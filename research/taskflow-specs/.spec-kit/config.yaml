@@ -1,0 +1,134 @@
+# Spec-Kit Plus Configuration
+# TaskFlow - Human-Agent Task Orchestration Platform
+
+name: taskflow
+version: "1.0"
+description: "Human-Agent Task Orchestration Platform"
+
+# Spec organization
+structure:
+  specs_dir: specs
+  constitution: specs/constitution.md
+  
+# Phase definitions
+phases:
+  - name: phase-1-cli
+    description: "Local CLI with File Storage"
+    due_date: "2025-12-07"
+    status: in_progress
+    features:
+      - task-crud
+      - human-agent-workers
+      - audit-trail
+      - linked-resources
+      - blueprints
+    specs:
+      - specs/phase-1/overview.md
+      - specs/phase-1/data-model.md
+      - specs/phase-1/cli-interface.md
+      - specs/phase-1/storage.md
+  
+  - name: phase-2-web
+    description: "Full-Stack Web Application"
+    due_date: "2025-12-14"
+    status: planned
+    features:
+      - task-crud
+      - authentication
+      - multi-user
+    specs:
+      - specs/phase-2/overview.md
+      - specs/phase-2/api-endpoints.md
+      - specs/phase-2/database-schema.md
+      - specs/phase-2/frontend-components.md
+  
+  - name: phase-3-mcp
+    description: "AI-Powered with MCP Server"
+    due_date: "2025-12-21"
+    status: planned
+    features:
+      - mcp-server
+      - chat-interface
+      - agent-integration
+    specs:
+      - specs/phase-3/overview.md
+      - specs/phase-3/mcp-tools.md
+      - specs/phase-3/chat-interface.md
+  
+  - name: phase-4-k8s
+    description: "Local Kubernetes Deployment"
+    due_date: "2026-01-04"
+    status: planned
+    features:
+      - containerization
+      - helm-charts
+      - minikube
+    specs:
+      - specs/phase-4/overview.md
+      - specs/phase-4/docker.md
+      - specs/phase-4/helm.md
+  
+  - name: phase-5-cloud
+    description: "Production Cloud Deployment"
+    due_date: "2026-01-18"
+    status: planned
+    features:
+      - doks-deployment
+      - kafka-events
+      - dapr-integration
+      - advanced-features
+    specs:
+      - specs/phase-5/overview.md
+      - specs/phase-5/kafka.md
+      - specs/phase-5/dapr.md
+      - specs/phase-5/ci-cd.md
+
+# Artifact tracking
+artifacts:
+  cli:
+    path: cli/
+    language: python
+    entry: src/taskflow/main.py
+  
+  frontend:
+    path: frontend/
+    language: typescript
+    framework: nextjs
+  
+  backend:
+    path: backend/
+    language: python
+    framework: fastapi
+  
+  mcp_server:
+    path: mcp-server/
+    language: python
+    framework: mcp-sdk
+
+# Conventions
+conventions:
+  # Commit messages
+  commits:
+    format: "type(scope): description"
+    types:
+      - feat
+      - fix
+      - docs
+      - spec
+      - refactor
+      - test
+  
+  # Branch naming
+  branches:
+    format: "phase-N/feature-name"
+    examples:
+      - phase-1/task-crud
+      - phase-1/audit-trail
+  
+  # Spec file naming
+  specs:
+    format: "kebab-case.md"
+    required_sections:
+      - Overview
+      - Requirements
+      - Implementation
