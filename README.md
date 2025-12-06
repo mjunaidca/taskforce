@@ -1,507 +1,802 @@
-# Hackathon II: TaskFlow — Human-Agent Task Platform
+# TaskFlow: Human-Agent Task Orchestration Platform
 
-## The Question You Must Answer
+**TaskFlow** is a Human-Agent Task Orchestration Platform that evolves from a local CLI tool to a cloud-native, event-driven system where humans and AI agents collaborate as equals.
 
-> "If ChatGPT can generate student essays, complete assignments, and even provide feedback, what remains of the software engineers transaction?"
+**One-liner:** Your AI workforce — assign tasks to humans or agents, track everything, ship together.
 
-If Claude Code can write the code, why are you here? What are you learning? What will you be able to do that someone who just prompts AI cannot?
-
-**This project ships a project I will personally use and designed to answer that question — not with words, but with proof.**
+This project fulfills all hackathon requirements while solving a real problem: **fragmented work across projects with no unified visibility or agent collaboration.**
 
 ---
 
-Let's be honest about what's dying:
+## Why TaskFlow (The Real Problem)
 
-| Dying Skill | Why It's Dying |
-|-------------|----------------|
-| Memorizing syntax | AI knows all syntax |
-| Typing code fast | AI types faster |
-| Implementing algorithms from scratch | AI has seen every implementation |
-| Debugging by staring at code | AI spots patterns you'd miss |
+### Current State: Data Silos Everywhere
 
----
+| Silo | What's Trapped |
+|------|----------------|
+| Each GitHub repo | Specs, context, implementation details |
+| Personal notes | Tasks that never become actionable |
+| Chat with Claude | Context lost after each session |
+| Team communication | Decisions buried in WhatsApp/Slack |
 
-The skills that matter now:
-
-| Emerging Skill | Why It Matters |
-|----------------|----------------|
-| **Specifying intent precisely** | AI does what you say, not what you mean. The gap is your job. |
-| **Evaluating AI output critically** | AI produces plausible garbage. Catching it is your job. |
-| **Debugging across the human-AI boundary** | When it fails, was it your spec or AI's execution? Knowing the difference is your job. |
-| **Architecting systems** | AI implements. You decide what's worth implementing. |
-| **Defending every choice** | If you can't explain why, you don't understand it. |
-
-**The constraint — "you cannot write code manually" — is not a limitation. It's the way forward.**
-
----
-
-## The Core Constraint
-
-> **Must refine the Spec until Claude Code generates the correct output.**
-
-This constraint creates learning through:
-
-1. **Write spec** → Claude Code generates code
-2. **Code is wrong** → You must understand WHY it's wrong
-3. **Refine spec** → You must know WHAT correct looks like
-4. **Repeat** → Each iteration sharpens your thinking
-
-If we write the code ourself or just vibecode, we'd skip the refinement loop. The constraint forces us to think.
-
----
-
-## Build: TaskFlow
-
-**One-liner:** Your AI workforce where Claude Code ships alongside you.
-
-This is a **Human-Agent Task Management Platform** where:
-
-| Traditional Todo | TaskFlow |
-|------------------|----------|
-| You create tasks | You create tasks |
-| You do tasks | You OR Claude Code does tasks |
-| You break down work upfront | **Worker breaks down work when starting** |
-| No visibility into process | **Full audit trail of who did what** |
-| Static checklist | **Living collaboration** |
-
-### Why This Design Teaches What You Need
-
-Every architectural decision in TaskFlow teaches an SDD-RI principle:
-
-| Design Decision | What It Teaches |
-|-----------------|-----------------|
-| **Task = Goal (no predefined subtasks)** | You learn to specify outcomes, not steps |
-| **Subtasks emerge from worker** | You learn that decomposition IS the skill |
-| **Two assignee types (human \| agent)** | You learn to think about human-AI collaboration |
-| **Audit everything** | You learn that process is proof |
-| **Human approves agent work** | You learn that judgment cannot be delegated |
-
-**You are building the tool that teaches the skill you're using.**
-
----
-
-## Core Data Model (LOCKED)
-
-These decisions are final. Do not amend.
+### TaskFlow Solution: Unified Orchestration Layer
 
 ```
-Task (Goal)
-├── id
-├── title
-├── description
-├── assignee_type (human | agent)
-├── assignee_id (user_id | "claude-code")
-├── status (pending | in_progress | review | completed)
-├── progress (0-100)
-├── created_by
-├── created_at
-├── updated_at
-
-Subtask (Emergent - created BY the worker when they start)
-├── id
-├── task_id
-├── title
-├── status (pending | completed)
-├── created_by_type (human | agent)
-├── created_by_id
-├── created_at
-
-AuditLog (Everything tracked)
-├── id
-├── entity_type (task | subtask)
-├── entity_id
-├── action (created | assigned | started | subtask_added | progress_updated | review_requested | approved | completed)
-├── actor_type (human | agent)
-├── actor_id
-├── details (json - notes, old_value, new_value)
-├── created_at
+┌─────────────────────────────────────────────────────────────────┐
+│                         TASKFLOW                                 │
+│                                                                  │
+│   HUMANS                              AI AGENTS                  │
+│   @muhammad                           @claude-code               │
+│   @hammad                             @qwen                      │
+│   @wania                              @gemini                    │
+│                                                                  │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│   │  PROJECT:   │  │  PROJECT:   │  │  PROJECT:   │            │
+│   │  taskflow   │  │  personal   │  │ panaversity │            │
+│   │             │  │             │  │             │            │
+│   │  Tasks      │  │  Tasks      │  │  Tasks      │            │
+│   │  Subtasks   │  │  Subtasks   │  │  Subtasks   │            │
+│   │  Audit logs │  │  Audit logs │  │  Audit logs │            │
+│   └─────────────┘  └─────────────┘  └─────────────┘            │
+│                                                                  │
+│   Everything tracked. Everyone accountable. Full audit trail.   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Why These Models Are Locked
-
-| Model | Pedagogical Purpose |
-|-------|---------------------|
-| **Task has no subtask hierarchy** | Forces goal-oriented thinking |
-| **Subtask has created_by_type** | Makes visible who did the decomposition |
-| **AuditLog captures everything** | Creates unfakeable process evidence |
-
 ---
 
-## Example Flow
+## What Makes TaskFlow Different
+
+| Traditional Task Manager | TaskFlow |
+|-------------------------|----------|
+| Humans only | Humans AND Agents as first-class workers |
+| Static assignment | Dynamic delegation (agent → agent) |
+| Manual status updates | Agents report progress via MCP |
+| Single project view | Cross-project visibility |
+| Trust the artifact | Trust the audit trail |
+| Personal OR work | Unified: "Message Ahmad" + "Implement MCP server" |
+
+### The Killer Feature: Agent-to-Agent Delegation
 
 ```
-1. You create Task: "Implement JWT verification"
-   → assigned to: @claude-code
-   → status: pending
-   → audit: "created by muhammad"
+Task: "Research authentication patterns"
+Assigned to: @claude-code
+│
+├── Subtask: "Survey existing solutions"
+│   Delegated to: @gemini (by @claude-code)
+│   Status: ✅ Completed
+│
+├── Subtask: "Analyze security tradeoffs"
+│   Delegated to: @qwen (by @claude-code)
+│   Status: 🔄 In Progress (60%)
+│
+└── Subtask: "Draft recommendation"
+    Kept by: @claude-code
+    Status: ⏳ Blocked (waiting on analysis)
 
-2. Claude Code claims task via MCP
-   → status: in_progress
-   → audit: "started by claude-code"
-
-3. Claude Code breaks down work (adds subtasks):
-   → "Research JWKS endpoint patterns"
-   → "Write FastAPI middleware"
-   → "Add token validation tests"
-   → audit: "subtask_added by claude-code" (x3)
-
-4. Claude Code works, completes subtasks:
-   → subtask 1: completed
-   → subtask 2: completed
-   → progress: 66%
-   → audit: "progress_updated by claude-code"
-
-5. Claude Code requests review:
-   → status: review
-   → audit: "review_requested by claude-code"
-
-6. You review, find issue, reject:
-   → status: in_progress
-   → audit: "rejected by muhammad" with notes
-
-7. Claude Code fixes, requests review again:
-   → status: review
-   → audit: "review_requested by claude-code"
-
-8. You review, approve:
-   → status: completed
-   → audit: "approved by muhammad"
+AUDIT TRAIL shows every delegation, every decision.
 ```
 
-**The audit trail is your proof that you understood the work.**
+---
+
+## Data Model (Core Schema)
+
+```python
+# === CORE ENTITIES ===
+
+class Project(SQLModel, table=True):
+    """Container for related tasks"""
+    id: str                          # "taskflow", "personal"
+    name: str
+    description: str | None
+    owner_id: str
+    created_at: datetime
+
+class Worker(SQLModel, table=True):
+    """Both humans and agents are workers"""
+    id: str                          # "@muhammad", "@claude-code"
+    type: Literal["human", "agent"]
+    name: str
+    agent_type: str | None           # "claude", "qwen", "gemini"
+    capabilities: list[str] | None   # ["coding", "research"]
+    api_key_hash: str | None         # For agent authentication
+    created_at: datetime
+
+class Task(SQLModel, table=True):
+    """Unit of work — can be assigned to human or agent"""
+    id: int
+    title: str
+    description: str | None
+    project_id: str
+    
+    # Assignment
+    assignee_id: str | None          # "@claude-code", "@muhammad"
+    created_by_id: str
+    
+    # Hierarchy
+    parent_task_id: int | None       # For subtasks
+    
+    # Status
+    status: Literal["pending", "in_progress", "review", "completed", "blocked"]
+    progress: int = 0                # 0-100
+    
+    # Organization (Intermediate features)
+    priority: Literal["low", "medium", "high", "urgent"] | None
+    tags: list[str] | None
+    due_date: datetime | None
+    
+    # Recurrence (Advanced features)
+    recurrence: str | None           # "daily", "weekly", "monthly"
+    
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+
+class LinkedResource(SQLModel, table=True):
+    """Generic linking — anything to anything"""
+    id: int
+    owner_type: Literal["project", "task", "blueprint"]
+    owner_id: str
+    resource_type: str               # "repo", "spec", "doc", "url", "task"
+    resource_uri: str
+    name: str
+    description: str | None
+    access: Literal["read", "write"] = "read"
+    created_by: str
+    created_at: datetime
+
+class Blueprint(SQLModel, table=True):
+    """Reusable task patterns"""
+    id: str
+    name: str
+    description: str | None
+    template_tasks: list[dict]
+    created_by: str
+    created_at: datetime
+
+class AuditLog(SQLModel, table=True):
+    """Every action tracked — this is the proof"""
+    id: int
+    entity_type: str                 # "task", "project", "worker"
+    entity_id: str
+    action: str                      # "created", "assigned", "delegated", "completed"
+    actor_id: str
+    actor_type: Literal["human", "agent"]
+    details: dict | None
+    created_at: datetime
+
+class Conversation(SQLModel, table=True):
+    """Chat sessions with TaskFlow AI"""
+    id: int
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
+
+class Message(SQLModel, table=True):
+    """Individual messages in conversations"""
+    id: int
+    conversation_id: int
+    role: Literal["user", "assistant", "system"]
+    content: str
+    tool_calls: list[dict] | None
+    created_at: datetime
+```
 
 ---
 
-## MCP Tools (How Claude Code Interacts)
+## Phase Breakdown: The Evolution of TaskFlow
 
-| Tool | Purpose |
-|------|---------|
-| `list_my_tasks` | Get tasks assigned to this agent |
-| `claim_task` | Start working (status → in_progress) |
-| `get_task_details` | Get full context |
-| `add_subtask` | Break down work (emergent planning) |
-| `complete_subtask` | Mark subtask done |
-| `update_progress` | Report % complete with notes |
-| `request_review` | Flag for human approval |
-
-### Why MCP Matters Pedagogically
-
-When you build the MCP server, you are:
-- Defining the **interface** between human and AI
-- Deciding what **capabilities** the AI has
-- Creating the **boundaries** of AI autonomy
-
-This is the architect's job. The AI implements. You decide the interface.
+Each phase powers up a specific capability while meeting all hackathon requirements.
 
 ---
 
-## Human UI Actions
+### Phase I: Local CLI with File Storage (Dec 7)
+**Points: 100 | Core Proof of Concept**
 
-| Action | What Happens |
-|--------|--------------|
-| Create Task | Define goal, assign to human OR agent |
-| View Tasks | See all tasks, status, progress, assignee |
-| View Task Detail | See subtasks (created by worker), audit trail |
-| Approve/Reject | After agent requests review |
-| Reassign | Move task to different human/agent |
+**Objective:** Build command-line TaskFlow that proves human-agent task management works.
 
----
+**Storage:** Local files (`.taskflow/config.yaml` + `.taskflow/data.json`)
 
-## Phase Breakdown
-
-### Phase I: Console App (Due Dec 7)
-**Points: 100**
-
-Build CLI for TaskFlow with in-memory storage.
-
-| Feature | Pedagogical Purpose |
-|---------|---------------------|
-| Create task with assignee_type | Learn to model human vs agent |
-| Worker adds subtasks when starting | Learn emergent decomposition |
-| Complete subtask, update progress | Learn progress tracking |
-| View audit trail | Learn that process is visible |
-
-**Technology:** Python 3.13+, UV, Claude Code, Spec-Kit Plus
+**Technology Stack:**
+- Python 3.13+
+- UV
+- Typer (CLI framework)
+- Pydantic (data validation)
+- Claude Code + Spec-Kit Plus
 
 **Deliverables:**
-- Constitution file
-- specs/ folder with all specification history
-- /src folder with Python source
-- README.md with setup instructions
-- CLAUDE.md with Claude Code instructions
 
-**What Success Looks Like:**
+1. **Initialization & Configuration**
+```bash
+$ taskflow init
+✓ Created .taskflow/config.yaml
+✓ Created .taskflow/data.json
+TaskFlow initialized!
 ```
-$ taskflow create "Implement JWT verification" --assign agent
-Task #1 created, assigned to agent
 
+2. **Project Management**
+```bash
+$ taskflow project add taskflow --name "TaskFlow Platform"
+$ taskflow project add personal --name "Personal Tasks"
+$ taskflow project list
+```
+
+3. **Worker Management (Humans + Agents)**
+```bash
+$ taskflow worker add @muhammad --type human --name "Muhammad"
+$ taskflow agent add @claude-code --capabilities coding,architecture
+$ taskflow agent add @qwen --capabilities research,analysis
+$ taskflow agent add @gemini --capabilities research,summarization
+$ taskflow worker list
+```
+
+4. **Task CRUD (Basic Level Features)**
+```bash
+# Add Task
+$ taskflow add "Implement MCP server" --project taskflow --assign @claude-code
+✓ Created task #1
+
+# View Task List
+$ taskflow list
+$ taskflow list --project taskflow
+$ taskflow list --assignee @claude-code
+$ taskflow list --status pending
+
+# Update Task
+$ taskflow edit 1 --title "Implement MCP server v2" --priority high
+
+# Delete Task
+$ taskflow delete 1
+
+# Mark Complete
+$ taskflow complete 1
+```
+
+5. **Intermediate Features**
+```bash
+# Priorities & Tags
+$ taskflow add "Fix auth bug" --priority urgent --tags bug,security
+
+# Search & Filter
+$ taskflow list --tag bug
+$ taskflow list --priority urgent
+
+# Sort
+$ taskflow list --sort due_date
+$ taskflow list --sort priority
+```
+
+6. **Human-Agent Workflow**
+```bash
+# Agent starts task and breaks down into subtasks
 $ taskflow start 1
 Starting task #1...
-Enter subtasks (empty line to finish):
-> Research JWKS patterns
-> Write middleware
-> Add tests
-3 subtasks added
+Enter subtasks (or empty to let agent decompose):
+> Design protocol
+> Implement handlers
+> Add authentication
+✓ 3 subtasks created
 
-$ taskflow progress 1 --percent 33 --note "Research complete"
-Task #1: 33% complete
+# Progress tracking
+$ taskflow progress 1 --percent 30 --note "Protocol designed"
 
+# Agent delegates to another agent
+$ taskflow delegate 1.2 @qwen --note "Need research first"
+✓ Subtask 1.2 delegated to @qwen by @claude-code
+
+# Request review
+$ taskflow review 1
+
+# Human approves/rejects
+$ taskflow approve 1
+$ taskflow reject 1 --reason "Missing tests"
+```
+
+7. **Audit Trail**
+```bash
 $ taskflow audit 1
-[2025-12-06 10:00] created by muhammad
-[2025-12-06 10:01] started by claude-code
-[2025-12-06 10:01] subtask_added: "Research JWKS patterns" by claude-code
-[2025-12-06 10:01] subtask_added: "Write middleware" by claude-code
-[2025-12-06 10:01] subtask_added: "Add tests" by claude-code
-[2025-12-06 10:30] progress_updated: 33% by claude-code
+TASK #1: Implement MCP server
+──────────────────────────────────────────────────
+[2025-12-06 10:00] created by @muhammad
+[2025-12-06 10:00] assigned to @claude-code
+[2025-12-06 10:05] started by @claude-code
+[2025-12-06 10:05] subtask added: "Design protocol"
+[2025-12-06 10:05] subtask added: "Implement handlers"
+[2025-12-06 10:05] subtask added: "Add authentication"
+[2025-12-06 12:00] progress: 30% "Protocol designed"
+[2025-12-06 13:00] subtask 1.2 delegated to @qwen
+[2025-12-06 15:00] review requested
+```
+
+8. **Linked Resources**
+```bash
+$ taskflow link 1 --type spec --uri "./specs/mcp.md" --name "MCP Spec"
+$ taskflow links 1
+```
+
+**File Structure:**
+```
+.taskflow/
+├── config.yaml      # Projects, workers, settings
+├── data.json        # Tasks, audit logs, links
+└── .env             # API keys (gitignored)
+```
+
+**Repository Structure:**
+```
+taskflow/
+├── .spec-kit/
+│   └── config.yaml
+├── specs/
+│   ├── constitution.md
+│   ├── overview.md
+│   ├── phase-1/
+│   │   ├── cli-interface.md
+│   │   ├── data-model.md
+│   │   └── storage.md
+│   └── features/
+│       ├── task-crud.md
+│       ├── human-agent-assignment.md
+│       └── audit-trail.md
+├── cli/
+│   ├── CLAUDE.md
+│   ├── pyproject.toml
+│   └── src/taskflow/
+│       ├── __init__.py
+│       ├── main.py
+│       ├── models.py
+│       ├── storage.py
+│       └── commands/
+├── CLAUDE.md
+└── README.md
 ```
 
 ---
 
-### Phase II: Full-Stack Web Application (Due Dec 14)
-**Points: 150**
+### Phase II: Full-Stack Web Application (Dec 14)
+**Points: 150 | Multi-User + Persistence**
 
-Transform console app into multi-user web application.
+**Objective:** Transform CLI into multi-user web app with real database.
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | Next.js 16+ (App Router) |
+**What Changes:**
+- Storage moves from local files to Neon PostgreSQL
+- Web UI for humans (Next.js)
+- REST API (FastAPI)
+- Authentication via Better Auth (reuse from Hackathon 1 SSO)
+
+**Technology Stack:**
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 16+ (App Router), TypeScript, Tailwind |
 | Backend | Python FastAPI |
 | ORM | SQLModel |
 | Database | Neon Serverless PostgreSQL |
-| Authentication | Better Auth with JWT/JWKS |
+| Auth | Better Auth with JWT/JWKS |
+
+**Architecture:**
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Next.js UI    │────▶│   FastAPI       │────▶│   Neon DB       │
+│   (Humans)      │     │   Backend       │     │   (PostgreSQL)  │
+└────────┬────────┘     └─────────────────┘     └─────────────────┘
+         │                      │
+         │                      ▼
+         │              ┌─────────────────┐
+         └─────────────▶│ Hackathon 1 SSO │
+                        │ (Better Auth)   │
+                        └─────────────────┘
+```
 
 **API Endpoints:**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /api/{user_id}/tasks | List all tasks |
-| POST | /api/{user_id}/tasks | Create task with assignee_type |
-| GET | /api/{user_id}/tasks/{id} | Get task with subtasks and audit |
-| PUT | /api/{user_id}/tasks/{id} | Update task |
-| DELETE | /api/{user_id}/tasks/{id} | Delete task |
-| POST | /api/{user_id}/tasks/{id}/start | Start task (create subtasks) |
-| POST | /api/{user_id}/tasks/{id}/subtasks | Add subtask |
-| PATCH | /api/{user_id}/tasks/{id}/progress | Update progress |
-| POST | /api/{user_id}/tasks/{id}/review | Request review |
-| POST | /api/{user_id}/tasks/{id}/approve | Approve (human only) |
-| POST | /api/{user_id}/tasks/{id}/reject | Reject with notes |
+| GET | /api/projects | List user's projects |
+| POST | /api/projects | Create project |
+| GET | /api/projects/{id}/tasks | List tasks in project |
+| POST | /api/projects/{id}/tasks | Create task |
+| GET | /api/tasks/{id} | Get task with subtasks |
+| PUT | /api/tasks/{id} | Update task |
+| DELETE | /api/tasks/{id} | Delete task |
+| POST | /api/tasks/{id}/start | Start task |
+| POST | /api/tasks/{id}/subtasks | Add subtask |
+| PATCH | /api/tasks/{id}/progress | Update progress |
+| POST | /api/tasks/{id}/delegate | Delegate subtask |
+| POST | /api/tasks/{id}/review | Request review |
+| POST | /api/tasks/{id}/approve | Approve |
+| POST | /api/tasks/{id}/reject | Reject |
+| GET | /api/tasks/{id}/audit | Get audit trail |
+| GET | /api/workers | List workers |
+| POST | /api/workers | Register worker/agent |
 
-**Authentication (JWKS-based):**
-
-Better Auth issues JWT tokens signed with RS256. FastAPI verifies using public keys from JWKS endpoint. No shared secrets.
-
-```python
-from jwt import decode, PyJWKClient
-
-JWKS_URL = "https://your-sso/api/auth/jwks"
-jwks_client = PyJWKClient(JWKS_URL)
-
-def verify_token(request: Request):
-    token = request.headers.get("authorization", "").split(" ", 1)[1]
-    signing_key = jwks_client.get_signing_key_from_jwt(token).key
-    return decode(token, signing_key, algorithms=["RS256"])
+**CLI Migration:**
+```bash
+# One command migrates local data to cloud
+$ taskflow migrate --to neon
+Migrating 15 tasks, 3 projects, 45 audit logs...
+✓ Migration complete. Storage: neon
 ```
 
-**Monorepo Structure:**
-
+**Repository Structure:**
 ```
-hackathon-taskflow/
-├── .spec-kit/config.yaml
+taskflow/
 ├── specs/
+│   ├── phase-2/
+│   │   ├── api-endpoints.md
+│   │   ├── database-schema.md
+│   │   ├── authentication.md
+│   │   └── frontend-components.md
+├── cli/                    # Phase 1 CLI (still works)
+├── frontend/
+│   ├── CLAUDE.md
+│   └── ... (Next.js app)
+├── backend/
+│   ├── CLAUDE.md
+│   └── ... (FastAPI app)
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+### Phase III: AI-Powered TaskFlow with MCP (Dec 21)
+**Points: 200 | Agent Gateway**
+
+**Objective:** Agents connect via MCP, humans chat via natural language.
+
+**What Changes:**
+- MCP Server for agent connections
+- Chat interface with OpenAI ChatKit
+- OpenAI Agents SDK for orchestration
+- Agents can work autonomously
+
+**Technology Stack:**
+| Component | Technology |
+|-----------|------------|
+| Chat UI | OpenAI ChatKit |
+| AI Framework | OpenAI Agents SDK |
+| MCP Server | Official MCP SDK |
+| Backend | FastAPI |
+| Database | Neon PostgreSQL |
+
+**Architecture:**
+```
+┌─────────────────┐     ┌─────────────────────────────────────────────────┐
+│   ChatKit UI    │     │              TaskFlow Backend                    │
+│   (Human Chat)  │────▶│                                                 │
+└─────────────────┘     │  ┌─────────────┐    ┌─────────────────────────┐│
+                        │  │ Chat API    │    │     MCP Server          ││
+┌─────────────────┐     │  │ /api/chat   │    │  (Agent Connections)    ││
+│   Web UI        │────▶│  └──────┬──────┘    └───────────┬─────────────┘│
+│   (Dashboard)   │     │         │                       │              │
+└─────────────────┘     │         ▼                       ▼              │
+                        │  ┌──────────────────────────────────────────┐  │
+                        │  │         OpenAI Agents SDK                │  │
+                        │  │         (Orchestration Layer)            │  │
+                        │  └──────────────────────────────────────────┘  │
+                        └─────────────────────────────────────────────────┘
+                                              │
+              ┌───────────────────────────────┼───────────────────────────┐
+              │                               │                           │
+              ▼                               ▼                           ▼
+      ┌───────────────┐               ┌───────────────┐           ┌───────────────┐
+      │ @claude-code  │               │    @qwen      │           │   @gemini     │
+      │ (MCP Client)  │               │ (MCP Client)  │           │ (MCP Client)  │
+      └───────────────┘               └───────────────┘           └───────────────┘
+```
+
+**MCP Tools Specification:**
+
+| Tool | Purpose | Parameters |
+|------|---------|------------|
+| `list_my_tasks` | Get tasks assigned to this agent | `agent_id`, `status?`, `project?` |
+| `get_task_details` | Get full task context | `task_id` |
+| `claim_task` | Start working on task | `task_id` |
+| `add_subtask` | Break down work | `task_id`, `title`, `assignee?` |
+| `delegate_subtask` | Assign to another agent | `subtask_id`, `agent_id`, `note?` |
+| `update_progress` | Report status | `task_id`, `percent`, `note?` |
+| `complete_subtask` | Mark subtask done | `subtask_id` |
+| `request_review` | Flag for human approval | `task_id` |
+
+**Chat Interface Examples:**
+
+```
+You: "What's on my plate today?"
+
+TaskFlow AI: Based on your tasks:
+
+URGENT:
+- #12 "Phase 1 submission" (due today)
+- #15 "Message Ahmad about RTJ" (personal)
+
+IN PROGRESS (agents working):
+- #8 @claude-code: "MCP implementation" (70%)
+- #9 @qwen: "Auth research" (completed, awaiting review)
+
+BLOCKED:
+- #11 "Choose auth pattern" — waiting for your decision
+
+Shall I show details on any of these?
+```
+
+```
+You: "Assign the research task to @gemini"
+
+TaskFlow AI: Created task #23 "Research task" assigned to @gemini.
+@gemini will report progress. I'll notify you when complete.
+```
+
+**Agent Authentication:**
+- Agents authenticate with API keys (generated in UI)
+- API key tied to agent identity
+- All actions logged with agent actor
+
+---
+
+### Phase IV: Local Kubernetes Deployment (Jan 4)
+**Points: 250 | Cloud-Native Local**
+
+**Objective:** Deploy TaskFlow on local Kubernetes with AI-assisted operations.
+
+**Technology Stack:**
+| Component | Technology |
+|-----------|------------|
+| Containerization | Docker + Gordon |
+| Orchestration | Kubernetes (Minikube) |
+| Package Manager | Helm Charts |
+| AI DevOps | kubectl-ai, Kagent |
+
+**Architecture:**
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                         MINIKUBE CLUSTER                                │
+│                                                                         │
+│  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐      │
+│  │   Frontend      │   │   Backend       │   │   MCP Server    │      │
+│  │   Deployment    │   │   Deployment    │   │   Deployment    │      │
+│  │   (Next.js)     │   │   (FastAPI)     │   │   (Python)      │      │
+│  └────────┬────────┘   └────────┬────────┘   └────────┬────────┘      │
+│           │                     │                     │                │
+│           └─────────────────────┴─────────────────────┘                │
+│                                 │                                       │
+│                    ┌────────────▼────────────┐                         │
+│                    │    Ingress Controller   │                         │
+│                    └────────────┬────────────┘                         │
+└─────────────────────────────────┼──────────────────────────────────────┘
+                                  │
+                    ┌─────────────▼─────────────┐
+                    │   Neon DB (External)      │
+                    └───────────────────────────┘
+```
+
+**AIOps Commands:**
+```bash
+# Docker AI (Gordon)
+$ docker ai "build the taskflow backend image"
+$ docker ai "optimize the Dockerfile for production"
+
+# kubectl-ai
+$ kubectl-ai "deploy taskflow with 2 backend replicas"
+$ kubectl-ai "check why the mcp-server pod is failing"
+$ kubectl-ai "scale frontend to handle more traffic"
+
+# Kagent
+$ kagent "analyze cluster health"
+$ kagent "suggest resource optimizations"
+```
+
+**Helm Charts:**
+```
+helm/
+├── Chart.yaml
+├── values.yaml
+└── templates/
+    ├── frontend-deployment.yaml
+    ├── backend-deployment.yaml
+    ├── mcp-server-deployment.yaml
+    ├── services.yaml
+    ├── ingress.yaml
+    └── configmap.yaml
+```
+
+---
+
+### Phase V: Production Cloud Deployment (Jan 18)
+**Points: 300 | Event-Driven + Global**
+
+**Objective:** Deploy to production Kubernetes with event-driven architecture.
+
+**What's Added:**
+- DigitalOcean Kubernetes (DOKS)
+- Kafka via Redpanda Cloud
+- Dapr for service mesh
+- Advanced features (recurring tasks, reminders)
+- CI/CD via GitHub Actions
+
+**Technology Stack:**
+| Component | Technology |
+|-----------|------------|
+| Cloud K8s | DigitalOcean DOKS |
+| Event Streaming | Kafka (Redpanda Cloud) |
+| Service Mesh | Dapr |
+| CI/CD | GitHub Actions |
+
+**Event-Driven Architecture:**
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                    DIGITALOCEAN KUBERNETES (DOKS)                       │
+│                                                                         │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │                     DAPR SIDECARS                               │   │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────────┐   │   │
+│  │  │Frontend │  │Backend  │  │MCP      │  │Notification     │   │   │
+│  │  │+ Dapr   │  │+ Dapr   │  │+ Dapr   │  │Service + Dapr   │   │   │
+│  │  └────┬────┘  └────┬────┘  └────┬────┘  └────────┬────────┘   │   │
+│  │       │            │            │                │             │   │
+│  └───────┴────────────┴────────────┴────────────────┴─────────────┘   │
+│                                    │                                    │
+│                       ┌────────────▼────────────┐                      │
+│                       │     DAPR COMPONENTS     │                      │
+│                       │  ┌──────────────────┐   │                      │
+│                       │  │ pubsub.kafka     │───┼──▶ Redpanda Cloud    │
+│                       │  │ state.postgresql │───┼──▶ Neon DB           │
+│                       │  │ bindings.cron    │   │   (Reminders)        │
+│                       │  │ secretstores.k8s │   │   (API Keys)         │
+│                       │  └──────────────────┘   │                      │
+│                       └─────────────────────────┘                      │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Kafka Topics:**
+
+| Topic | Producer | Consumer | Purpose |
+|-------|----------|----------|---------|
+| `task-events` | Backend | Audit Service | All CRUD operations |
+| `agent-progress` | MCP Server | Dashboard | Real-time progress |
+| `review-requests` | MCP Server | Notification | Alert humans |
+| `reminders` | Cron Binding | Notification | Due date alerts |
+
+**Advanced Features:**
+
+```bash
+# Recurring tasks
+$ taskflow add "Weekly standup" --recurrence weekly --assign @muhammad
+
+# Due dates with reminders
+$ taskflow add "Submit phase 5" --due "2025-01-18 20:00" --remind "1 hour before"
+
+# Priority-based sorting
+$ taskflow list --sort priority --status pending
+```
+
+**CI/CD Pipeline:**
+```yaml
+# .github/workflows/deploy.yaml
+name: Deploy TaskFlow
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: docker-compose build
+      - name: Push to registry
+        run: docker-compose push
+      - name: Deploy to DOKS
+        run: helm upgrade --install taskflow ./helm
+```
+
+---
+
+## Bonus Features Implementation
+
+| Bonus | Points | Implementation |
+|-------|--------|----------------|
+| **Human-Agent Platform** | +300 | Core feature — agents are first-class workers |
+| **Reusable Intelligence (Blueprints)** | +200 | `taskflow blueprint` commands |
+| **Cloud-Native Blueprints** | +200 | Helm charts + kubectl-ai patterns |
+| **Multi-language (Urdu)** | +100 | Chat understands Urdu commands |
+| **Voice Commands** | +200 | Browser speech-to-text → chat |
+| **TOTAL** | +1000 | |
+
+**Blueprint Example:**
+```bash
+# Create blueprint
+$ taskflow blueprint add feature-dev --name "Feature Development"
+$ taskflow blueprint tasks feature-dev
+> Research existing solutions [@gemini]
+> Write spec [@human]
+> Implement backend [@claude-code]
+> Implement frontend [@claude-code]
+> Write tests [@claude-code]
+> Deploy [@claude-code]
+
+# Use blueprint
+$ taskflow add "Add recurring tasks" --blueprint feature-dev
+✓ Created task #50 with 6 subtasks from blueprint
+```
+
+---
+
+## Repository Final Structure
+
+```
+taskflow/
+├── .spec-kit/
+│   └── config.yaml
+├── specs/
+│   ├── constitution.md
 │   ├── overview.md
+│   ├── architecture.md
+│   ├── data-model/
+│   │   ├── core-entities.md
+│   │   └── audit-system.md
 │   ├── features/
-│   │   ├── task-management.md
+│   │   ├── task-crud.md
+│   │   ├── human-agent-assignment.md
+│   │   ├── agent-delegation.md
 │   │   ├── audit-trail.md
-│   │   └── human-agent-assignment.md
+│   │   ├── linked-resources.md
+│   │   ├── blueprints.md
+│   │   └── chat-interface.md
 │   ├── api/
-│   │   └── rest-endpoints.md
-│   └── database/
-│       └── schema.md
-├── CLAUDE.md
+│   │   ├── rest-endpoints.md
+│   │   └── mcp-tools.md
+│   └── phases/
+│       ├── phase-1-cli.md
+│       ├── phase-2-web.md
+│       ├── phase-3-mcp.md
+│       ├── phase-4-k8s.md
+│       └── phase-5-cloud.md
+├── cli/
+│   ├── CLAUDE.md
+│   ├── pyproject.toml
+│   └── src/taskflow/
 ├── frontend/
 │   ├── CLAUDE.md
 │   └── ... (Next.js)
 ├── backend/
 │   ├── CLAUDE.md
 │   └── ... (FastAPI)
-└── docker-compose.yml
+├── mcp-server/
+│   ├── CLAUDE.md
+│   └── ... (MCP SDK)
+├── helm/
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+├── .github/
+│   └── workflows/
+│       └── deploy.yaml
+├── docker-compose.yml
+├── CLAUDE.md
+└── README.md
 ```
 
 ---
 
-### Phase III: AI-Powered TaskFlow (Due Dec 21)
-**Points: 200**
+## Submission Checklist
 
-Add MCP server so Claude Code can actually work on tasks.
-
-**Architecture:**
-
-```
-┌─────────────────┐     ┌──────────────────────────────────────────────┐     ┌─────────────────┐
-│                 │     │              FastAPI Server                   │     │                 │
-│  ChatKit UI     │────▶│  Chat Endpoint → Agents SDK → MCP Server     │────▶│    Neon DB      │
-│  (Frontend)     │     │                                               │     │                 │
-└─────────────────┘     └──────────────────────────────────────────────┘     └─────────────────┘
-```
-
-**MCP Tools for TaskFlow:**
-
-| Tool | Parameters | Purpose |
-|------|------------|---------|
-| `list_my_tasks` | agent_id | Get tasks assigned to this agent |
-| `claim_task` | task_id | Start working on task |
-| `get_task_details` | task_id | Get full context |
-| `add_subtask` | task_id, title | Create emergent subtask |
-| `complete_subtask` | subtask_id | Mark done |
-| `update_progress` | task_id, percent, notes | Report progress |
-| `request_review` | task_id | Flag for human approval |
-
-**Natural Language Examples:**
-
-| User Says | Agent Does |
-|-----------|------------|
-| "What tasks are assigned to Claude Code?" | Calls `list_my_tasks` |
-| "Start working on task 3" | Calls `claim_task`, then adds subtasks |
-| "How's task 3 going?" | Calls `get_task_details` |
-| "Mark the first subtask done" | Calls `complete_subtask` |
-| "Submit task 3 for review" | Calls `request_review` |
-
-**The Meta-Level:**
-
-When you chat with the AI to manage tasks, you are:
-1. Assigning work to Claude Code
-2. Reviewing what Claude Code produced
-3. Approving or rejecting based on your judgment
-
-**You are learning orchestration by doing orchestration.**
+| Phase | Due | Deliverables |
+|-------|-----|--------------|
+| I | Dec 7 | CLI + GitHub + Demo Video |
+| II | Dec 14 | Web App + Vercel + API URL |
+| III | Dec 21 | Chat + MCP Server |
+| IV | Jan 4 | Minikube Instructions |
+| V | Jan 18 | DOKS URL + Full Demo |
 
 ---
 
-### Phase IV: Local Kubernetes (Due Jan 4)
-**Points: 250**
+## The Meta-Lesson
 
-Deploy TaskFlow on Minikube with Helm charts.
+This project proves:
 
-| Component | Technology |
-|-----------|------------|
-| Containerization | Docker |
-| Orchestration | Kubernetes (Minikube) |
-| Package Manager | Helm Charts |
-| AI DevOps | kubectl-ai, Kagent |
-
-**What You Learn:**
-
-- How to specify infrastructure (Helm values = specs for infra)
-- How to debug deployments (when pods fail, was it your spec or the container?)
-- How AI tools (kubectl-ai, Kagent) operate at the infrastructure level
-
----
-
-### Phase V: Cloud Deployment (Due Jan 18)
-**Points: 300**
-
-Deploy to DigitalOcean/GKE/AKS with Kafka event streaming and Dapr.
-
-**Kafka Topics:**
-
-| Topic | Producer | Consumer | Purpose |
-|-------|----------|----------|---------|
-| task-events | API | Audit Service | All operations logged |
-| agent-progress | MCP Server | Dashboard | Real-time progress |
-| review-requests | MCP Server | Notification | Alert humans |
-
-**Dapr Building Blocks:**
-
-| Block | Use |
-|-------|-----|
-| Pub/Sub | Kafka abstraction |
-| State | Conversation state |
-| Bindings | Scheduled reminders |
-| Secrets | API keys |
-
-**What You Learn:**
-
-- Event-driven architecture (publish events, don't call functions)
-- Loose coupling (services don't know about each other)
-- Production concerns (monitoring, logging, scaling)
-
----
-
-## How You Will Be Evaluated
-
-### What We Check (Process)
-
-| Artifact | What It Proves |
-|----------|----------------|
-| **Spec history in /specs** | You refined thinking, not just code |
-| **Git commit history** | You iterated, didn't just dump final code |
-| **Audit trail in app** | You built what you designed |
-| **CLAUDE.md evolution** | You learned what to tell AI |
-
-### What We Verify (Competence)
-
-| Method | What It Proves |
-|--------|----------------|
-| **Live demo** | It actually works |
-| **Modify on the spot** | You understand the code |
-| **Oral defense** | You can explain any decision |
-| **Handle unexpected input** | You didn't just memorize happy path |
-
-### What You Cannot Fake
-
-- Commit history (shows process over time)
-- Spec revisions (shows thinking evolved)
-- Oral defense (you either understand or you don't)
-- Live modification (you either can or you can't)
-
----
-
-## What Panaversity Graduates Can Do
-
-After completing this hackathon, you can:
-
-| Capability | Evidence |
-|------------|----------|
-| **Specify systems precisely** | Specs that Claude Code implements correctly |
-| **Evaluate AI output critically** | Rejected bad code, approved good code |
-| **Debug human-AI boundaries** | Know when spec was wrong vs AI failed |
-| **Architect complex systems** | Designed TaskFlow data model |
-| **Defend every choice** | Passed oral examination |
-| **Know what you don't know** | Asked AI appropriately, not dependently |
-
----
-At the end, you don't have a certificate. You have:
-- 5 deployed projects (console → web → AI → K8s → cloud)
-- Spec history proving your thinking process
-- Public GitHub proving real work
-- Oral defense proving understanding
-- Potential interview for Panaversity team
-
-**That's not a credential. That's a portfolio of proof.**
-
----
-
-## Bonus Points
-
-| Feature | Points |
-|---------|--------|
-| **Full Human-Agent Platform** (as designed above) | +300 |
-| Reusable Intelligence via Subagents/Skills | +200 |
-| Cloud-Native Blueprints via Agent Skills | +200 |
-| Multi-language (Urdu) | +100 |
-| Voice Commands | +200 |
-| **Total Bonus** | +1000 |
-
-## The Bottom Line
-
-This project answers the question: **"If AI can code, what's left for humans?"**
-
-The answer: **Specification, evaluation, orchestration, and judgment.**
-
-You will prove you have these skills — not by telling us, but by showing us:
-- Your specs that evolved
-- Your commits that iterated
-- Your system that works
-- Your defense that demonstrates understanding
-
-**The constraint — "cannot write code manually" — is not a limitation. It's the entire curriculum.**
+1. **AI-native learning works** — spec evolution shows real understanding
+2. **The constraint is the curriculum** — "cannot write code manually" forces thinking
+3. **Human-agent collaboration is the future** — TaskFlow demonstrates it
+4. **Process is proof** — audit trail shows who did what
