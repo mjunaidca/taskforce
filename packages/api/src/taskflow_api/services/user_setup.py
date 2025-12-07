@@ -52,11 +52,16 @@ async def get_or_create_worker(session: AsyncSession, user: CurrentUser) -> Work
 
 
 async def ensure_default_project(
-    session: AsyncSession, user: CurrentUser, worker: Worker
+    session: AsyncSession, user: CurrentUser, worker_id: int
 ) -> Project:
     """Ensure user has a Default project.
 
     Creates one if it doesn't exist.
+
+    Args:
+        session: Database session
+        user: Current user from auth
+        worker_id: Worker ID (passed as int to avoid detached object issues)
     """
     # Check if default project exists
     stmt = select(Project).where(Project.owner_id == user.id, Project.is_default.is_(True))
@@ -94,7 +99,7 @@ async def ensure_default_project(
     # Add user as owner
     membership = ProjectMember(
         project_id=project.id,
-        worker_id=worker.id,
+        worker_id=worker_id,
         role="owner",
     )
     session.add(membership)
@@ -114,8 +119,9 @@ async def ensure_user_setup(session: AsyncSession, user: CurrentUser) -> Worker:
     Returns the user's Worker record.
     """
     worker = await get_or_create_worker(session, user)
-    # Refresh worker to ensure it's attached to the current session
-    # This is needed because get_or_create_worker may have committed
+    # Store worker.id before any further commits to avoid detached object issues
+    worker_id = worker.id
+    await ensure_default_project(session, user, worker_id)
+    # Refresh worker before returning to ensure it's attached to session
     await session.refresh(worker)
-    await ensure_default_project(session, user, worker)
     return worker
