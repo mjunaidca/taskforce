@@ -1,4 +1,4 @@
-name: Auth Server Tests
+name: SSO Platform Tests
 
 on:
   workflow_dispatch:
@@ -7,18 +7,22 @@ on:
       - main
       - feat/**
     paths:
-      - 'auth-server/**'
+      - 'sso-platform/**'
       - '.github/workflows/test-auth.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'auth-server/**'
+      - 'sso-platform/**'
       - '.github/workflows/test-auth.yml'
+
+defaults:
+  run:
+    working-directory: sso-platform
 
 jobs:
   test:
-    name: Run Auth Server Tests
+    name: Run SSO Platform Tests
     runs-on: ubuntu-latest
 
     # PostgreSQL service for database tests
@@ -51,7 +55,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          cache-dependency-path: "sso-platform/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -205,13 +209,17 @@ jobs:
         with:
           name: test-results
           path: |
-            test-results.json
-            tests/**/*.log
+            sso-platform/test-results.json
+            sso-platform/tests/**/*.log
           retention-days: 7
+          if-no-files-found: ignore
 
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sso-platform
 
     steps:
       - name: Checkout code
@@ -227,7 +235,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          cache-dependency-path: "sso-platform/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
