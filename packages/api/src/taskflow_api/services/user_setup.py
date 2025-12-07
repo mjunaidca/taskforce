@@ -114,5 +114,8 @@ async def ensure_user_setup(session: AsyncSession, user: CurrentUser) -> Worker:
     Returns the user's Worker record.
     """
     worker = await get_or_create_worker(session, user)
+    # Refresh worker to ensure it's attached to the current session
+    # This is needed because get_or_create_worker may have committed
+    await session.refresh(worker)
     await ensure_default_project(session, user, worker)
     return worker
