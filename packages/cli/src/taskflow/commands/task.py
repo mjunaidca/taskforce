@@ -112,9 +112,7 @@ def add_task(
     if created_by is None:
         creator = get_current_user(storage)
         if creator is None:
-            console.print(
-                "[red]Error: No current user set. Run 'taskflow worker add' first.[/red]"
-            )
+            console.print("[red]Error: No current user set. Run 'taskflow worker add' first.[/red]")
             raise typer.Exit(1)
     else:
         creator = created_by
@@ -257,9 +255,7 @@ def add_subtask(
     if created_by is None:
         creator = get_current_user(storage)
         if creator is None:
-            console.print(
-                "[red]Error: No current user set. Run 'taskflow worker add' first.[/red]"
-            )
+            console.print("[red]Error: No current user set. Run 'taskflow worker add' first.[/red]")
             raise typer.Exit(1)
     else:
         creator = created_by

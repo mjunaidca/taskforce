@@ -91,5 +91,5 @@ def init(
     console.print(f"  Default user: [cyan]{user_id}[/cyan]")
     console.print()
     console.print("[dim]Quick start:[/dim]")
-    console.print("  taskflow add \"My first task\"")
+    console.print('  taskflow add "My first task"')
     console.print("  taskflow list")
