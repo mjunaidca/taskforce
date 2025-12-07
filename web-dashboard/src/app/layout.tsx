@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* ChatKit Web Component - must load before React components */}
+        <Script
+          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
       </body>

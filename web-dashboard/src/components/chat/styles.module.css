@@ -1,0 +1,427 @@
+/* ChatKit Floating Widget Styles - TaskFlow IFK Theme */
+
+.chatButtonContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.chatButton {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  border: 2px solid hsl(var(--primary) / 0.3);
+  box-shadow:
+    0 4px 12px hsl(var(--primary) / 0.3),
+    0 0 20px hsl(var(--primary) / 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--primary-foreground));
+  transition: all 0.3s ease;
+}
+
+.settingsButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: hsl(var(--primary) / 0.1);
+  border: 1px solid hsl(var(--primary) / 0.3);
+  box-shadow:
+    0 2px 8px hsl(var(--background) / 0.1),
+    0 0 0 1px hsl(var(--primary) / 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--primary) / 0.9);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.settingsButton:hover {
+  background: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary) / 0.5);
+  transform: scale(1.1);
+  color: hsl(var(--primary));
+}
+
+.settingsButton:active {
+  transform: scale(0.95);
+}
+
+.chatButton svg {
+  stroke: hsl(var(--primary-foreground));
+  filter: drop-shadow(0 0 2px hsl(var(--primary-foreground) / 0.5));
+}
+
+.chatButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px hsl(var(--background) / 0.4);
+}
+
+.chatButton:active {
+  transform: scale(0.95);
+}
+
+/* ChatKit Container */
+.chatKitContainer {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 400px;
+  height: 600px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 120px);
+  z-index: 2000;
+  box-shadow: 0 8px 32px hsl(var(--background) / 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  animation: slideUp 0.3s ease-out;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chatKitContainer::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.chatKit {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chatKit::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbars in ChatKit */
+.chatKitContainer :global(*) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chatKitContainer :global(*)::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scroll indicators */
+.chatKitContainer :global([class*="scroll" i]),
+.chatKitContainer :global([class*="Scroll"]),
+.chatKitContainer :global([id*="scroll" i]),
+.chatKitContainer :global([id*="Scroll"]),
+.chatKitContainer :global([data-scroll]),
+.chatKitContainer :global([aria-label*="scroll" i]),
+.chatKitContainer :global([aria-label*="Scroll" i]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide progress indicators */
+.chatKitContainer :global([class*="progress" i]),
+.chatKitContainer :global([class*="Progress"]),
+.chatKitContainer :global([role="progressbar"]),
+.chatKitContainer :global([role="status"]) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Ask Button for Selected Text */
+.askButton {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: hsl(var(--primary) / 0.95);
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(var(--primary-foreground) / 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow:
+    0 2px 8px hsl(var(--background) / 0.15),
+    0 0 0 1px hsl(var(--primary) / 0.1);
+  z-index: 1999;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+  animation: slideDown 0.2s ease-out;
+  backdrop-filter: blur(8px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.askButton:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow:
+    0 4px 12px hsl(var(--primary) / 0.3),
+    0 0 0 1px hsl(var(--primary) / 0.2);
+  background: hsl(var(--primary));
+}
+
+.askButton:active {
+  transform: translateX(-50%) translateY(0);
+}
+
+.askButton svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+/* Login Prompt Overlay */
+.loginPrompt {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 400px;
+  max-width: calc(100vw - 48px);
+  z-index: 2000;
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--primary) / 0.3);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px hsl(var(--background) / 0.3),
+    0 0 20px hsl(var(--primary) / 0.2);
+  animation: slideUp 0.3s ease-out;
+}
+
+.loginPromptContent {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.loginPromptContent h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.loginPromptContent p {
+  margin: 0;
+  font-size: 1rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.6;
+}
+
+.loginButton {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.3);
+}
+
+.loginButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px hsl(var(--primary) / 0.4);
+}
+
+.loginButton:active {
+  transform: translateY(0);
+}
+
+.closeButton {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+/* Personalize Menu */
+.personalizeMenu {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 280px;
+  max-width: calc(100vw - 48px);
+  z-index: 2001;
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--primary) / 0.3);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px hsl(var(--background) / 0.3),
+    0 0 20px hsl(var(--primary) / 0.2);
+  animation: slideUp 0.2s ease-out;
+  overflow: hidden;
+}
+
+.personalizeMenuHeader {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.personalizeMenuHeader h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.closeMenuButton {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.closeMenuButton:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.personalizeMenuContent {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.personalizeMenuContent p {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.personalizeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.personalizeButton:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--primary) / 0.3);
+  transform: translateX(2px);
+}
+
+.personalizeButton svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .chatButtonContainer {
+    bottom: 16px;
+    right: 16px;
+    gap: 10px;
+  }
+
+  .chatButton {
+    width: 48px;
+    height: 48px;
+  }
+
+  .settingsButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .chatKitContainer {
+    bottom: 80px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    height: calc(100vh - 100px);
+    max-width: none;
+    max-height: none;
+  }
+
+  .askButton {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .loginPrompt {
+    bottom: 80px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+
+  .personalizeMenu {
+    bottom: 80px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
