@@ -93,31 +93,31 @@ export const TRUSTED_CLIENTS = [
     disabled: false,
     skipConsent: true,
     metadata: {},
-  },
-  {
-    clientId: "ai-native-public-client",
-    name: "AI Native Platform",
-    type: "public" as const,
-    redirectUrls: getRedirectUrls([
-      "http://localhost:3000/auth/callback",
-      "https://ai-native.taskflow.org/auth/callback",
-    ]),
-    disabled: false,
-    skipConsent: true,
-    metadata: {},
-  },
-  {
-    clientId: "assessment-public-client",
-    name: "Taskflow Assessment Platform",
-    type: "public" as const,
-    redirectUrls: getRedirectUrls([
-      "http://localhost:3000/api/auth/callback",
-      "https://assessment.taskflow.org/api/auth/callback",
-    ]),
-    disabled: false,
-    skipConsent: true,
-    metadata: {},
-  },
+  }
+  // {
+  //   clientId: "ai-native-public-client",
+  //   name: "AI Native Platform",
+  //   type: "public" as const,
+  //   redirectUrls: getRedirectUrls([
+  //     "http://localhost:3000/auth/callback",
+  //     "https://ai-native.taskflow.org/auth/callback",
+  //   ]),
+  //   disabled: false,
+  //   skipConsent: true,
+  //   metadata: {},
+  // }
+  // {
+  //   clientId: "assessment-public-client",
+  //   name: "Taskflow Assessment Platform",
+  //   type: "public" as const,
+  //   redirectUrls: getRedirectUrls([
+  //     "http://localhost:3000/api/auth/callback",
+  //     "https://assessment.taskflow.org/api/auth/callback",
+  //   ]),
+  //   disabled: false,
+  //   skipConsent: true,
+  //   metadata: {},
+  // },
 ];
 
 /**
