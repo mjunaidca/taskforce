@@ -68,14 +68,19 @@ def interactive() -> None:
     # Set up history file in .taskflow directory
     try:
         storage = get_storage()
-        history_file = storage.taskflow_dir / "history.txt"
+        taskflow_dir = storage.taskflow_dir
     except Exception:
         # Fallback if storage not initialized - use current directory
         from taskflow.config import get_taskflow_dir
 
         taskflow_dir = get_taskflow_dir()
-        taskflow_dir.mkdir(exist_ok=True)
-        history_file = taskflow_dir / "history.txt"
+
+    # Ensure directory exists and create history file path
+    taskflow_dir.mkdir(parents=True, exist_ok=True)
+    history_file = taskflow_dir / "history.txt"
+
+    # Touch the history file to ensure it exists
+    history_file.touch(exist_ok=True)
 
     # Create session with history
     session: PromptSession = PromptSession(history=FileHistory(str(history_file)))
