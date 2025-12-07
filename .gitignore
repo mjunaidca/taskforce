@@ -52,3 +52,8 @@ feedback/
 
 audit_only/
 robolearn-interface/
+
+.env
+.env.local
+
+cookies.txt
