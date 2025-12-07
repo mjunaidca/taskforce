@@ -137,12 +137,13 @@ async def list_tasks(
 ) -> list[TaskListItem]:
     """List tasks in a project with optional filters."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
 
     # Check project exists and user is member
     project = await session.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    await check_project_membership(session, project_id, worker.id)
+    await check_project_membership(session, project_id, worker_id)
 
     # Build query
     stmt = select(Task).where(Task.project_id == project_id)
@@ -193,17 +194,21 @@ async def create_task(
 ) -> TaskRead:
     """Create a new task in a project."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     # Check project exists and user is member
     project = await session.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    await check_project_membership(session, project_id, worker.id)
+    await check_project_membership(session, project_id, worker_id)
 
     # Validate assignee if provided
     assignee = None
+    assignee_handle = None
     if data.assignee_id:
         assignee = await check_assignee_is_member(session, project_id, data.assignee_id)
+        assignee_handle = assignee.handle
 
     # Validate parent if provided
     if data.parent_task_id:
@@ -219,19 +224,19 @@ async def create_task(
         tags=data.tags,
         due_date=data.due_date,
         project_id=project_id,
-        created_by_id=worker.id,
+        created_by_id=worker_id,
     )
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
+    await session.flush()  # Get task.id without committing
 
-    # Audit log
+    # Audit log (doesn't commit)
     await log_action(
         session,
         entity_type="task",
         entity_id=task.id,
         action="created",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={
             "title": task.title,
             "priority": task.priority,
@@ -239,7 +244,30 @@ async def create_task(
         },
     )
 
-    return task_to_read(task, assignee)
+    # Single commit
+    await session.commit()
+    await session.refresh(task)
+
+    return TaskRead(
+        id=task.id,
+        title=task.title,
+        description=task.description,
+        status=task.status,
+        priority=task.priority,
+        progress_percent=task.progress_percent,
+        tags=task.tags,
+        due_date=task.due_date,
+        project_id=task.project_id,
+        assignee_id=task.assignee_id,
+        assignee_handle=assignee_handle,
+        parent_task_id=task.parent_task_id,
+        created_by_id=task.created_by_id,
+        started_at=task.started_at,
+        completed_at=task.completed_at,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        subtasks=[],
+    )
 
 
 # Task-specific endpoints (not project-scoped)
@@ -253,13 +281,14 @@ async def get_task(
 ) -> TaskRead:
     """Get task details including subtasks."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Check membership
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     # Get assignee
     assignee = None
@@ -283,12 +312,14 @@ async def update_task(
 ) -> TaskRead:
     """Update task details."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     # Track changes
     changes = {}
@@ -314,17 +345,19 @@ async def update_task(
     if changes:
         task.updated_at = datetime.utcnow()
         session.add(task)
-        await session.commit()
-        await session.refresh(task)
 
         await log_action(
             session,
             entity_type="task",
-            entity_id=task.id,
+            entity_id=task_id,
             action="updated",
-            actor_id=worker.id,
+            actor_id=worker_id,
+            actor_type=worker_type,
             details=changes,
         )
+
+        await session.commit()
+        await session.refresh(task)
 
     assignee = None
     if task.assignee_id:
@@ -341,12 +374,18 @@ async def delete_task(
 ) -> dict:
     """Delete a task."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
+
+    # Extract values before deletion
+    task_title = task.title
+    task_status = task.status
 
     # Check for subtasks
     stmt = select(Task).where(Task.parent_task_id == task_id)
@@ -358,10 +397,11 @@ async def delete_task(
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="deleted",
-        actor_id=worker.id,
-        details={"title": task.title, "status": task.status},
+        actor_id=worker_id,
+        actor_type=worker_type,
+        details={"title": task_title, "status": task_status},
     )
 
     await session.delete(task)
@@ -382,12 +422,14 @@ async def update_status(
 ) -> TaskRead:
     """Change task status with transition validation."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     # Validate transition
     if not validate_status_transition(task.status, data.status):
@@ -410,17 +452,19 @@ async def update_status(
         task.progress_percent = 100
 
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
 
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="status_changed",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={"before": old_status, "after": data.status},
     )
+
+    await session.commit()
+    await session.refresh(task)
 
     assignee = None
     if task.assignee_id:
@@ -438,12 +482,14 @@ async def update_progress(
 ) -> TaskRead:
     """Update task progress percentage."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     if task.status != "in_progress":
         raise HTTPException(
@@ -455,17 +501,19 @@ async def update_progress(
     task.updated_at = datetime.utcnow()
 
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
 
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="progress_updated",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={"before": old_progress, "after": data.percent, "note": data.note},
     )
+
+    await session.commit()
+    await session.refresh(task)
 
     assignee = None
     if task.assignee_id:
@@ -483,38 +531,62 @@ async def assign_task(
 ) -> TaskRead:
     """Assign task to a project member."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     # Validate assignee
     assignee = await check_assignee_is_member(session, task.project_id, data.assignee_id)
+    assignee_handle = assignee.handle
 
     old_assignee_id = task.assignee_id
     task.assignee_id = data.assignee_id
     task.updated_at = datetime.utcnow()
 
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
 
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="assigned",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={
             "before": old_assignee_id,
             "after": data.assignee_id,
-            "assignee_handle": assignee.handle,
+            "assignee_handle": assignee_handle,
         },
     )
 
-    return task_to_read(task, assignee)
+    await session.commit()
+    await session.refresh(task)
+
+    return TaskRead(
+        id=task.id,
+        title=task.title,
+        description=task.description,
+        status=task.status,
+        priority=task.priority,
+        progress_percent=task.progress_percent,
+        tags=task.tags,
+        due_date=task.due_date,
+        project_id=task.project_id,
+        assignee_id=task.assignee_id,
+        assignee_handle=assignee_handle,
+        parent_task_id=task.parent_task_id,
+        created_by_id=task.created_by_id,
+        started_at=task.started_at,
+        completed_at=task.completed_at,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        subtasks=[],
+    )
 
 
 @router.post("/api/tasks/{task_id}/subtasks", response_model=TaskRead, status_code=201)
@@ -526,17 +598,24 @@ async def create_subtask(
 ) -> TaskRead:
     """Create a subtask under a parent task."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     parent = await session.get(Task, task_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Parent task not found")
 
-    await check_project_membership(session, parent.project_id, worker.id)
+    await check_project_membership(session, parent.project_id, worker_id)
+
+    # Get parent's project_id before any modifications
+    parent_project_id = parent.project_id
 
     # Validate assignee if provided
     assignee = None
+    assignee_handle = None
     if data.assignee_id:
-        assignee = await check_assignee_is_member(session, parent.project_id, data.assignee_id)
+        assignee = await check_assignee_is_member(session, parent_project_id, data.assignee_id)
+        assignee_handle = assignee.handle
 
     # Create subtask
     subtask = Task(
@@ -547,19 +626,19 @@ async def create_subtask(
         parent_task_id=task_id,
         tags=data.tags,
         due_date=data.due_date,
-        project_id=parent.project_id,
-        created_by_id=worker.id,
+        project_id=parent_project_id,
+        created_by_id=worker_id,
     )
     session.add(subtask)
-    await session.commit()
-    await session.refresh(subtask)
+    await session.flush()
 
     await log_action(
         session,
         entity_type="task",
         entity_id=subtask.id,
         action="created",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={
             "title": subtask.title,
             "parent_task_id": task_id,
@@ -567,7 +646,29 @@ async def create_subtask(
         },
     )
 
-    return task_to_read(subtask, assignee)
+    await session.commit()
+    await session.refresh(subtask)
+
+    return TaskRead(
+        id=subtask.id,
+        title=subtask.title,
+        description=subtask.description,
+        status=subtask.status,
+        priority=subtask.priority,
+        progress_percent=subtask.progress_percent,
+        tags=subtask.tags,
+        due_date=subtask.due_date,
+        project_id=subtask.project_id,
+        assignee_id=subtask.assignee_id,
+        assignee_handle=assignee_handle,
+        parent_task_id=subtask.parent_task_id,
+        created_by_id=subtask.created_by_id,
+        started_at=subtask.started_at,
+        completed_at=subtask.completed_at,
+        created_at=subtask.created_at,
+        updated_at=subtask.updated_at,
+        subtasks=[],
+    )
 
 
 @router.post("/api/tasks/{task_id}/approve", response_model=TaskRead)
@@ -578,12 +679,14 @@ async def approve_task(
 ) -> TaskRead:
     """Approve a task in review status."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     if task.status != "review":
         raise HTTPException(status_code=400, detail="Can only approve tasks in 'review' status")
@@ -594,17 +697,19 @@ async def approve_task(
     task.updated_at = datetime.utcnow()
 
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
 
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="approved",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={"from_status": "review", "to_status": "completed"},
     )
+
+    await session.commit()
+    await session.refresh(task)
 
     assignee = None
     if task.assignee_id:
@@ -622,12 +727,14 @@ async def reject_task(
 ) -> TaskRead:
     """Reject a task in review status, returning it to in_progress."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    await check_project_membership(session, task.project_id, worker.id)
+    await check_project_membership(session, task.project_id, worker_id)
 
     if task.status != "review":
         raise HTTPException(status_code=400, detail="Can only reject tasks in 'review' status")
@@ -636,17 +743,19 @@ async def reject_task(
     task.updated_at = datetime.utcnow()
 
     session.add(task)
-    await session.commit()
-    await session.refresh(task)
 
     await log_action(
         session,
         entity_type="task",
-        entity_id=task.id,
+        entity_id=task_id,
         action="rejected",
-        actor_id=worker.id,
+        actor_id=worker_id,
+        actor_type=worker_type,
         details={"reason": data.reason, "from_status": "review", "to_status": "in_progress"},
     )
+
+    await session.commit()
+    await session.refresh(task)
 
     assignee = None
     if task.assignee_id:

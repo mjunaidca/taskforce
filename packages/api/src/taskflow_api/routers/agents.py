@@ -23,7 +23,6 @@ async def list_agents(
     offset: int = Query(default=0, ge=0),
 ) -> list[WorkerRead]:
     """List all global agents."""
-    # Ensure user is set up
     await ensure_user_setup(session, user)
 
     stmt = (
@@ -58,6 +57,9 @@ async def create_agent(
 ) -> WorkerRead:
     """Register a global agent."""
     current_worker = await ensure_user_setup(session, user)
+    # Extract primitive values before any commits
+    current_worker_id = current_worker.id
+    current_worker_type = current_worker.type
 
     # Check handle uniqueness
     stmt = select(Worker).where(Worker.handle == data.handle)
@@ -74,22 +76,26 @@ async def create_agent(
         capabilities=data.capabilities,
     )
     session.add(agent)
-    await session.commit()
-    await session.refresh(agent)
+    await session.flush()  # Get agent.id without committing
 
-    # Audit log
+    # Audit log (doesn't commit)
     await log_action(
         session,
         entity_type="worker",
         entity_id=agent.id,
         action="created",
-        actor_id=current_worker.id,
+        actor_id=current_worker_id,
+        actor_type=current_worker_type,
         details={
-            "handle": agent.handle,
-            "agent_type": agent.agent_type,
-            "capabilities": agent.capabilities,
+            "handle": data.handle,
+            "agent_type": data.agent_type,
+            "capabilities": data.capabilities,
         },
     )
+
+    # Single commit for all changes
+    await session.commit()
+    await session.refresh(agent)
 
     return WorkerRead(
         id=agent.id,
@@ -137,6 +143,8 @@ async def update_agent(
 ) -> WorkerRead:
     """Update agent details."""
     current_worker = await ensure_user_setup(session, user)
+    current_worker_id = current_worker.id
+    current_worker_type = current_worker.type
 
     agent = await session.get(Worker, agent_id)
     if not agent:
@@ -158,18 +166,20 @@ async def update_agent(
 
     if changes:
         session.add(agent)
-        await session.commit()
-        await session.refresh(agent)
 
         # Audit log
         await log_action(
             session,
             entity_type="worker",
-            entity_id=agent.id,
+            entity_id=agent_id,
             action="updated",
-            actor_id=current_worker.id,
+            actor_id=current_worker_id,
+            actor_type=current_worker_type,
             details=changes,
         )
+
+        await session.commit()
+        await session.refresh(agent)
 
     return WorkerRead(
         id=agent.id,
@@ -190,12 +200,18 @@ async def delete_agent(
 ) -> dict:
     """Delete an agent."""
     current_worker = await ensure_user_setup(session, user)
+    current_worker_id = current_worker.id
+    current_worker_type = current_worker.type
 
     agent = await session.get(Worker, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     if agent.type != "agent":
         raise HTTPException(status_code=404, detail="Not an agent")
+
+    # Extract values before deletion
+    agent_handle = agent.handle
+    agent_type_val = agent.agent_type
 
     # Check if agent is member of any project
     stmt = select(ProjectMember).where(ProjectMember.worker_id == agent_id)
@@ -210,10 +226,11 @@ async def delete_agent(
     await log_action(
         session,
         entity_type="worker",
-        entity_id=agent.id,
+        entity_id=agent_id,
         action="deleted",
-        actor_id=current_worker.id,
-        details={"handle": agent.handle, "agent_type": agent.agent_type},
+        actor_id=current_worker_id,
+        actor_type=current_worker_type,
+        details={"handle": agent_handle, "agent_type": agent_type_val},
     )
 
     await session.delete(agent)

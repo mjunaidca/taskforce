@@ -6,7 +6,6 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..models.audit import AuditLog
-from ..models.worker import Worker
 
 
 async def log_action(
@@ -16,9 +15,13 @@ async def log_action(
     entity_id: int,
     action: str,
     actor_id: int,
+    actor_type: str = "human",
     details: dict[str, Any] | None = None,
 ) -> AuditLog:
     """Create an immutable audit log entry.
+
+    Note: This does NOT commit - caller must commit the transaction.
+    This allows the audit log to be part of the same transaction as the action.
 
     Args:
         session: Database session
@@ -26,15 +29,12 @@ async def log_action(
         entity_id: ID of the affected entity
         action: Action performed (created, updated, started, etc.)
         actor_id: Worker ID who performed the action
+        actor_type: Type of actor ("human" or "agent")
         details: Additional context (before/after values, notes)
 
     Returns:
-        Created AuditLog entry
+        Created AuditLog entry (not yet committed)
     """
-    # Get actor type from worker
-    worker = await session.get(Worker, actor_id)
-    actor_type = worker.type if worker else "human"
-
     log = AuditLog(
         entity_type=entity_type,
         entity_id=entity_id,
@@ -44,8 +44,6 @@ async def log_action(
         details=details or {},
     )
     session.add(log)
-    await session.commit()
-    await session.refresh(log)
     return log
 
 

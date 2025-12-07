@@ -23,6 +23,7 @@ async def list_members(
 ) -> list[MemberRead]:
     """List all members of a project (humans + agents)."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
 
     # Check project exists
     project = await session.get(Project, project_id)
@@ -32,7 +33,7 @@ async def list_members(
     # Check user is member
     stmt = select(ProjectMember).where(
         ProjectMember.project_id == project_id,
-        ProjectMember.worker_id == worker.id,
+        ProjectMember.worker_id == worker_id,
     )
     result = await session.exec(stmt)
     if not result.first():
@@ -73,6 +74,8 @@ async def add_member(
     - agent_id: Existing agent worker ID (links to project)
     """
     current_worker = await ensure_user_setup(session, user)
+    current_worker_id = current_worker.id
+    current_worker_type = current_worker.type
 
     # Validate input
     if not data.user_id and not data.agent_id:
@@ -90,6 +93,7 @@ async def add_member(
         raise HTTPException(status_code=403, detail="Only project owner can add members")
 
     member_worker: Worker | None = None
+    member_worker_id: int | None = None
 
     if data.agent_id:
         # Link existing agent
@@ -98,6 +102,7 @@ async def add_member(
             raise HTTPException(status_code=404, detail="Agent not found")
         if member_worker.type != "agent":
             raise HTTPException(status_code=400, detail="Worker is not an agent")
+        member_worker_id = member_worker.id
 
     elif data.user_id:
         # Get or create worker for SSO user
@@ -105,7 +110,9 @@ async def add_member(
         result = await session.exec(stmt)
         member_worker = result.first()
 
-        if not member_worker:
+        if member_worker:
+            member_worker_id = member_worker.id
+        else:
             # Create worker for new user
             # We don't have their email/name, so use user_id
             handle = f"@user-{data.user_id[:8].lower()}"
@@ -128,16 +135,13 @@ async def add_member(
                 user_id=data.user_id,
             )
             session.add(member_worker)
-            await session.commit()
-            await session.refresh(member_worker)
-
-    # Refresh member_worker to ensure it's attached to session after any commits
-    await session.refresh(member_worker)
+            await session.flush()  # Get ID without committing
+            member_worker_id = member_worker.id
 
     # Check not already a member
     stmt = select(ProjectMember).where(
         ProjectMember.project_id == project_id,
-        ProjectMember.worker_id == member_worker.id,
+        ProjectMember.worker_id == member_worker_id,
     )
     result = await session.exec(stmt)
     if result.first():
@@ -146,33 +150,41 @@ async def add_member(
     # Add membership
     membership = ProjectMember(
         project_id=project_id,
-        worker_id=member_worker.id,
+        worker_id=member_worker_id,
         role="member",
     )
     session.add(membership)
-    await session.commit()
-    await session.refresh(membership)
 
-    # Audit log
+    # Get member details for response before commit
+    member_handle = member_worker.handle
+    member_name = member_worker.name
+    member_type = member_worker.type
+
+    # Audit log (doesn't commit)
     await log_action(
         session,
         entity_type="project",
         entity_id=project_id,
         action="member_added",
-        actor_id=current_worker.id,
+        actor_id=current_worker_id,
+        actor_type=current_worker_type,
         details={
-            "worker_id": member_worker.id,
-            "handle": member_worker.handle,
-            "type": member_worker.type,
+            "worker_id": member_worker_id,
+            "handle": member_handle,
+            "type": member_type,
         },
     )
 
+    # Single commit
+    await session.commit()
+    await session.refresh(membership)
+
     return MemberRead(
         id=membership.id,
-        worker_id=member_worker.id,
-        handle=member_worker.handle,
-        name=member_worker.name,
-        type=member_worker.type,
+        worker_id=member_worker_id,
+        handle=member_handle,
+        name=member_name,
+        type=member_type,
         role=membership.role,
         joined_at=membership.joined_at,
     )
@@ -187,6 +199,8 @@ async def remove_member(
 ) -> dict:
     """Remove a member from a project."""
     current_worker = await ensure_user_setup(session, user)
+    current_worker_id = current_worker.id
+    current_worker_type = current_worker.type
 
     # Check project exists
     project = await session.get(Project, project_id)
@@ -206,24 +220,27 @@ async def remove_member(
     if membership.role == "owner":
         raise HTTPException(status_code=400, detail="Cannot remove project owner")
 
-    # Get worker for audit
-    member_worker = await session.get(Worker, membership.worker_id)
+    # Get worker info for audit before deletion
+    removed_worker_id = membership.worker_id
+    member_worker = await session.get(Worker, removed_worker_id)
+    member_handle = member_worker.handle if member_worker else None
 
-    # Remove membership
-    await session.delete(membership)
-    await session.commit()
-
-    # Audit log
+    # Audit log before deletion
     await log_action(
         session,
         entity_type="project",
         entity_id=project_id,
         action="member_removed",
-        actor_id=current_worker.id,
+        actor_id=current_worker_id,
+        actor_type=current_worker_type,
         details={
-            "worker_id": member_worker.id if member_worker else None,
-            "handle": member_worker.handle if member_worker else None,
+            "worker_id": removed_worker_id,
+            "handle": member_handle,
         },
     )
+
+    # Remove membership
+    await session.delete(membership)
+    await session.commit()
 
     return {"ok": True}
