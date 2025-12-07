@@ -38,13 +38,11 @@ class TaskCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     due_date: datetime | None = None
 
-    @field_validator("due_date", mode="before")
+    @field_validator("due_date", mode="after")
     @classmethod
     def normalize_due_date(cls, v: datetime | None) -> datetime | None:
         """Strip timezone from due_date for database compatibility."""
-        if isinstance(v, datetime):
-            return strip_timezone(v)
-        return v
+        return strip_timezone(v)
 
 
 class TaskUpdate(BaseModel):
@@ -56,13 +54,11 @@ class TaskUpdate(BaseModel):
     tags: list[str] | None = None
     due_date: datetime | None = None
 
-    @field_validator("due_date", mode="before")
+    @field_validator("due_date", mode="after")
     @classmethod
     def normalize_due_date(cls, v: datetime | None) -> datetime | None:
         """Strip timezone from due_date for database compatibility."""
-        if isinstance(v, datetime):
-            return strip_timezone(v)
-        return v
+        return strip_timezone(v)
 
 
 class StatusUpdate(BaseModel):
