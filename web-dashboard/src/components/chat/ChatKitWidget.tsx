@@ -22,6 +22,7 @@ import styles from "./styles.module.css";
 
 const isBrowser = typeof window !== "undefined";
 
+
 interface ChatKitWidgetProps {
   backendUrl?: string;
   domainKey?: string;
@@ -53,11 +54,9 @@ export function ChatKitWidget({
   const pathname = usePathname();
   const params = useParams();
 
-  // Get backend URL from props or environment
-  const effectiveBackendUrl =
-    backendUrl ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8000";
+  // Use dedicated ChatKit proxy endpoint - handles auth via httpOnly cookies
+  // The proxy at /api/chatkit will forward to the backend /chatkit with Authorization header
+  const chatkitProxyUrl = "/api/chatkit";
 
   // Domain key for ChatKit (required for whitelabeled domains)
   const effectiveDomainKey =
@@ -166,21 +165,27 @@ export function ChatKitWidget({
     };
   }, []);
 
-  // ChatKit configuration
+  // ChatKit configuration - routes through /api/chatkit which adds Authorization header
   const { control, sendUserMessage } = useChatKit({
     api: {
-      url: `${effectiveBackendUrl}/chatkit`,
+      url: chatkitProxyUrl,
       domainKey: effectiveDomainKey,
 
-      // Custom fetch to inject authentication and context
+      // Custom fetch to inject context (auth handled by proxy via httpOnly cookies)
       fetch: async (input: RequestInfo | URL, options?: RequestInit) => {
         const url = typeof input === "string" ? input : input.toString();
+        console.log("[ChatKit] Fetch request to:", url);
+        console.log("[ChatKit] Request method:", options?.method || "GET");
+
         if (!isAuthenticated) {
+          console.error("[ChatKit] User not authenticated");
           throw new Error("User must be logged in to use chat");
         }
 
         const userId = user!.sub;
         const pageContext = getPageContext();
+        console.log("[ChatKit] User ID:", userId);
+        console.log("[ChatKit] Page context:", pageContext?.path);
 
         const userInfo = {
           id: user!.sub,
@@ -214,8 +219,19 @@ export function ChatKitWidget({
           }
         }
 
-        return fetch(url, {
+        // Log request body for debugging
+        if (modifiedOptions.body) {
+          try {
+            const bodyPreview = JSON.parse(modifiedOptions.body as string);
+            console.log("[ChatKit] Request type:", bodyPreview.type);
+          } catch {
+            console.log("[ChatKit] Request body (non-JSON)");
+          }
+        }
+
+        const response = await fetch(url, {
           ...modifiedOptions,
+          credentials: "include", // Include cookies for proxy auth
           headers: {
             ...modifiedOptions.headers,
             "X-User-ID": userId,
@@ -226,6 +242,23 @@ export function ChatKitWidget({
             "Content-Type": "application/json",
           },
         });
+
+        console.log("[ChatKit] Response status:", response.status);
+        console.log("[ChatKit] Response ok:", response.ok);
+
+        if (!response.ok) {
+          // Try to get error details from response
+          const contentType = response.headers.get("content-type");
+          console.error("[ChatKit] Response failed, content-type:", contentType);
+          try {
+            const errorText = await response.clone().text();
+            console.error("[ChatKit] Error response body:", errorText.substring(0, 500));
+          } catch {
+            console.error("[ChatKit] Could not read error response body");
+          }
+        }
+
+        return response;
       },
     },
     theme: {
@@ -255,7 +288,10 @@ export function ChatKitWidget({
       placeholder: "Ask about your tasks...",
     },
     onError: ({ error }) => {
-      console.error("ChatKit error:", error);
+      console.error("[ChatKit] Error received:", error);
+      console.error("[ChatKit] Error name:", error?.name);
+      console.error("[ChatKit] Error message:", error?.message);
+      console.error("[ChatKit] Full error object:", JSON.stringify(error, null, 2));
     },
   });
 
