@@ -89,7 +89,7 @@ uv add <package>                 # Add dependency
 # Running
 uv run taskflow --help           # CLI
 uv run uvicorn main:app --reload # FastAPI server
-uv run python -m mcp_server      # MCP server
+cd packages/mcp-server && uv run python -m taskflow_mcp.server  # MCP server
 
 # Testing
 uv run pytest                    # All tests
@@ -215,12 +215,14 @@ Agents can autonomously decompose work into subtasks. Progress rolls up from sub
 
 | Human Action | CLI Command | MCP Tool |
 |--------------|-------------|----------|
-| Create task | `taskflow add "title"` | `add_task(title)` |
-| Start work | `taskflow start 1` | `claim_task(1)` |
-| Update progress | `taskflow progress 1 --percent 50` | `update_progress(1, 50)` |
-| Complete | `taskflow complete 1` | `complete_task(1)` |
-| Request review | `taskflow review 1` | `request_review(1)` |
-| Add subtask | `taskflow add "sub" --parent 1` | `add_subtask(1, "sub")` |
+| Create task | `taskflow add "title"` | `taskflow_add_task` |
+| List tasks | `taskflow list` | `taskflow_list_tasks` |
+| Start work | `taskflow start 1` | `taskflow_start_task` |
+| Update progress | `taskflow progress 1 --percent 50` | `taskflow_update_progress` |
+| Complete | `taskflow complete 1` | `taskflow_complete_task` |
+| Request review | `taskflow review 1` | `taskflow_request_review` |
+| Assign task | `taskflow assign 1 --to @agent` | `taskflow_assign_task` |
+| List projects | `taskflow projects` | `taskflow_list_projects` |
 
 ---
 

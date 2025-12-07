@@ -227,6 +227,14 @@ Load these resources as needed during development:
   - Complete working examples
   - Quality checklist
 
+### TaskFlow Patterns (Load for Internal/Stateless Servers)
+- [🔧 TaskFlow Patterns](./reference/taskflow_patterns.md) - Patterns for internal MCP servers:
+  - Stateless HTTP transport setup
+  - Three-mode authentication (dev, production, service token)
+  - API client with auth forwarding
+  - Common issues and fixes (session timeout, auth errors)
+  - Package structure for REST API wrappers
+
 ### Evaluation Guide (Load During Phase 4)
 - [✅ Evaluation Guide](./reference/evaluation.md) - Complete evaluation creation guide with:
   - Question creation guidelines
