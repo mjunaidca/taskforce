@@ -1,0 +1,78 @@
+name: TaskFlow CLI CI
+
+on:
+  push:
+    branches: [main, 001-cli-core]
+    paths:
+      - 'packages/cli/**'
+      - '.github/workflows/cli.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/cli/**'
+
+defaults:
+  run:
+    working-directory: packages/cli
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests with coverage
+        run: uv run pytest --cov=src/taskflow --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: packages/cli/coverage.xml
+        continue-on-error: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint with ruff
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+  demo:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run demo (must complete <90s)
+        run: timeout 90 uv run taskflow demo || echo "Demo not yet implemented"

@@ -1,6 +1,6 @@
 # TaskFlow: Human-Agent Task Orchestration Platform
 
- Human-Agent Task Orchestration Platform where humans and AI agents collaborate as equals.
+Human-Agent Task Orchestration Platform where humans and AI agents collaborate as equals.
 
 **One-liner:** Your AI workforce — assign tasks to humans or agents, track everything, ship together.
 
