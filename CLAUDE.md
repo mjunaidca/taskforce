@@ -505,6 +505,35 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ---
 
+## X. Available Agents and Skills
+
+### Engineering Agents (`.claude/agents/engineering/`)
+
+| Agent | Purpose | Skills Used |
+|-------|---------|-------------|
+| **platform-orchestrator** | Master orchestrator for hackathon phases | spec-architect |
+| **spec-architect** | Validate and refine specifications | - |
+| **chatkit-integration-agent** | ChatKit framework integration | chatkit-integration, frontend-design |
+| **fastapi-backend-agent** | Production FastAPI backends with async PostgreSQL | fastapi-backend, sqlmodel-database |
+
+### Engineering Skills (`.claude/skills/engineering/`)
+
+| Skill | When to Use |
+|-------|-------------|
+| **fastapi-backend** | REST APIs, JWT auth, CRUD endpoints, audit logging |
+| **sqlmodel-database** | Database schemas, async sessions, relationships |
+| **better-auth-sso** | Better Auth SSO integration |
+| **chatkit-integration** | ChatKit server/client integration |
+| **nextjs-16** | Next.js 16 App Router patterns |
+| **shadcn-ui** | UI components with Tailwind |
+| **mcp-builder** | MCP server development |
+| **skill-creator** | Creating new skills |
+| **session-intelligence-harvester** | Extracting learnings into RII |
+
+**Usage**: Skills are auto-discovered. Use the Task tool with appropriate `subagent_type` for agents.
+
+---
+
 **This file defines HOW Claude AI operates on the TaskFlow codebase. The constitution (`.specify/memory/constitution.md`) defines WHAT to optimize for.**
 
 **Bold Engineer Mode: Default to action. Fix proactively. Ship fast.**

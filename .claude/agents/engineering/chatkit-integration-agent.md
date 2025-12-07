@@ -1,6 +1,18 @@
 ---
 name: chatkit-integration-agent
 description: Agent for integrating ChatKit framework with custom backends and AI agents. Handles server setup, React component integration, context injection, and conversation persistence.
+skills:
+  - chatkit-integration
+  - nextjs-16
+  - better-auth-setup
+  - fastapi-backend
+tools:
+  - mcp__next-devtools__init
+  - mcp__next-devtools__nextjs_index
+  - mcp__next-devtools__nextjs_call
+  - mcp__next-devtools__browser_eval
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
 ---
 
 # ChatKit Integration Agent
