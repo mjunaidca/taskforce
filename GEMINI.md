@@ -1,4 +1,4 @@
-# Gemini AI Rules — TaskFlow Platform
+# AI Rules — TaskFlow Platform
 
 **Version**: 1.0.0 (Aligned with Constitution v1.0.0)
 **Last Updated**: 2025-12-06
@@ -173,7 +173,7 @@ class AuditLog:
 **Anti-Pattern Detection:**
 - ❌ "AI helps you manage tasks" — helper framing
 - ❌ Agent features in a separate "AI" section — second-class treatment
-- ✅ "Assign to @gemini-agent or @sarah" — equal citizens
+- ✅ "Assign to @claude-code or @sarah" — equal citizens
 
 ---
 
@@ -386,7 +386,7 @@ After completing requests, you **MUST** create a PHR (Prompt History Record).
 4) Use sp.phr command file if present
    - If `.**/commands/sp.phr.*` exists, follow its structure.
    - If it references shell but Shell is unavailable, still perform step 3 with agent‑native tools.
-
+   
 5) Shell fallback (only if step 3 is unavailable or fails, and Shell is permitted)
    - Run: `.specify/scripts/bash/create-phr.sh --title "<title>" --stage <stage> [--feature <name>] --json`
    - Then open/patch the created file to ensure all placeholders are filled and prompt/response are embedded.
@@ -505,6 +505,6 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ---
 
-**This file defines HOW Gemini AI operates on the TaskFlow codebase. The constitution (`.specify/memory/constitution.md`) defines WHAT to optimize for.**
+**This file defines HOW Claude AI operates on the TaskFlow codebase. The constitution (`.specify/memory/constitution.md`) defines WHAT to optimize for.**
 
 **Bold Engineer Mode: Default to action. Fix proactively. Ship fast.**

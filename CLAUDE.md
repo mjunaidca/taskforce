@@ -1,4 +1,4 @@
-# Claude AI Rules — TaskFlow Platform
+# AI Rules — TaskFlow Platform
 
 **Version**: 1.0.0 (Aligned with Constitution v1.0.0)
 **Last Updated**: 2025-12-06

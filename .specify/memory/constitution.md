@@ -42,7 +42,7 @@ Follow-up TODOs:
 
 # TaskFlow Platform — Constitution
 
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Ratified:** 2025-12-06
 **Last Amended:** 2025-12-07
 **Scope:** Platform governance (CLI, Web, MCP Server, AI Agents, Human Workers)
@@ -326,6 +326,23 @@ Phase 4 (K8s):     Task events via Kafka (same audit format)
 
 ---
 
+### Formal Verification Guidance
+
+**Reference**: Daniel Jackson's *Software Abstractions: Logic, Language, and Analysis* (Revised Edition)
+
+For complex specifications (5+ interacting entities, 3+ constraint types, or safety-critical features), apply Alloy-style formal verification:
+
+| Technique | Purpose |
+|-----------|---------|
+| **Small Scope Hypothesis** | Most spec bugs found with 3-5 instances |
+| **Invariant Identification** | Properties that MUST always hold (`∀ task: Task \| some task.assignee`) |
+| **Counterexample Generation** | Find minimal cases that break the spec |
+| **Relational Constraints** | Verify no cycles, complete coverage, uniqueness |
+
+**Application**: Use the `spec-architect` agent (`.claude/agents/engineering/spec-architect.md`) for formal verification of complex specifications before planning.
+
+---
+
 ## III. Platform Quality Standards
 
 ### Code Quality
@@ -476,6 +493,7 @@ Configurable per-project:
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.3 | 2025-12-07 | Added Formal Verification Guidance (Software Abstractions reference) |
 | 1.0.2 | 2025-12-07 | Added Principle 5: Phase Continuity (data models persist across phases) |
 | 1.0.1 | 2025-12-07 | Added Python standards: PEP 8, modern typing system |
 | 1.0.0 | 2025-12-06 | Initial TaskFlow Platform constitution |

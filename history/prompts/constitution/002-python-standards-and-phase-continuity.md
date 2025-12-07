@@ -29,30 +29,36 @@ Another important point is the design system shall be carefully planned at each 
 
 ## Response snapshot
 
-Updated constitution v1.0.0 → v1.0.1 with Python standards:
+Updated constitution v1.0.0 → v1.0.3 with three additions:
 
-**Code Quality table updated:**
+**1. Python Standards (v1.0.1):**
 ```
 | **Python** | Python 3.13+, UV for package management, PEP 8 style, modern typing system (generics, `|` union, `TypedDict`, `Literal`) |
 ```
 
-**Key insight captured:** Data model designed in Phase 1 (CLI) directly embeds into Phase 2 (Web), Phase 3 (MCP), etc. This means:
-- Phase 1 data models must be production-grade from day one
+**2. Principle 5: Phase Continuity (v1.0.2):**
+- Data models in P1 → directly embed in P2, P3, P4, P5
 - No "throwaway" code — everything compounds forward
-- Pydantic models in P1 become SQLModel in P2, same schema
-- Audit trail structure defined once, used everywhere
+- Pydantic (P1) → SQLModel (P2) → same schema
+- Validation: "Will this exact structure work in Phase 5?"
+
+**3. Formal Verification Guidance (v1.0.3):**
+- Reference: Daniel Jackson's *Software Abstractions: Logic, Language, and Analysis*
+- Small Scope Hypothesis: Most bugs found with 3-5 instances
+- Invariant Identification, Counterexample Generation, Relational Constraints
+- Points to `spec-architect` agent for detailed implementation
 
 ## Outcome
 
-- ✅ Impact: Constitution v1.0.1 now mandates Python 3.13+, PEP 8, modern typing
+- ✅ Impact: Constitution v1.0.3 now includes Python standards, Phase Continuity principle, and Formal Verification guidance
 - 🧪 Tests: N/A (documentation change)
 - 📁 Files: `.specify/memory/constitution.md` updated
-- 🔁 Next prompts: Consider adding explicit "Phase Continuity Principle" to constitution
-- 🧠 Reflection: Data model decisions in P1 are architectural decisions — they persist through all phases
+- 🔁 Next prompts: None — all requested changes complete
+- 🧠 Reflection: Formal methods (Alloy-style) kept as guidance, not principle — appropriate level for TaskFlow's complexity
 
 ## Evaluation notes (flywheel)
 
 - Failure modes observed: None
 - Graders run and results (PASS/FAIL): N/A
 - Prompt variant (if applicable): N/A
-- Next experiment (smallest change to try): Add Phase Continuity as 5th Non-Negotiable Principle or as explicit guidance in constitution
+- Next experiment (smallest change to try): N/A — changes complete
