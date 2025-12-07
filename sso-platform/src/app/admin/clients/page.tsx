@@ -169,7 +169,7 @@ export default function ClientsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-taskflow-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -177,10 +177,10 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">OAuth Clients</h1>
+        <h1 className="text-2xl font-bold text-foreground">OAuth Clients</h1>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-taskflow-500 text-white rounded-lg hover:bg-taskflow-600 text-sm font-medium"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium transition-colors"
         >
           Register New Client
         </button>
@@ -188,27 +188,27 @@ export default function ClientsPage() {
 
       {/* Client Created Success Modal */}
       {createdClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto border border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               {createdClient.isPublic ? "Public" : "Confidential"} OAuth Client Created!
             </h3>
 
             {createdClient.isPublic ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-green-800 font-medium mb-1">
+              <div className="bg-success/10 border border-success/30 rounded-lg p-4 mb-4">
+                <p className="text-sm text-success font-medium mb-1">
                   Public Client (PKCE)
                 </p>
-                <p className="text-xs text-green-700">
+                <p className="text-xs text-success/80">
                   No client secret needed. Uses PKCE for security. Perfect for SPAs, mobile apps, and browser-based apps.
                 </p>
               </div>
             ) : (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-yellow-800 font-medium mb-1">
+              <div className="bg-secondary border border-secondary/30 rounded-lg p-4 mb-4">
+                <p className="text-sm text-secondary-foreground font-medium mb-1">
                   Confidential Client
                 </p>
-                <p className="text-xs text-yellow-700">
+                <p className="text-xs text-secondary-foreground/80">
                   Save the client secret securely - it will not be shown again! Use for server-side apps only.
                 </p>
               </div>
@@ -216,20 +216,20 @@ export default function ClientsPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Client ID
                 </label>
-                <code className="block w-full p-2 bg-gray-100 rounded text-sm break-all select-all">
+                <code className="block w-full p-2 bg-muted rounded text-sm break-all select-all text-foreground">
                   {createdClient.clientId}
                 </code>
               </div>
 
               {!createdClient.isPublic && createdClient.clientSecret && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Client Secret
                   </label>
-                  <code className="block w-full p-2 bg-gray-100 rounded text-sm break-all select-all">
+                  <code className="block w-full p-2 bg-muted rounded text-sm break-all select-all text-foreground">
                     {createdClient.clientSecret}
                   </code>
                 </div>
@@ -237,12 +237,12 @@ export default function ClientsPage() {
             </div>
 
             {/* Usage Guide */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Quick Start</h4>
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <h4 className="text-sm font-medium text-foreground mb-2">Quick Start</h4>
               {createdClient.isPublic ? (
-                <div className="text-xs text-gray-600 space-y-2">
-                  <p><strong>1. Authorization Request (with PKCE):</strong></p>
-                  <code className="block p-2 bg-white rounded text-xs overflow-x-auto">
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <p><strong className="text-foreground">1. Authorization Request (with PKCE):</strong></p>
+                  <code className="block p-2 bg-card rounded text-xs overflow-x-auto border border-border">
                     GET /api/auth/oauth2/authorize?<br/>
                     &nbsp;&nbsp;client_id={createdClient.clientId}<br/>
                     &nbsp;&nbsp;&redirect_uri=YOUR_CALLBACK<br/>
@@ -251,8 +251,8 @@ export default function ClientsPage() {
                     &nbsp;&nbsp;&code_challenge=GENERATED_CHALLENGE<br/>
                     &nbsp;&nbsp;&code_challenge_method=S256
                   </code>
-                  <p><strong>2. Token Exchange (no secret):</strong></p>
-                  <code className="block p-2 bg-white rounded text-xs overflow-x-auto">
+                  <p><strong className="text-foreground">2. Token Exchange (no secret):</strong></p>
+                  <code className="block p-2 bg-card rounded text-xs overflow-x-auto border border-border">
                     POST /api/auth/oauth2/token<br/>
                     grant_type=authorization_code<br/>
                     &code=AUTH_CODE<br/>
@@ -262,17 +262,17 @@ export default function ClientsPage() {
                   </code>
                 </div>
               ) : (
-                <div className="text-xs text-gray-600 space-y-2">
-                  <p><strong>1. Authorization Request:</strong></p>
-                  <code className="block p-2 bg-white rounded text-xs overflow-x-auto">
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <p><strong className="text-foreground">1. Authorization Request:</strong></p>
+                  <code className="block p-2 bg-card rounded text-xs overflow-x-auto border border-border">
                     GET /api/auth/oauth2/authorize?<br/>
                     &nbsp;&nbsp;client_id={createdClient.clientId}<br/>
                     &nbsp;&nbsp;&redirect_uri=YOUR_CALLBACK<br/>
                     &nbsp;&nbsp;&response_type=code<br/>
                     &nbsp;&nbsp;&scope=openid profile email
                   </code>
-                  <p><strong>2. Token Exchange (with secret):</strong></p>
-                  <code className="block p-2 bg-white rounded text-xs overflow-x-auto">
+                  <p><strong className="text-foreground">2. Token Exchange (with secret):</strong></p>
+                  <code className="block p-2 bg-card rounded text-xs overflow-x-auto border border-border">
                     POST /api/auth/oauth2/token<br/>
                     grant_type=authorization_code<br/>
                     &code=AUTH_CODE<br/>
@@ -286,7 +286,7 @@ export default function ClientsPage() {
 
             <button
               onClick={() => setCreatedClient(null)}
-              className="mt-6 w-full py-2 bg-taskflow-500 text-white rounded-lg hover:bg-taskflow-600"
+              className="mt-6 w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               I've saved my credentials
             </button>
@@ -296,14 +296,14 @@ export default function ClientsPage() {
 
       {/* Create Client Form Modal */}
       {showCreateForm && !createdClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4 border border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               Register OAuth Client
             </h3>
             <form onSubmit={handleCreateClient} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Application Name
                 </label>
                 <input
@@ -313,14 +313,14 @@ export default function ClientsPage() {
                     setNewClient({ ...newClient, name: e.target.value })
                   }
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-taskflow-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-input text-foreground"
                   placeholder="My Application"
                 />
               </div>
 
               {/* Client Type Selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Client Type
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -329,17 +329,17 @@ export default function ClientsPage() {
                     onClick={() => setNewClient({ ...newClient, clientType: "public" })}
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
                       newClient.clientType === "public"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-success bg-success/10"
+                        : "border-border hover:border-muted-foreground bg-card"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <div className={`w-3 h-3 rounded-full ${
-                        newClient.clientType === "public" ? "bg-green-500" : "bg-gray-300"
+                        newClient.clientType === "public" ? "bg-success" : "bg-muted"
                       }`} />
-                      <span className="font-medium text-sm">Public</span>
+                      <span className="font-medium text-sm text-foreground">Public</span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       SPAs, mobile apps, browser-based. Uses PKCE, no secret.
                     </p>
                   </button>
@@ -348,17 +348,17 @@ export default function ClientsPage() {
                     onClick={() => setNewClient({ ...newClient, clientType: "confidential" })}
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
                       newClient.clientType === "confidential"
-                        ? "border-taskflow-500 bg-taskflow-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-muted-foreground bg-card"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <div className={`w-3 h-3 rounded-full ${
-                        newClient.clientType === "confidential" ? "bg-taskflow-500" : "bg-gray-300"
+                        newClient.clientType === "confidential" ? "bg-primary" : "bg-muted"
                       }`} />
-                      <span className="font-medium text-sm">Confidential</span>
+                      <span className="font-medium text-sm text-foreground">Confidential</span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Server-side apps. Uses client secret.
                     </p>
                   </button>
@@ -366,7 +366,7 @@ export default function ClientsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Redirect URLs (one per line)
                 </label>
                 <textarea
@@ -376,12 +376,12 @@ export default function ClientsPage() {
                   }
                   required
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-taskflow-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-input text-foreground"
                   placeholder="https://myapp.com/callback"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Scopes
                 </label>
                 <input
@@ -390,22 +390,22 @@ export default function ClientsPage() {
                   onChange={(e) =>
                     setNewClient({ ...newClient, scope: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-taskflow-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-input text-foreground"
                   placeholder="openid profile email"
                 />
               </div>
 
               {/* Skip Consent Note */}
-              <div className="border border-taskflow-200 rounded-lg p-4 bg-taskflow-50">
+              <div className="border border-primary/30 rounded-lg p-4 bg-primary/5">
                 <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-taskflow-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-medium text-taskflow-800">OAuth Consent Screen</p>
-                    <p className="text-xs text-taskflow-600 mt-1">
+                    <p className="text-sm font-medium text-foreground">OAuth Consent Screen</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       All dynamically registered clients will show a consent screen.
-                      To skip consent for first-party apps, configure them as trusted clients in <code className="bg-taskflow-100 px-1 py-0.5 rounded">auth.ts</code>.
+                      To skip consent for first-party apps, configure them as trusted clients in <code className="bg-muted px-1 py-0.5 rounded">auth.ts</code>.
                       See the pre-configured "RoboLearn Book Interface" client as an example.
                     </p>
                   </div>
@@ -416,14 +416,14 @@ export default function ClientsPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="flex-1 py-2 bg-taskflow-500 text-white rounded-lg hover:bg-taskflow-600 disabled:opacity-50"
+                  className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {isCreating ? "Creating..." : "Create Client"}
                 </button>
@@ -435,19 +435,19 @@ export default function ClientsPage() {
 
       {/* Edit Client Modal */}
       {editingClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4 border border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               Edit OAuth Client
             </h3>
 
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
               <div className="text-sm">
-                <span className="font-medium text-gray-700">Client:</span>{" "}
-                <span className="text-gray-900">{editingClient.name}</span>
+                <span className="font-medium text-muted-foreground">Client:</span>{" "}
+                <span className="text-foreground">{editingClient.name}</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                <code className="bg-gray-100 px-1 py-0.5 rounded">
+              <div className="text-xs text-muted-foreground mt-1">
+                <code className="bg-muted px-1 py-0.5 rounded">
                   {editingClient.clientId}
                 </code>
               </div>
@@ -455,7 +455,7 @@ export default function ClientsPage() {
 
             <form onSubmit={handleUpdateClient} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Redirect URLs (one per line)
                 </label>
                 <textarea
@@ -463,10 +463,10 @@ export default function ClientsPage() {
                   onChange={(e) => setEditRedirectUrls(e.target.value)}
                   required
                   rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-taskflow-500 font-mono text-sm"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm bg-input text-foreground"
                   placeholder="https://myapp.com/callback&#10;http://localhost:3000/callback"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Add localhost URLs for testing, remove them for production security
                 </p>
               </div>
@@ -478,14 +478,14 @@ export default function ClientsPage() {
                     setEditingClient(null);
                     setEditRedirectUrls("");
                   }}
-                  className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="flex-1 py-2 bg-taskflow-500 text-white rounded-lg hover:bg-taskflow-600 disabled:opacity-50"
+                  className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {isUpdating ? "Saving..." : "Save Changes"}
                 </button>
@@ -496,42 +496,42 @@ export default function ClientsPage() {
       )}
 
       {/* Clients List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+      <div className="bg-card rounded-lg shadow-card-elevated overflow-hidden overflow-x-auto border border-border">
         <table className="w-full min-w-max">
-          <thead className="bg-gray-50">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Application
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Client ID
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Redirect URLs
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {clients.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                   No OAuth clients registered yet. Click "Register New Client" to create one.
                 </td>
               </tr>
             ) : (
               clients.map((client) => (
-                <tr key={client.id} className="hover:bg-gray-50">
+                <tr key={client.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-taskflow-100 rounded-lg flex items-center justify-center">
+                      <div className="flex-shrink-0 h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
                         <svg
-                          className="w-5 h-5 text-taskflow-500"
+                          className="w-5 h-5 text-primary"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -545,22 +545,22 @@ export default function ClientsPage() {
                         </svg>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                        <div className="text-sm font-medium text-foreground flex items-center gap-2">
                           {client.name || "Unnamed Client"}
                           {client.isTrusted && (
-                            <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground rounded">
                               Trusted
                             </span>
                           )}
                         </div>
                         {client.disabled && (
-                          <span className="text-xs text-red-500">Disabled</span>
+                          <span className="text-xs text-destructive">Disabled</span>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                    <code className="text-sm bg-muted px-2 py-1 rounded text-foreground">
                       {client.clientId}
                     </code>
                   </td>
@@ -573,8 +573,8 @@ export default function ClientsPage() {
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded ${
                             isPublic
-                              ? "bg-green-100 text-green-800"
-                              : "bg-taskflow-100 text-taskflow-700"
+                              ? "bg-success/10 text-success"
+                              : "bg-primary/10 text-primary"
                           }`}
                         >
                           {isPublic ? "Public (PKCE)" : "Confidential"}
@@ -583,7 +583,7 @@ export default function ClientsPage() {
                     })()}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 max-w-xs truncate">
+                    <div className="text-sm text-muted-foreground max-w-xs truncate">
                       {Array.isArray(client.redirectUrls)
                         ? client.redirectUrls.join(", ")
                         : client.redirectUrls}
@@ -591,19 +591,19 @@ export default function ClientsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     {client.isTrusted ? (
-                      <span className="text-xs text-gray-400">Pre-configured</span>
+                      <span className="text-xs text-muted-foreground">Pre-configured</span>
                     ) : (
                       <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={() => handleEditClient(client)}
-                          className="text-taskflow-500 hover:text-taskflow-700 text-sm font-medium"
+                          className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDeleteClient(client.clientId)}
                           disabled={deletingClientId === client.clientId}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                          className="text-destructive hover:text-destructive/80 text-sm font-medium disabled:opacity-50 transition-colors"
                         >
                           {deletingClientId === client.clientId ? "Deleting..." : "Delete"}
                         </button>
@@ -618,8 +618,8 @@ export default function ClientsPage() {
       </div>
 
       {/* OAuth Endpoints Info */}
-      <div className="mt-8 bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="mt-8 bg-card rounded-lg shadow-card-elevated p-6 border border-border">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           OAuth 2.0 / OIDC Endpoints
         </h2>
         <div className="space-y-3">
@@ -647,9 +647,9 @@ export default function ClientsPage() {
 
 function EndpointRow({ name, url }: { name: string; url: string }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-      <span className="text-sm font-medium text-gray-700">{name}</span>
-      <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
+    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
+      <span className="text-sm font-medium text-muted-foreground">{name}</span>
+      <code className="text-sm bg-muted px-2 py-1 rounded text-foreground">
         {url}
       </code>
     </div>

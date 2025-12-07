@@ -86,7 +86,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-taskflow-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -94,54 +94,54 @@ export default function UsersPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="text-2xl font-bold text-foreground">Users</h1>
         <div className="flex gap-4">
           <input
             type="text"
             placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-taskflow-500 text-sm"
+            className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-input text-foreground placeholder:text-muted-foreground text-sm"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow-card-elevated overflow-hidden border border-border">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Role
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {filteredUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
+              <tr key={user.id} className="hover:bg-muted/50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-600">
+                    <div className="flex-shrink-0 h-10 w-10 bg-muted rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-muted-foreground">
                         {(user.name || user.email || "?")[0].toUpperCase()}
                       </span>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-foreground">
                         {user.name || "No name"}
                       </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </div>
                 </td>
@@ -150,7 +150,7 @@ export default function UsersPage() {
                     value={user.role || "user"}
                     onChange={(e) => handleSetRole(user.id, e.target.value as "user" | "admin")}
                     disabled={actionLoading === user.id}
-                    className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-taskflow-500"
+                    className="text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary bg-input text-foreground"
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
@@ -160,17 +160,17 @@ export default function UsersPage() {
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${
                       user.banned === true
-                        ? "bg-red-100 text-red-800"
-                        : "bg-green-100 text-green-800"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-success/10 text-success"
                     }`}
                   >
                     {user.banned === true ? "Banned" : "Active"}
                   </span>
                   {user.banReason && (
-                    <p className="text-xs text-gray-500 mt-1">{user.banReason}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{user.banReason}</p>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {user.createdAt.toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -178,7 +178,7 @@ export default function UsersPage() {
                     <button
                       onClick={() => handleBanUser(user.id, false)}
                       disabled={actionLoading === user.id}
-                      className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                      className="text-success hover:text-success/80 disabled:opacity-50"
                     >
                       {actionLoading === user.id ? "..." : "Unban"}
                     </button>
@@ -189,7 +189,7 @@ export default function UsersPage() {
                         handleBanUser(user.id, true, reason || undefined);
                       }}
                       disabled={actionLoading === user.id}
-                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                      className="text-destructive hover:text-destructive/80 disabled:opacity-50"
                     >
                       {actionLoading === user.id ? "..." : "Ban"}
                     </button>
@@ -199,7 +199,7 @@ export default function UsersPage() {
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
                   {searchQuery ? "No users match your search" : "No users found"}
                 </td>
               </tr>

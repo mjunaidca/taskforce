@@ -14,7 +14,7 @@ export default function AccountLayout({
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
               <Image
-                src="/logo.webp"
+                src="/logo.png"
                 alt="Taskflow"
                 width={240}
                 height={60}

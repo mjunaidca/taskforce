@@ -25,19 +25,19 @@ export default function AdminLayout({
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-taskflow-500"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!session || (session.user as any).role !== "admin") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
-          <Link href="/" className="text-taskflow-500 hover:text-taskflow-500">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-4">You need admin privileges to access this page.</p>
+          <Link href="/" className="text-primary hover:text-primary/80">
             Go back home
           </Link>
         </div>
@@ -46,47 +46,47 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Admin Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-8">
-              <Link href="/admin" className="text-xl font-bold text-gray-900">
+              <Link href="/admin" className="text-xl font-bold text-foreground">
                 Taskflow Admin
               </Link>
               <nav className="hidden md:flex gap-6">
                 <Link
                   href="/admin"
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/admin/users"
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Users
                 </Link>
                 <Link
                   href="/admin/clients"
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   OAuth Clients
                 </Link>
                 <Link
                   href="/admin/service-keys"
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Service Keys
                 </Link>
               </nav>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {session.user.name || session.user.email}
               </span>
-              <span className="px-2 py-1 text-xs font-medium bg-taskflow-100 text-taskflow-700 rounded">
+              <span className="px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded border border-primary/30">
                 Admin
               </span>
             </div>

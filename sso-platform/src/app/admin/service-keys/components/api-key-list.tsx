@@ -49,7 +49,7 @@ interface ApiKeyListProps {
 
 function getKeyStatus(key: ApiKey): {
   label: string;
-  variant: "default" | "secondary" | "destructive" | "outline";
+  variant: "default" | "secondary" | "destructive" | "outline" | "success";
 } {
   if (!key.enabled) {
     return { label: "Revoked", variant: "destructive" };
@@ -57,7 +57,7 @@ function getKeyStatus(key: ApiKey): {
   if (key.expiresAt && new Date(key.expiresAt) < new Date()) {
     return { label: "Expired", variant: "secondary" };
   }
-  return { label: "Active", variant: "default" };
+  return { label: "Active", variant: "success" };
 }
 
 function formatDate(date: Date | null): string {
@@ -90,7 +90,7 @@ function PermissionsBadge({ permissions }: { permissions: Record<string, string[
   const [expanded, setExpanded] = useState(false);
 
   if (!permissions || Object.keys(permissions).length === 0) {
-    return <span className="text-gray-400 text-sm">No scopes</span>;
+    return <span className="text-muted-foreground text-sm">No scopes</span>;
   }
 
   const scopeIds = permissionsToScopes(permissions);
@@ -109,8 +109,8 @@ function PermissionsBadge({ permissions }: { permissions: Record<string, string[
                   <span
                     className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${
                       scope?.sensitive
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-blue-100 text-blue-800"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "bg-primary/10 text-primary"
                     }`}
                   >
                     {scopeId}
@@ -118,7 +118,7 @@ function PermissionsBadge({ permissions }: { permissions: Record<string, string[
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="font-medium">{scope?.name || scopeId}</p>
-                  <p className="text-xs text-gray-400">{scope?.description}</p>
+                  <p className="text-xs text-muted-foreground">{scope?.description}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -127,7 +127,7 @@ function PermissionsBadge({ permissions }: { permissions: Record<string, string[
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
+            className="text-xs text-primary hover:text-primary/80 flex items-center gap-0.5"
           >
             {expanded ? (
               <>
@@ -151,7 +151,7 @@ export function ApiKeyList({ apiKeys, isLoading, onRevoke, onDelete }: ApiKeyLis
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-taskflow-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -159,8 +159,8 @@ export function ApiKeyList({ apiKeys, isLoading, onRevoke, onDelete }: ApiKeyLis
   if (apiKeys.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 mb-2">No API keys found</p>
-        <p className="text-sm text-gray-400">
+        <p className="text-muted-foreground mb-2">No API keys found</p>
+        <p className="text-sm text-muted-foreground/70">
           Create your first API key to enable machine-to-machine authentication.
         </p>
       </div>
@@ -191,9 +191,9 @@ export function ApiKeyList({ apiKeys, isLoading, onRevoke, onDelete }: ApiKeyLis
             const status = getKeyStatus(key);
             return (
               <TableRow key={key.id}>
-                <TableCell className="font-medium">{key.name || "Unnamed Key"}</TableCell>
+                <TableCell className="font-medium text-foreground">{key.name || "Unnamed Key"}</TableCell>
                 <TableCell>
-                  <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                  <code className="text-sm bg-muted px-2 py-1 rounded text-foreground">
                     {key.start || key.prefix || "—"}
                   </code>
                 </TableCell>
@@ -203,10 +203,10 @@ export function ApiKeyList({ apiKeys, isLoading, onRevoke, onDelete }: ApiKeyLis
                 <TableCell>
                   <Badge variant={status.variant}>{status.label}</Badge>
                 </TableCell>
-                <TableCell className="text-sm text-gray-600">
+                <TableCell className="text-sm text-muted-foreground">
                   {formatDate(key.createdAt)}
                 </TableCell>
-                <TableCell className="text-sm text-gray-600">
+                <TableCell className="text-sm text-muted-foreground">
                   {formatDate(key.lastRequest)}
                 </TableCell>
                 <TableCell>

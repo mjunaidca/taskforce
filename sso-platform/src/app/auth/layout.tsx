@@ -6,28 +6,19 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Animated background mesh */}
-      <div className="absolute inset-0 gradient-mesh opacity-60" />
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-background">
+      {/* Atmospheric gradient */}
+      <div className="absolute inset-0 ifk-atmosphere" />
 
-      {/* Subtle grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #0f172a 1px, transparent 1px),
-            linear-gradient(to bottom, #0f172a 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px'
-        }}
-      />
+      {/* Grid pattern */}
+      <div className="absolute inset-0 ifk-grid-fade" />
 
       <div className="max-w-md lg:max-w-lg w-full relative z-10">
         {/* Logo/Brand */}
-        <div className="text-center mb-10 animate-in slide-in-from-top">
+        <div className="text-center mb-10 animate-fade-in-down">
           <div className="flex justify-center mb-4">
             <Image
-              src="/logo.webp"
+              src="/logo.png"
               alt="Taskflow"
               width={280}
               height={70}
@@ -35,24 +26,24 @@ export default function AuthLayout({
               priority
             />
           </div>
-          <p className="text-sm text-slate-600 font-medium tracking-wide">
+          <p className="text-sm text-muted-foreground font-medium tracking-wide">
             {process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Secure Single Sign-On"}
           </p>
           <div className="mt-3 flex items-center justify-center gap-2">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-            <div className="w-1.5 h-1.5 rounded-full bg-taskflow-500" />
-            <div className="h-px w-12 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+            <div className="h-px w-12 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <div className="h-px w-12 bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
         </div>
 
-        {/* Form container with glass effect */}
-        <div className="glass-effect rounded-2xl shadow-2xl shadow-taskflow-500/10 p-8 md:p-10 animate-in scale-in">
+        {/* Form container */}
+        <div className="bg-card border border-border rounded-2xl shadow-card-elevated p-8 md:p-10 animate-scale-in">
           {children}
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center animate-in slide-in-from-bottom">
-          <p className="text-xs text-slate-400">
+        <div className="mt-8 text-center animate-fade-in-up">
+          <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} {process.env.NEXT_PUBLIC_ORG_NAME || "Taskflow"}
           </p>
         </div>

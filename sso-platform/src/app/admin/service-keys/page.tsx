@@ -157,8 +157,8 @@ export default function ServiceKeysPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Service Keys</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Service Keys</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage API keys for machine-to-machine authentication
           </p>
         </div>
@@ -183,7 +183,7 @@ export default function ServiceKeysPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-taskflow-500" />
+            <Key className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">API Keys</CardTitle>
           </div>
           <CardDescription>

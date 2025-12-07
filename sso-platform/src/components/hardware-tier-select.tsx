@@ -38,7 +38,7 @@ const hardwareTiers: { value: HardwareTier; label: string; shortLabel: string; d
 export function HardwareTierSelect({ value, onChange, error }: HardwareTierSelectProps) {
   return (
     <div className="space-y-3">
-      <label className="block mt-6 px-4 py-3 bg-gradient-to-r from-taskflow-50 to-taskflow-50/50 border-l-4 border-taskflow-500 rounded-r-lg text-sm font-bold text-taskflow-900">
+      <label className="block mt-6 px-4 py-3 bg-primary/10 border-l-4 border-primary rounded-r-lg text-sm font-bold text-foreground">
         What hardware and OS do you use?
       </label>
       <div className="grid grid-cols-2 gap-3">
@@ -49,34 +49,34 @@ export function HardwareTierSelect({ value, onChange, error }: HardwareTierSelec
             onClick={() => onChange(tier.value)}
             className={`group relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 text-left ${
               value === tier.value
-                ? "border-taskflow-500 bg-gradient-to-br from-taskflow-50 to-taskflow-50/50 shadow-md shadow-taskflow-500/20"
-                : "border-slate-200 hover:border-taskflow-200 hover:bg-slate-50/50 bg-white/50 backdrop-blur-sm"
+                ? "border-primary bg-primary/10 shadow-md"
+                : "border-border hover:border-primary/50 hover:bg-muted/50 bg-card"
             }`}
           >
             <div className="flex flex-col space-y-1.5">
               <div className="flex items-center justify-between">
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                   value === tier.value
-                    ? "border-taskflow-600 bg-taskflow-600"
-                    : "border-slate-300 group-hover:border-taskflow-400"
+                    ? "border-primary bg-primary"
+                    : "border-muted-foreground/50 group-hover:border-primary/70"
                 }`}>
                   {value === tier.value && (
-                    <div className="w-2 h-2 rounded-full bg-white animate-in scale-in" />
+                    <div className="w-2 h-2 rounded-full bg-primary-foreground animate-scale-in" />
                   )}
                 </div>
                 {value === tier.value && (
-                  <svg className="w-4 h-4 text-taskflow-600 animate-in scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary animate-scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
               <span className={`block text-sm font-semibold transition-colors ${
-                value === tier.value ? "text-taskflow-900" : "text-slate-900"
+                value === tier.value ? "text-primary" : "text-foreground"
               }`}>
                 {tier.shortLabel}
               </span>
               <span className={`block text-xs transition-colors leading-tight ${
-                value === tier.value ? "text-taskflow-700" : "text-slate-600"
+                value === tier.value ? "text-primary/80" : "text-muted-foreground"
               }`}>
                 {tier.description}
               </span>
@@ -85,7 +85,7 @@ export function HardwareTierSelect({ value, onChange, error }: HardwareTierSelec
         ))}
       </div>
       {error && (
-        <p className="text-sm text-red-600 animate-in slide-in-from-top">{error}</p>
+        <p className="text-sm text-destructive animate-fade-in">{error}</p>
       )}
     </div>
   );

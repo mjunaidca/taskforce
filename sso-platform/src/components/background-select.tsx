@@ -29,8 +29,8 @@ const backgrounds: { value: SoftwareBackground; label: string; description: stri
 export function BackgroundSelect({ value, onChange, error }: BackgroundSelectProps) {
   return (
     <div className="space-y-3">
-      <label className="block mt-6 px-4 py-3 bg-gradient-to-r from-taskflow-50 to-taskflow-50/50 border-l-4 border-taskflow-500 rounded-r-lg text-sm font-bold text-taskflow-900">
-        What's your software background?
+      <label className="block mt-6 px-4 py-3 bg-primary/10 border-l-4 border-primary rounded-r-lg text-sm font-bold text-foreground">
+        What&apos;s your software background?
       </label>
       <div className="grid grid-cols-3 gap-3">
         {backgrounds.map((bg) => (
@@ -40,34 +40,34 @@ export function BackgroundSelect({ value, onChange, error }: BackgroundSelectPro
             onClick={() => onChange(bg.value)}
             className={`group relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 text-left ${
               value === bg.value
-                ? "border-taskflow-500 bg-gradient-to-br from-taskflow-50 to-taskflow-50/50 shadow-md shadow-taskflow-500/20"
-                : "border-slate-200 hover:border-taskflow-200 hover:bg-slate-50/50 bg-white/50 backdrop-blur-sm"
+                ? "border-primary bg-primary/10 shadow-md"
+                : "border-border hover:border-primary/50 hover:bg-muted/50 bg-card"
             }`}
           >
             <div className="flex flex-col items-center text-center space-y-2">
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                 value === bg.value
-                  ? "border-taskflow-600 bg-taskflow-600"
-                  : "border-slate-300 group-hover:border-taskflow-400"
+                  ? "border-primary bg-primary"
+                  : "border-muted-foreground/50 group-hover:border-primary/70"
               }`}>
                 {value === bg.value && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white animate-in scale-in" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary-foreground animate-scale-in" />
                 )}
               </div>
               <span className={`block text-sm font-semibold transition-colors ${
-                value === bg.value ? "text-taskflow-900" : "text-slate-900"
+                value === bg.value ? "text-primary" : "text-foreground"
               }`}>
                 {bg.label}
               </span>
               <span className={`block text-xs transition-colors leading-tight ${
-                value === bg.value ? "text-taskflow-700" : "text-slate-600"
+                value === bg.value ? "text-primary/80" : "text-muted-foreground"
               }`}>
                 {bg.description}
               </span>
             </div>
             {value === bg.value && (
               <div className="absolute top-2 right-2">
-                <svg className="w-4 h-4 text-taskflow-600 animate-in scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary animate-scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -76,7 +76,7 @@ export function BackgroundSelect({ value, onChange, error }: BackgroundSelectPro
         ))}
       </div>
       {error && (
-        <p className="text-sm text-red-600 animate-in slide-in-from-top">{error}</p>
+        <p className="text-sm text-destructive animate-fade-in">{error}</p>
       )}
     </div>
   );

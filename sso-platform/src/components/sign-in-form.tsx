@@ -80,7 +80,7 @@ export function SignInForm() {
 
       if (result.error) {
         console.error("[SignIn] Error:", result.error.status, result.error.message);
-        
+
         if (result.error.status === 403 || result.error.message?.toLowerCase().includes("verify") || result.error.message?.toLowerCase().includes("verification") || result.error.message?.toLowerCase().includes("not verified")) {
           setErrors({
             general: "Please verify your email address before signing in. Check your inbox for the verification email.",
@@ -131,22 +131,22 @@ export function SignInForm() {
   return (
     <div className="w-full">
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Welcome back</h2>
-        <p className="text-sm text-slate-600">Sign in to your account</p>
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome back</h2>
+        <p className="text-sm text-muted-foreground">Sign in to your account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {errors.general && (
-          <div className={`p-4 rounded-xl border-l-4 animate-in slide-in-from-top ${
-            errors.needsVerification 
-              ? "bg-amber-50 border-amber-400 text-amber-800" 
-              : "bg-red-50 border-red-400 text-red-800"
+          <div className={`p-4 rounded-xl border-l-4 animate-fade-in ${
+            errors.needsVerification
+              ? "bg-secondary/10 border-secondary text-secondary"
+              : "bg-destructive/10 border-destructive text-destructive"
           }`}>
             <p className="text-sm font-medium">{errors.general}</p>
             {errors.needsVerification && (
               <a
                 href={`/auth/resend-verification?email=${encodeURIComponent(formData.email)}${searchParams.toString() ? `&${searchParams.toString()}` : ""}`}
-                className="mt-2 inline-block text-sm font-semibold text-amber-700 hover:text-amber-800 underline underline-offset-2 transition-colors"
+                className="mt-2 inline-block text-sm font-semibold text-secondary hover:text-secondary/80 underline underline-offset-2 transition-colors"
               >
                 Resend verification email
               </a>
@@ -155,7 +155,7 @@ export function SignInForm() {
         )}
 
         <div className="space-y-3">
-          <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+          <label htmlFor="email" className="block text-sm font-semibold text-foreground">
             Email address
           </label>
           <div className="relative">
@@ -168,26 +168,23 @@ export function SignInForm() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onFocus={() => setFocusedField("email")}
               onBlur={() => setFocusedField(null)}
-              className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-white/50 backdrop-blur-sm ${
-                errors.email 
-                  ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20" 
+              className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-input text-foreground placeholder:text-muted-foreground ${
+                errors.email
+                  ? "border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20"
                   : focusedField === "email"
-                  ? "border-taskflow-400 focus:border-taskflow-500 focus:ring-2 focus:ring-taskflow-500/20 shadow-sm shadow-taskflow-500/10"
-                  : "border-slate-200 focus:border-taskflow-400 focus:ring-2 focus:ring-taskflow-500/20"
+                  ? "border-primary focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  : "border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
               }`}
               placeholder="you@example.com"
             />
-            {focusedField === "email" && (
-              <div className="absolute inset-0 rounded-xl border-2 border-taskflow-500 pointer-events-none animate-in scale-in opacity-50" />
-            )}
           </div>
           {errors.email && (
-            <p className="text-sm text-red-600 animate-in slide-in-from-top">{errors.email}</p>
+            <p className="text-sm text-destructive animate-fade-in">{errors.email}</p>
           )}
         </div>
 
         <div className="space-y-3">
-          <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
+          <label htmlFor="password" className="block text-sm font-semibold text-foreground">
             Password
           </label>
           <div className="relative">
@@ -200,37 +197,34 @@ export function SignInForm() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               onFocus={() => setFocusedField("password")}
               onBlur={() => setFocusedField(null)}
-              className={`w-full px-4 py-3 pr-12 border rounded-xl transition-all duration-200 bg-white/50 backdrop-blur-sm ${
+              className={`w-full px-4 py-3 pr-12 border rounded-xl transition-all duration-200 bg-input text-foreground placeholder:text-muted-foreground ${
                 errors.password
-                  ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                  ? "border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20"
                   : focusedField === "password"
-                  ? "border-taskflow-400 focus:border-taskflow-500 focus:ring-2 focus:ring-taskflow-500/20 shadow-sm shadow-taskflow-500/10"
-                  : "border-slate-200 focus:border-taskflow-400 focus:ring-2 focus:ring-taskflow-500/20"
+                  ? "border-primary focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  : "border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
               }`}
               placeholder="Enter your password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
               tabIndex={-1}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
-            {focusedField === "password" && (
-              <div className="absolute inset-0 rounded-xl border-2 border-taskflow-500 pointer-events-none animate-in scale-in opacity-50" />
-            )}
           </div>
           {errors.password && (
-            <p className="text-sm text-red-600 animate-in slide-in-from-top">{errors.password}</p>
+            <p className="text-sm text-destructive animate-fade-in">{errors.password}</p>
           )}
         </div>
 
         <div className="flex items-center justify-between pt-1">
-          <a 
-            href="/auth/forgot-password" 
-            className="text-sm font-medium text-taskflow-600 hover:text-taskflow-700 transition-colors"
+          <a
+            href="/auth/forgot-password"
+            className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
           >
             Forgot password?
           </a>
@@ -239,11 +233,11 @@ export function SignInForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full relative py-3.5 px-4 bg-gradient-to-r from-taskflow-500 to-taskflow-600 text-white font-semibold rounded-xl shadow-lg shadow-taskflow-500/30 hover:shadow-xl hover:shadow-taskflow-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-taskflow-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg overflow-hidden group"
+          className="w-full relative py-3.5 px-4 bg-primary text-primary-foreground font-semibold rounded-xl shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group btn-glow"
         >
           {isLoading ? (
             <span className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
@@ -259,16 +253,16 @@ export function SignInForm() {
 
         <div className="relative pt-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-slate-500">Don't have an account?</span>
+            <span className="px-4 bg-card text-muted-foreground">Don&apos;t have an account?</span>
           </div>
         </div>
 
         <a
           href={`/auth/sign-up${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
-          className="block w-full text-center py-3 px-4 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:border-taskflow-300 hover:text-taskflow-700 hover:bg-taskflow-50/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-taskflow-500 transition-all duration-200"
+          className="block w-full text-center py-3 px-4 border-2 border-border text-foreground font-semibold rounded-xl hover:border-primary/50 hover:text-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200"
         >
           Create an account
         </a>
