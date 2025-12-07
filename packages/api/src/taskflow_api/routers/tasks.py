@@ -95,7 +95,9 @@ async def detect_cycle(session: AsyncSession, task_id: int, parent_task_id: int)
     return False
 
 
-def task_to_read(task: Task, assignee: Worker | None = None, subtasks: list[Task] | None = None) -> TaskRead:
+def task_to_read(
+    task: Task, assignee: Worker | None = None, subtasks: list[Task] | None = None
+) -> TaskRead:
     """Convert Task model to TaskRead schema."""
     return TaskRead(
         id=task.id,
@@ -444,7 +446,9 @@ async def update_progress(
     await check_project_membership(session, task.project_id, worker.id)
 
     if task.status != "in_progress":
-        raise HTTPException(status_code=400, detail="Can only update progress for in_progress tasks")
+        raise HTTPException(
+            status_code=400, detail="Can only update progress for in_progress tasks"
+        )
 
     old_progress = task.progress_percent
     task.progress_percent = data.percent

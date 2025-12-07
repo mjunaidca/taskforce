@@ -1,9 +1,11 @@
 """Test fixtures for TaskFlow API tests."""
 
+# ruff: noqa: E402
 # Patch JSONB to JSON FIRST before any model imports
 # This allows us to use SQLite in-memory for testing while using JSONB in production
-from sqlalchemy import JSON
 import sqlalchemy.dialects.postgresql as pg_dialects
+from sqlalchemy import JSON
+
 pg_dialects.JSONB = JSON  # type: ignore
 
 import asyncio
@@ -56,7 +58,7 @@ TEST_USER_2 = CurrentUser({
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop() -> Generator[asyncio.AbstractEventLoop]:
     """Create event loop for session-scoped fixtures."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
@@ -64,7 +66,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_database() -> AsyncGenerator[None, None]:
+async def setup_database() -> AsyncGenerator[None]:
     """Create tables before each test and drop after."""
     async with test_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -73,7 +75,7 @@ async def setup_database() -> AsyncGenerator[None, None]:
         await conn.run_sync(SQLModel.metadata.drop_all)
 
 
-async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_test_session() -> AsyncGenerator[AsyncSession]:
     """Provide a test database session."""
     async with TestAsyncSession() as session:
         yield session
@@ -85,14 +87,14 @@ def get_test_user() -> CurrentUser:
 
 
 @pytest.fixture
-async def session() -> AsyncGenerator[AsyncSession, None]:
+async def session() -> AsyncGenerator[AsyncSession]:
     """Provide a database session for direct model testing."""
     async with TestAsyncSession() as session:
         yield session
 
 
 @pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client() -> AsyncGenerator[AsyncClient]:
     """Provide an async test client with mocked auth."""
     # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
@@ -121,7 +123,7 @@ def mock_user_2() -> CurrentUser:
 
 
 @pytest.fixture
-async def client_user_2() -> AsyncGenerator[AsyncClient, None]:
+async def client_user_2() -> AsyncGenerator[AsyncClient]:
     """Provide test client authenticated as second user."""
 
     def get_user_2() -> CurrentUser:

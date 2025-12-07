@@ -11,7 +11,6 @@ from ..auth import CurrentUser, get_current_user
 from ..database import get_session
 from ..models.project import Project, ProjectMember
 from ..models.task import Task
-from ..models.worker import Worker
 from ..schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from ..services.audit import log_action
 from ..services.user_setup import ensure_user_setup

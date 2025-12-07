@@ -51,13 +51,15 @@ async def get_or_create_worker(session: AsyncSession, user: CurrentUser) -> Work
     return worker
 
 
-async def ensure_default_project(session: AsyncSession, user: CurrentUser, worker: Worker) -> Project:
+async def ensure_default_project(
+    session: AsyncSession, user: CurrentUser, worker: Worker
+) -> Project:
     """Ensure user has a Default project.
 
     Creates one if it doesn't exist.
     """
     # Check if default project exists
-    stmt = select(Project).where(Project.owner_id == user.id, Project.is_default == True)
+    stmt = select(Project).where(Project.owner_id == user.id, Project.is_default.is_(True))
     result = await session.exec(stmt)
     project = result.first()
 
