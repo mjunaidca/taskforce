@@ -34,7 +34,7 @@ Works directly with every web and local AI Coding Agent, SpecKitPlus, SpecKit, G
 │                                                                  │
 │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
 │   │  PROJECT:   │  │  PROJECT:   │  │  PROJECT:   │            │
-│   │  taskflow   │  │  personal   │  │ panaversity │            │
+│   │  taskflow   │  │  personal   │  │ robolearn │            │
 │   │             │  │             │  │             │            │
 │   │  Tasks      │  │  Tasks      │  │  Tasks      │            │
 │   │  Subtasks   │  │  Subtasks   │  │  Subtasks   │            │

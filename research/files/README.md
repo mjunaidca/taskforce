@@ -206,7 +206,7 @@ uv run pytest
 
 ## Hackathon Submission
 
-This project is Muhammad's submission for **Panaversity Hackathon II**.
+This project is Muhammad's submission for **Hackathon II**.
 
 | Phase | Due Date | Status |
 |-------|----------|--------|

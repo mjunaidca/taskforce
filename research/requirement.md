@@ -2,8 +2,7 @@ Hackathon II
 The Evolution of Todo – Mastering Spec-Driven Development & Cloud Native AI
 The future of software development is AI-native and spec-driven. As AI agents like Claude Code become more powerful, the role of the engineer shifts from "syntax writer" to "system architect." We have already explored Spec-Driven Book Authoring. Now, we want you to master the Architecture of Intelligence.
 In this hackathon, you will master the art of building applications iteratively—starting from a simple console app and evolving it into a fully-featured, cloud-native AI chatbot deployed on Kubernetes. This journey will teach you the Nine Pillars of AI-Driven Development, Claude Code, Spec-Driven Development with Reusable Intelligence and Cloud-Native AI technologies through hands-on implementation.
-Excel in the Hackathon and Launch Your Journey as an AI Startup Founder 🚀
-We've recently launched Panaversity (panaversity.org), an initiative focused on teaching cutting-edge AI courses. If you perform well in this hackathon, you may be invited for an interview to join the Panaversity core team and potentially step into the role of a startup founder within this growing ecosystem. You will get a chance to work with Panaversity founders Zia, Rehan, Junaid, and Wania and become the very best. You may also get a chance to teach at Panaversity, PIAIC, and GIAIC.
+
 What You Will Learn
 Spec-Driven Development using Claude Code and Spec-Kit Plus
 Reusable Intelligence: Agents Skills and Subagent Development

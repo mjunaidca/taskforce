@@ -1,0 +1,241 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Industrial Dark Theme (IFK) */
+    --background: 222 15% 8%;       /* #141418 */
+    --foreground: 0 0% 100%;        /* #ffffff */
+    
+    --card: 222 11% 11%;            /* #1a1a1e */
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 222 11% 11%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 191 100% 50%;        /* #00d4ff (Cyan) */
+    --primary-foreground: 222 15% 8%;
+    
+    --secondary: 35 100% 50%;       /* #ff9500 (Amber) */
+    --secondary-foreground: 222 15% 8%;
+    
+    --muted: 222 8% 14%;
+    --muted-foreground: 0 0% 53%;
+    
+    --accent: 191 100% 50%;
+    --accent-foreground: 222 15% 8%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 100% / 0.1;
+    --input: 222 8% 14%;
+    --ring: 191 100% 50%;
+    --radius: 0.5rem;
+
+    /* Success green (consistent across themes) */
+    --success: 145 80% 42%;
+    
+    /* Legacy Mapping (for compatibility) */
+    --color-primary: #00d4ff;
+    --color-primary-dark: #00a0c2;
+    --color-primary-light: #66e5ff;
+    --color-surface: #141418;
+    --color-text-primary: #ffffff;
+    --color-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 11%;
+    --card: 0 0% 96%;
+    --card-foreground: 0 0% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+    --primary: 204 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 100% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 204 100% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0% / 0.1;
+    --input: 0 0% 96%;
+    --ring: 204 100% 40%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    @apply font-mono tracking-tight;
+  }
+  
+  code, pre {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+  
+  /* Selection color */
+  ::selection {
+    background: rgba(0, 212, 255, 0.2);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .slide-in-from-top {
+    animation: slideInFromTop 0.3s ease-out;
+  }
+
+  .slide-in-from-bottom {
+    animation: slideInFromBottom 0.3s ease-out;
+  }
+
+  .scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  /* Taskflow gradient mesh - subtle green energy */
+  .gradient-mesh {
+    background: 
+      radial-gradient(at 0% 0%, rgba(28, 217, 142, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(13, 150, 104, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(6, 95, 70, 0.06) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(28, 217, 142, 0.04) 0px, transparent 50%);
+  }
+
+  /* Glass effect with green tint */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(28, 217, 142, 0.15);
+    box-shadow: 0 4px 24px rgba(6, 95, 70, 0.08);
+  }
+
+  /* Text gradient - light green to dark green */
+  .text-gradient {
+    background: linear-gradient(135deg, #1cd98e 0%, #0d9668 50%, #065f46 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Primary button glow effect */
+  .btn-glow {
+    box-shadow: 0 0 0 0 rgba(28, 217, 142, 0.4);
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .btn-glow:hover {
+    box-shadow: 0 0 20px 2px rgba(28, 217, 142, 0.3);
+  }
+  
+  /* Card with subtle green border on hover */
+  .card-hover {
+    transition: all 0.2s ease;
+    border: 1px solid var(--color-border);
+  }
+  
+  .card-hover:hover {
+    border-color: rgba(28, 217, 142, 0.3);
+    box-shadow: 0 8px 32px rgba(28, 217, 142, 0.08);
+  }
+  
+  /* Focus ring - green */
+  .focus-ring:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(28, 217, 142, 0.2);
+  }
+  
+  /* Link style */
+  .link-primary {
+    color: var(--color-primary-dark);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  
+  .link-primary:hover {
+    color: var(--color-primary);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}

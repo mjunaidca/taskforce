@@ -372,7 +372,7 @@ This is the finale. Real Kubernetes cluster on DigitalOcean, Kafka for events, D
 
 ## Success Demo
 
-- Live URL: taskflow.panaversity.app
+- Live URL: taskflow.example.app
 - Real-time updates via WebSocket
 - Event-driven: task created → notification sent
 - Recurring tasks auto-create
