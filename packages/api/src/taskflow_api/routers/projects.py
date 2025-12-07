@@ -100,6 +100,8 @@ async def create_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
+    # Refresh worker to ensure it's still attached after commit
+    await session.refresh(worker)
 
     # Add creator as owner
     membership = ProjectMember(
@@ -109,6 +111,9 @@ async def create_project(
     )
     session.add(membership)
     await session.commit()
+    # Refresh objects after commit before using their attributes
+    await session.refresh(project)
+    await session.refresh(worker)
 
     # Audit log
     await log_action(

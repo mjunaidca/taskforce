@@ -131,6 +131,9 @@ async def add_member(
             await session.commit()
             await session.refresh(member_worker)
 
+    # Refresh member_worker to ensure it's attached to session after any commits
+    await session.refresh(member_worker)
+
     # Check not already a member
     stmt = select(ProjectMember).where(
         ProjectMember.project_id == project_id,
