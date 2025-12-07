@@ -14,10 +14,10 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 # Load .env before anything else (for OPENAI_API_KEY used by Agents SDK)
 load_dotenv()
 
-from .chatkit_store import RequestContext
-from .config import settings
-from .database import create_db_and_tables
-from .routers import agents, audit, health, members, projects, tasks
+from .chatkit_store import RequestContext  # noqa: E402
+from .config import settings  # noqa: E402
+from .database import create_db_and_tables  # noqa: E402
+from .routers import agents, audit, health, members, projects, tasks  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
