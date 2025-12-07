@@ -37,9 +37,15 @@ build/
 *.egg-info/
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+
+# TaskFlow CLI
+.taskflow/
+packages/cli/.venv/
+packages/cli/uv.lock
 
 robolearn-interface/
 feedback/
