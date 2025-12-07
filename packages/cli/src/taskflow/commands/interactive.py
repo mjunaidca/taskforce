@@ -11,7 +11,6 @@ Features:
 """
 
 import shlex
-from pathlib import Path
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory

@@ -132,8 +132,6 @@ class TestDemoCommand:
         # The .taskflow directory should still exist (for init)
         # but demo workers/tasks should be removed
         workers = storage.list_workers()
-        tasks = storage.list_tasks()
-        projects = storage.list_projects()
 
         # If cleanup worked, demo-specific data should be gone
         # Note: We can't be 100% certain without --no-cleanup, but we can check

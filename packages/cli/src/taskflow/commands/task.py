@@ -122,7 +122,8 @@ def add_task(
     # Validate creator exists
     if storage.get_worker(creator) is None:
         console.print(
-            f"[red]Error: Creator '{creator}' not found. Add worker first with 'taskflow worker add'[/red]"
+            f"[red]Error: Creator '{creator}' not found. "
+            "Add worker first with 'taskflow worker add'[/red]"
         )
         raise typer.Exit(1)
 
@@ -154,9 +155,8 @@ def add_task(
     # Validate priority
     valid_priorities = ["low", "medium", "high", "critical"]
     if priority not in valid_priorities:
-        console.print(
-            f"[red]Error: Invalid priority '{priority}'. Must be one of: {', '.join(valid_priorities)}[/red]"
-        )
+        opts = ", ".join(valid_priorities)
+        console.print(f"[red]Error: Invalid priority '{priority}'. Must be one of: {opts}[/red]")
         raise typer.Exit(1)
 
     # Parse due date
@@ -267,7 +267,8 @@ def add_subtask(
     # Validate creator exists
     if storage.get_worker(creator) is None:
         console.print(
-            f"[red]Error: Creator '{creator}' not found. Add worker first with 'taskflow worker add'[/red]"
+            f"[red]Error: Creator '{creator}' not found. "
+            "Add worker first with 'taskflow worker add'[/red]"
         )
         raise typer.Exit(1)
 
@@ -287,9 +288,8 @@ def add_subtask(
     # Validate priority
     valid_priorities = ["low", "medium", "high", "critical"]
     if priority not in valid_priorities:
-        console.print(
-            f"[red]Error: Invalid priority '{priority}'. Must be one of: {', '.join(valid_priorities)}[/red]"
-        )
+        opts = ", ".join(valid_priorities)
+        console.print(f"[red]Error: Invalid priority '{priority}'. Must be one of: {opts}[/red]")
         raise typer.Exit(1)
 
     # Generate task ID
@@ -334,7 +334,7 @@ def add_subtask(
 
     # Show success message
     console.print(
-        f"[green]✓[/green] Subtask [bold]#{task.id}[/bold] created successfully under parent #{parent_id}"
+        f"[green]✓[/green] Subtask [bold]#{task.id}[/bold] created under parent #{parent_id}"
     )
     console.print(f"  Title: {task.title}")
     console.print(f"  Project: [cyan]{task.project_slug}[/cyan] (inherited from parent)")
@@ -394,18 +394,16 @@ def list_tasks(
     if priority:
         valid_priorities = ["low", "medium", "high", "critical"]
         if priority not in valid_priorities:
-            console.print(
-                f"[red]Error: Invalid priority '{priority}'. Must be one of: {', '.join(valid_priorities)}[/red]"
-            )
+            opts = ", ".join(valid_priorities)
+            console.print(f"[red]Error: Invalid priority '{priority}'. Options: {opts}[/red]")
             raise typer.Exit(1)
 
     # Validate sort field
     if sort:
         valid_sort_fields = ["created", "updated", "priority", "due_date"]
         if sort not in valid_sort_fields:
-            console.print(
-                f"[red]Error: Invalid sort field '{sort}'. Must be one of: {', '.join(valid_sort_fields)}[/red]"
-            )
+            opts = ", ".join(valid_sort_fields)
+            console.print(f"[red]Error: Invalid sort field '{sort}'. Must be one of: {opts}[/red]")
             raise typer.Exit(1)
 
     # Parse due date filters
@@ -557,17 +555,6 @@ def list_tasks(
 
         # Format assigned
         assigned_display = task.assigned_to if task.assigned_to else "-"
-
-        # Format title with due date icons
-        title_display = f"TEST-{task.title}"  # TEMPORARY DEBUG
-        if task.due_date:
-            days_until_due = (task.due_date.date() - today.date()).days
-            if days_until_due < 0:
-                # Overdue - red circle (avoid emoji in tests, use [red] markup instead)
-                title_display = f"[red]🔴[/red] {task.title}"
-            elif days_until_due <= 2:
-                # Due within 2 days - warning (avoid emoji in tests, use [yellow] markup instead)
-                title_display = f"[yellow]⚠️[/yellow] {task.title}"
 
         # Add row directly without unpacking
         if has_due_dates:
@@ -901,9 +888,8 @@ def edit_task(
         # Validate status
         valid_statuses = ["pending", "in_progress", "review", "completed", "blocked"]
         if status not in valid_statuses:
-            console.print(
-                f"[red]Error: Invalid status '{status}'. Must be one of: {', '.join(valid_statuses)}[/red]"
-            )
+            opts = ", ".join(valid_statuses)
+            console.print(f"[red]Error: Invalid status '{status}'. Must be one of: {opts}[/red]")
             raise typer.Exit(1)
         task.status = status  # type: ignore
         changes["status"] = status
@@ -912,9 +898,8 @@ def edit_task(
         # Validate priority
         valid_priorities = ["low", "medium", "high", "critical"]
         if priority not in valid_priorities:
-            console.print(
-                f"[red]Error: Invalid priority '{priority}'. Must be one of: {', '.join(valid_priorities)}[/red]"
-            )
+            opts = ", ".join(valid_priorities)
+            console.print(f"[red]Error: Invalid priority '{priority}'. Options: {opts}[/red]")
             raise typer.Exit(1)
         task.priority = priority  # type: ignore
         changes["priority"] = priority

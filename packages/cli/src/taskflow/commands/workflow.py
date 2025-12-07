@@ -117,7 +117,8 @@ def progress_task(
     # Validate task is in progress
     if task.status != "in_progress":
         console.print(
-            f"[red]Error: Task must be in_progress to update progress (current: {task.status})[/red]"
+            f"[red]Error: Task must be in_progress to update progress "
+            f"(current: {task.status})[/red]"
         )
         raise typer.Exit(1)
 

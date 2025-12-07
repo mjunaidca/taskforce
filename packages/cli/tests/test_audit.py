@@ -150,7 +150,7 @@ class TestLogAction:
         storage.add_worker(worker)
 
         # Log action
-        log = log_action(storage=storage, action="completed", actor_id="@sarah", task_id=1)
+        log_action(storage=storage, action="completed", actor_id="@sarah", task_id=1)
 
         # Verify persistence
         logs = storage.get_audit_logs(task_id=1)

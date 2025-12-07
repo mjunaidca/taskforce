@@ -259,7 +259,7 @@ class TestSubtaskProgressRollup:
         assert parent_progress == 50
 
     def test_all_subtasks_complete_marks_parent_complete(self, temp_taskflow):
-        """Test that when all subtasks complete, parent shows 100% via calculate_subtask_progress."""
+        """Test: when all subtasks complete, parent shows 100% via calculate_subtask_progress."""
         from taskflow.commands.task import calculate_subtask_progress
 
         # Create parent and subtasks
