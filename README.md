@@ -1,10 +1,12 @@
 # TaskFlow: Human-Agent Task Orchestration Platform
 
-**TaskFlow** is a Human-Agent Task Orchestration Platform that evolves from a local CLI tool to a cloud-native, event-driven system where humans and AI agents collaborate as equals.
+ Human-Agent Task Orchestration Platform where humans and AI agents collaborate as equals.
 
 **One-liner:** Your AI workforce — assign tasks to humans or agents, track everything, ship together.
 
 This project fulfills all hackathon requirements while solving a real problem: **fragmented work across projects with no unified visibility or agent collaboration.**
+
+Works directly with every web and local AI Coding Agent, SpecKitPlus, SpecKit, Google AntiGravity, and any other AI agent that implements the MCP protocol.
 
 ---
 
