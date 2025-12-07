@@ -28,7 +28,7 @@ TaskFlow isn't just a task manager — it's evidence that humans and AI agents c
 
 The CLI is your proof of concept. When you demo this, the audience should immediately understand: "Oh, I can assign tasks to Claude the same way I assign to a human teammate."
 
-## Success Demo (69 minutes from now)
+## Success Demo 
 
 ```bash
 # Initialize
@@ -61,7 +61,7 @@ taskflow audit 1
 
 ## Execution Approach
 
-**Don't build everything. Build the demo path first.**
+**Don't build everything. Build the core path first.**
 
 ### Sprint 1: Core Loop (30 min)
 ```
@@ -92,7 +92,7 @@ Goal: Demo-ready
 ```
 Read CLAUDE.md and specs/constitution.md first.
 
-We have 69 minutes. Build the demo path only:
+We have 69 minutes. Build the core path only:
 
 1. models.py - Task, Worker, Project, AuditLog (skip LinkedResource, Blueprint)
 2. storage.py - init, load, save (skip backup, locking)
