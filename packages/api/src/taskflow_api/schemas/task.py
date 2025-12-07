@@ -38,6 +38,14 @@ class TaskCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     due_date: datetime | None = None
 
+    @field_validator("assignee_id", "parent_task_id", mode="after")
+    @classmethod
+    def zero_to_none(cls, v: int | None) -> int | None:
+        """Convert 0 to None (0 is not a valid foreign key)."""
+        if v == 0:
+            return None
+        return v
+
     @field_validator("due_date", mode="after")
     @classmethod
     def normalize_due_date(cls, v: datetime | None) -> datetime | None:
