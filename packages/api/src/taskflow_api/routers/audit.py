@@ -106,13 +106,9 @@ async def get_project_audit(
     # Get audit entries for project and its tasks
     from sqlalchemy import or_
 
-    conditions = [
-        (AuditLog.entity_type == "project") & (AuditLog.entity_id == project_id)
-    ]
+    conditions = [(AuditLog.entity_type == "project") & (AuditLog.entity_id == project_id)]
     if task_ids:
-        conditions.append(
-            (AuditLog.entity_type == "task") & (AuditLog.entity_id.in_(task_ids))
-        )
+        conditions.append((AuditLog.entity_type == "task") & (AuditLog.entity_id.in_(task_ids)))
 
     stmt = (
         select(AuditLog)

@@ -42,19 +42,23 @@ TestAsyncSession = sessionmaker(
 
 
 # Mock user for tests
-TEST_USER = CurrentUser({
-    "sub": "test-user-123",
-    "email": "test@example.com",
-    "name": "Test User",
-    "role": "user",
-})
+TEST_USER = CurrentUser(
+    {
+        "sub": "test-user-123",
+        "email": "test@example.com",
+        "name": "Test User",
+        "role": "user",
+    }
+)
 
-TEST_USER_2 = CurrentUser({
-    "sub": "test-user-456",
-    "email": "other@example.com",
-    "name": "Other User",
-    "role": "user",
-})
+TEST_USER_2 = CurrentUser(
+    {
+        "sub": "test-user-456",
+        "email": "other@example.com",
+        "name": "Other User",
+        "role": "user",
+    }
+)
 
 
 @pytest.fixture(scope="session")

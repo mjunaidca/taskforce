@@ -171,9 +171,7 @@ async def test_complete_task_lifecycle(client: AsyncClient) -> None:
     assert task["status"] == "pending"
 
     # Start
-    response = await client.patch(
-        f"/api/tasks/{task['id']}/status", json={"status": "in_progress"}
-    )
+    response = await client.patch(f"/api/tasks/{task['id']}/status", json={"status": "in_progress"})
     assert response.json()["status"] == "in_progress"
     assert response.json()["started_at"] is not None
 
@@ -186,9 +184,7 @@ async def test_complete_task_lifecycle(client: AsyncClient) -> None:
     assert response.json()["progress_percent"] == 75
 
     # Submit for review
-    response = await client.patch(
-        f"/api/tasks/{task['id']}/status", json={"status": "review"}
-    )
+    response = await client.patch(f"/api/tasks/{task['id']}/status", json={"status": "review"})
     assert response.json()["status"] == "review"
 
     # Approve
@@ -231,15 +227,11 @@ async def test_blocked_status(client: AsyncClient) -> None:
     task = await create_test_task(client, project["id"])
 
     # pending -> blocked
-    response = await client.patch(
-        f"/api/tasks/{task['id']}/status", json={"status": "blocked"}
-    )
+    response = await client.patch(f"/api/tasks/{task['id']}/status", json={"status": "blocked"})
     assert response.json()["status"] == "blocked"
 
     # blocked -> pending
-    response = await client.patch(
-        f"/api/tasks/{task['id']}/status", json={"status": "pending"}
-    )
+    response = await client.patch(f"/api/tasks/{task['id']}/status", json={"status": "pending"})
     assert response.json()["status"] == "pending"
 
 

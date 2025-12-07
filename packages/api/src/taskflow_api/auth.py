@@ -133,12 +133,14 @@ async def get_current_user(
     """
     # Dev mode bypass for local development
     if settings.dev_mode:
-        return CurrentUser({
-            "sub": settings.dev_user_id,
-            "email": settings.dev_user_email,
-            "name": settings.dev_user_name,
-            "role": "admin",
-        })
+        return CurrentUser(
+            {
+                "sub": settings.dev_user_id,
+                "email": settings.dev_user_email,
+                "name": settings.dev_user_name,
+                "role": "admin",
+            }
+        )
 
     # Production: Verify JWT using JWKS
     payload = await verify_jwt(credentials.credentials)
