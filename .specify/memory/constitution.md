@@ -42,7 +42,7 @@ Follow-up TODOs:
 
 # TaskFlow Platform — Constitution
 
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Ratified:** 2025-12-06
 **Last Amended:** 2025-12-07
 **Scope:** Platform governance (CLI, Web, MCP Server, AI Agents, Human Workers)
@@ -343,7 +343,85 @@ For complex specifications (5+ interacting entities, 3+ constraint types, or saf
 
 ---
 
-## III. Platform Quality Standards
+## III. Technical Implementation Patterns
+
+<!-- REASONING ACTIVATION: These patterns prevent bugs discovered in production -->
+
+### Async SQLAlchemy / SQLModel (Python Backend)
+
+**Problem**: After `session.commit()`, SQLAlchemy objects become detached. Accessing attributes on detached objects triggers lazy loading in async context, causing `MissingGreenlet` errors.
+
+**Required Pattern**:
+```python
+# 1. Extract primitive values BEFORE any commit
+worker = await ensure_user_setup(session, user)
+worker_id = worker.id          # Extract NOW
+worker_type = worker.type      # Extract NOW
+
+# 2. Use flush() to get generated IDs without committing
+session.add(entity)
+await session.flush()          # Gets entity.id
+entity_id = entity.id          # Extract immediately
+
+# 3. Single commit at end of operation
+await log_action(session, entity_id=entity_id, actor_id=worker_id, ...)
+await session.commit()         # One commit
+await session.refresh(entity)  # Reattach if needed for response
+```
+
+**Anti-Patterns**:
+- ❌ Service functions that commit internally (caller loses control)
+- ❌ Passing ORM objects across commit boundaries
+- ❌ Accessing object attributes after commit without refresh
+
+**Validation**: If `MissingGreenlet` appears, check for attribute access after commit.
+
+---
+
+### API Input Validation
+
+**Problem**: API clients (especially Swagger UI) send unexpected default values.
+
+**Required Patterns**:
+
+1. **Convert 0 to None for nullable FKs**:
+```python
+@field_validator("assignee_id", "parent_task_id", mode="after")
+@classmethod
+def zero_to_none(cls, v: int | None) -> int | None:
+    """Convert 0 to None (0 is not a valid foreign key)."""
+    return None if v == 0 else v
+```
+
+2. **Strip timezone from datetime inputs**:
+```python
+@field_validator("due_date", mode="after")
+@classmethod
+def normalize_datetime(cls, v: datetime | None) -> datetime | None:
+    """Database stores naive UTC, strip timezone after conversion."""
+    if v is None:
+        return None
+    if v.tzinfo is not None:
+        v = v.astimezone(UTC).replace(tzinfo=None)
+    return v
+```
+
+3. **Validate FK references exist before insert** (handle gracefully, not 500).
+
+---
+
+### Transaction Boundaries
+
+**Principle**: The caller owns the transaction lifecycle.
+
+- Service functions (like `log_action`) should NOT commit
+- Router endpoints own the commit decision
+- Use `flush()` for generated IDs mid-transaction
+- Single `commit()` at the end ensures atomicity
+
+---
+
+## IV. Platform Quality Standards
 
 ### Code Quality
 
@@ -493,6 +571,7 @@ Configurable per-project:
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.4 | 2025-12-07 | Added Section III: Technical Implementation Patterns (async SQLAlchemy, input validation, transaction boundaries) |
 | 1.0.3 | 2025-12-07 | Added Formal Verification Guidance (Software Abstractions reference) |
 | 1.0.2 | 2025-12-07 | Added Principle 5: Phase Continuity (data models persist across phases) |
 | 1.0.1 | 2025-12-07 | Added Python standards: PEP 8, modern typing system |

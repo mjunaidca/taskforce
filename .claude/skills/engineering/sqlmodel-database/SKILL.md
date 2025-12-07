@@ -445,6 +445,96 @@ def test_update_partial(client, session):
     assert response.json()["priority"] == "high"   # Updated
 ```
 
+## Critical: Async Session Patterns (MissingGreenlet Prevention)
+
+After `session.commit()`, SQLAlchemy objects become **detached**. Accessing attributes on detached objects triggers lazy loading, which fails in async context with `MissingGreenlet` error.
+
+### The Pattern: Extract → Flush → Commit
+
+```python
+@router.post("/entities", response_model=EntityRead, status_code=201)
+async def create_entity(
+    data: EntityCreate,
+    session: AsyncSession = Depends(get_session),
+    user: CurrentUser = Depends(get_current_user),
+) -> EntityRead:
+    # 1. Get related objects and EXTRACT primitives immediately
+    worker = await get_worker(session, user.id)
+    worker_id = worker.id        # Extract BEFORE any commit
+    worker_type = worker.type    # Extract BEFORE any commit
+
+    # 2. Create entity
+    entity = Entity(**data.model_dump())
+    session.add(entity)
+
+    # 3. Use flush() to get generated ID without committing
+    await session.flush()
+    entity_id = entity.id        # Extract immediately after flush
+
+    # 4. Do related operations (audit logging, etc.)
+    # Pass primitives, NOT objects
+    await log_action(
+        session,
+        entity_id=entity_id,
+        actor_id=worker_id,
+        actor_type=worker_type,  # String, not object
+    )
+
+    # 5. Single commit at the end
+    await session.commit()
+
+    # 6. Refresh if you need to return the object
+    await session.refresh(entity)
+    return entity
+```
+
+### Service Functions: Never Commit Internally
+
+```python
+# WRONG - service commits, caller loses transaction control
+async def log_action(session: AsyncSession, ...):
+    log = AuditLog(...)
+    session.add(log)
+    await session.commit()  # ❌ Don't do this!
+
+# CORRECT - caller owns the transaction
+async def log_action(session: AsyncSession, ...):
+    log = AuditLog(...)
+    session.add(log)
+    # No commit - caller will commit
+    return log
+```
+
+### The Problem: Object Detachment After Commit
+
+```python
+# ❌ WRONG - causes MissingGreenlet
+worker = await session.get(Worker, 1)
+await session.commit()           # Worker is now DETACHED
+print(worker.name)               # ERROR! Triggers lazy load in async
+
+# ✅ CORRECT - extract before commit
+worker = await session.get(Worker, 1)
+worker_name = worker.name        # Extract while attached
+await session.commit()
+print(worker_name)               # Safe - it's a string
+```
+
+### When Passing Objects Between Functions
+
+```python
+# ❌ WRONG - passing ORM object that may be detached
+async def do_work(entity: Entity):
+    print(entity.name)  # May fail if entity was detached
+
+# ✅ CORRECT - pass primitive IDs
+async def do_work(entity_id: int, session: AsyncSession):
+    entity = await session.get(Entity, entity_id)  # Fresh fetch
+    print(entity.name)
+```
+
+---
+
 ## Common Pitfalls
 
 ### 1. Forgetting table=True
@@ -485,6 +575,65 @@ tasks: List["Task"] = Relationship()
 
 # CORRECT
 tasks: List["Task"] = Relationship(back_populates="project")
+```
+
+### 5. MissingGreenlet after commit (see "Critical: Async Session Patterns" above)
+```python
+# WRONG - accessing detached object
+await session.commit()
+print(entity.name)  # MissingGreenlet error!
+
+# CORRECT - extract before commit or refresh after
+name = entity.name  # Before commit
+await session.commit()
+# OR
+await session.commit()
+await session.refresh(entity)  # Reattach
+print(entity.name)
+```
+
+---
+
+## Input Validation Patterns
+
+### Converting 0 to None for nullable foreign keys
+
+Swagger UI and some clients send `0` as default for optional int fields. This violates FK constraints.
+
+```python
+from pydantic import field_validator
+
+class TaskCreate(SQLModel):
+    assignee_id: int | None = None
+    parent_task_id: int | None = None
+
+    @field_validator("assignee_id", "parent_task_id", mode="after")
+    @classmethod
+    def zero_to_none(cls, v: int | None) -> int | None:
+        """Convert 0 to None (0 is not a valid FK)."""
+        return None if v == 0 else v
+```
+
+### Normalizing timezone-aware datetimes
+
+Database stores naive UTC, but clients may send ISO 8601 with timezone.
+
+```python
+from datetime import UTC, datetime
+from pydantic import field_validator
+
+class TaskCreate(SQLModel):
+    due_date: datetime | None = None
+
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def normalize_datetime(cls, v: datetime | None) -> datetime | None:
+        """Strip timezone after converting to UTC."""
+        if v is None:
+            return None
+        if v.tzinfo is not None:
+            v = v.astimezone(UTC).replace(tzinfo=None)
+        return v
 ```
 
 ## References
