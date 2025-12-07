@@ -1,9 +1,24 @@
 """Task API schemas."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def strip_timezone(dt: datetime | None) -> datetime | None:
+    """Convert timezone-aware datetime to naive UTC datetime.
+
+    Database stores naive datetimes, so we strip timezone info
+    after converting to UTC.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        # Convert to UTC and strip timezone
+
+        dt = dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
 
 
 class TaskCreate(BaseModel):
@@ -23,6 +38,20 @@ class TaskCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     due_date: datetime | None = None
 
+    @field_validator("assignee_id", "parent_task_id", mode="after")
+    @classmethod
+    def zero_to_none(cls, v: int | None) -> int | None:
+        """Convert 0 to None (0 is not a valid foreign key)."""
+        if v == 0:
+            return None
+        return v
+
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def normalize_due_date(cls, v: datetime | None) -> datetime | None:
+        """Strip timezone from due_date for database compatibility."""
+        return strip_timezone(v)
+
 
 class TaskUpdate(BaseModel):
     """Schema for updating a task."""
@@ -32,6 +61,12 @@ class TaskUpdate(BaseModel):
     priority: Literal["low", "medium", "high", "critical"] | None = None
     tags: list[str] | None = None
     due_date: datetime | None = None
+
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def normalize_due_date(cls, v: datetime | None) -> datetime | None:
+        """Strip timezone from due_date for database compatibility."""
+        return strip_timezone(v)
 
 
 class StatusUpdate(BaseModel):

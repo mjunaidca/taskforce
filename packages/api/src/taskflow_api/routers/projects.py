@@ -26,11 +26,11 @@ async def list_projects(
     offset: int = Query(default=0, ge=0),
 ) -> list[ProjectRead]:
     """List projects where user is a member."""
-    # Ensure user setup
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
 
     # Get project IDs where user is a member
-    member_stmt = select(ProjectMember.project_id).where(ProjectMember.worker_id == worker.id)
+    member_stmt = select(ProjectMember.project_id).where(ProjectMember.worker_id == worker_id)
     member_result = await session.exec(member_stmt)
     project_ids = list(member_result.all())
 
@@ -80,8 +80,10 @@ async def create_project(
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
     """Create a new project."""
-    # Ensure user setup
     worker = await ensure_user_setup(session, user)
+    # Extract primitive values before any commits
+    worker_id = worker.id
+    worker_type = worker.type
 
     # Check slug uniqueness
     stmt = select(Project).where(Project.slug == data.slug)
@@ -98,27 +100,31 @@ async def create_project(
         is_default=False,
     )
     session.add(project)
-    await session.commit()
-    await session.refresh(project)
+    await session.flush()  # Get project.id without committing
+    project_id = project.id
 
     # Add creator as owner
     membership = ProjectMember(
-        project_id=project.id,
-        worker_id=worker.id,
+        project_id=project_id,
+        worker_id=worker_id,
         role="owner",
     )
     session.add(membership)
-    await session.commit()
 
-    # Audit log
+    # Audit log (doesn't commit)
     await log_action(
         session,
         entity_type="project",
-        entity_id=project.id,
+        entity_id=project_id,
         action="created",
-        actor_id=worker.id,
-        details={"slug": project.slug, "name": project.name},
+        actor_id=worker_id,
+        actor_type=worker_type,
+        details={"slug": data.slug, "name": data.name},
     )
+
+    # Single commit for all changes
+    await session.commit()
+    await session.refresh(project)
 
     return ProjectRead(
         id=project.id,
@@ -142,6 +148,7 @@ async def get_project(
 ) -> ProjectRead:
     """Get project details."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
 
     project = await session.get(Project, project_id)
     if not project:
@@ -150,7 +157,7 @@ async def get_project(
     # Check membership
     stmt = select(ProjectMember).where(
         ProjectMember.project_id == project_id,
-        ProjectMember.worker_id == worker.id,
+        ProjectMember.worker_id == worker_id,
     )
     result = await session.exec(stmt)
     if not result.first():
@@ -188,6 +195,8 @@ async def update_project(
 ) -> ProjectRead:
     """Update project (owner only)."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     project = await session.get(Project, project_id)
     if not project:
@@ -209,18 +218,20 @@ async def update_project(
     if changes:
         project.updated_at = datetime.utcnow()
         session.add(project)
-        await session.commit()
-        await session.refresh(project)
 
         # Audit log
         await log_action(
             session,
             entity_type="project",
-            entity_id=project.id,
+            entity_id=project_id,
             action="updated",
-            actor_id=worker.id,
+            actor_id=worker_id,
+            actor_type=worker_type,
             details=changes,
         )
+
+        await session.commit()
+        await session.refresh(project)
 
     # Get counts for response
     member_count_stmt = select(func.count(ProjectMember.id)).where(
@@ -254,10 +265,15 @@ async def delete_project(
 ) -> dict:
     """Delete project (owner only)."""
     worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+    worker_type = worker.type
 
     project = await session.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Extract values before any modifications
+    project_slug = project.slug
 
     # Check ownership
     if project.owner_id != user.id:
@@ -294,10 +310,11 @@ async def delete_project(
     await log_action(
         session,
         entity_type="project",
-        entity_id=project.id,
+        entity_id=project_id,
         action="deleted",
-        actor_id=worker.id,
-        details={"slug": project.slug, "force": force, "task_count": task_count},
+        actor_id=worker_id,
+        actor_type=worker_type,
+        details={"slug": project_slug, "force": force, "task_count": task_count},
     )
 
     await session.delete(project)
