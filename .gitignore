@@ -57,3 +57,5 @@ robolearn-interface/
 .env.local
 
 cookies.txt
+
+rag-agent/
