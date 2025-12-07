@@ -71,9 +71,10 @@ def interactive() -> None:
         storage = get_storage()
         history_file = storage.taskflow_dir / "history.txt"
     except Exception:
-        # Fallback if storage not initialized
-        home = Path.home()
-        taskflow_dir = home / ".taskflow"
+        # Fallback if storage not initialized - use current directory
+        from taskflow.config import get_taskflow_dir
+
+        taskflow_dir = get_taskflow_dir()
         taskflow_dir.mkdir(exist_ok=True)
         history_file = taskflow_dir / "history.txt"
 

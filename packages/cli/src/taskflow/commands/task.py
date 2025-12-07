@@ -525,12 +525,12 @@ def list_tasks(
 
     # Create table
     table = Table(title=title, show_header=True, header_style="bold cyan")
-    table.add_column("ID", style="green", width=6)
-    table.add_column("Title", style="white", no_wrap=False)
-    table.add_column("Status", style="blue", width=12)
-    table.add_column("Priority", style="yellow", width=10)
-    table.add_column("Assigned", style="magenta", width=15)
-    table.add_column("Project", style="cyan", width=15)
+    table.add_column("ID", style="green", width=5)
+    table.add_column("Title", style="white", min_width=20)
+    table.add_column("Status", style="blue", width=11)
+    table.add_column("Priority", style="yellow", width=9)
+    table.add_column("Assigned", style="magenta", width=14)
+    table.add_column("Project", style="cyan", width=12)
 
     # Add due date column if any task has one
     if has_due_dates:

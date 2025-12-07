@@ -56,7 +56,7 @@ def test_init_creates_config_json(cli_runner: CliRunner, tmp_path: Path) -> None
 
     config = json.loads(config_file.read_text())
     assert config["default_project"] == "default"
-    assert config["current_user"] is None
+    assert config["current_user"] == "@default-user"  # Default user now created
     assert config["storage_mode"] == "json"
 
     # Clean up
@@ -86,8 +86,12 @@ def test_init_creates_data_json_with_default_project(cli_runner: CliRunner, tmp_
     assert data["projects"][0]["name"] == "Default Project"
     assert data["projects"][0]["description"] == "Default project created on init"
 
+    # Verify default user was created
+    assert len(data["workers"]) == 1
+    assert data["workers"][0]["id"] == "@default-user"
+    assert data["workers"][0]["type"] == "human"
+
     # Verify empty collections
-    assert data["workers"] == []
     assert data["tasks"] == []
     assert data["audit_logs"] == []
 

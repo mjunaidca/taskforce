@@ -102,14 +102,29 @@ def demo(
     console.print("  [green]✓[/green] Creating worker @claude-code (agent)")
     sleep_if_not_fast(0.5, fast)
 
-    # Create project
-    project = Project(
+    # Create demo project
+    demo_project = Project(
         slug="demo",
         name="Demo Project",
         description="Demonstration of human-agent parity",
     )
-    storage.add_project(project)
+    storage.add_project(demo_project)
     console.print('  [green]✓[/green] Creating project "demo"')
+
+    # Ensure default project exists for post-demo use
+    if storage.get_project("default") is None:
+        default_project = Project(
+            slug="default",
+            name="Default Project",
+            description="Default project created on init",
+        )
+        storage.add_project(default_project)
+
+    # Set @sarah as current user so demo data is usable
+    from taskflow.config import set_config
+
+    set_config(storage, "current_user", "@sarah")
+
     console.print()
     sleep_if_not_fast(1, fast)
 

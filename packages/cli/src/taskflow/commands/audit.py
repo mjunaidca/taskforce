@@ -7,29 +7,15 @@ Commands for viewing audit logs and accountability tracking:
 - audit actor: Show audit trail for specific actor
 """
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from taskflow.storage import Storage
+from taskflow.utils import get_storage
 
 app = typer.Typer(help="Audit log viewing commands")
 console = Console()
-
-
-def get_taskflow_dir() -> Path:
-    """Get the .taskflow directory path.
-
-    Returns:
-        Path to .taskflow directory
-    """
-    import os
-
-    home = os.environ.get("TASKFLOW_HOME", str(Path.home()))
-    return Path(home) / ".taskflow"
 
 
 @app.command(name="list")
@@ -47,8 +33,7 @@ def list_audit_logs(
         taskflow audit list --actor @claude-code
         taskflow audit list --action created --limit 10
     """
-    taskflow_dir = get_taskflow_dir()
-    storage = Storage(taskflow_dir)
+    storage = get_storage()
 
     # Get filtered audit logs
     logs = storage.list_audit_logs(task_id=task, actor_id=actor, action=action)
@@ -92,8 +77,7 @@ def show_audit_log(
     Examples:
         taskflow audit show 5
     """
-    taskflow_dir = get_taskflow_dir()
-    storage = Storage(taskflow_dir)
+    storage = get_storage()
 
     log = storage.get_audit_log(id)
 
@@ -137,8 +121,7 @@ def show_task_audit(
     Examples:
         taskflow audit task 1
     """
-    taskflow_dir = get_taskflow_dir()
-    storage = Storage(taskflow_dir)
+    storage = get_storage()
 
     # Get audit logs for this task
     logs = storage.list_audit_logs(task_id=task_id)
@@ -191,8 +174,7 @@ def show_actor_audit(
         taskflow audit actor @claude-code
         taskflow audit actor @sarah
     """
-    taskflow_dir = get_taskflow_dir()
-    storage = Storage(taskflow_dir)
+    storage = get_storage()
 
     # Get audit logs for this actor
     logs = storage.list_audit_logs(actor_id=actor_id)
