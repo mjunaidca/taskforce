@@ -7,8 +7,7 @@ The future of software development is **AI-native and spec-driven**. As AI agent
 
 In this hackathon, you will master the art of building applications iteratively—starting from a simple console app and evolving it into a fully-featured, cloud-native AI chatbot deployed on Kubernetes. This journey will teach you the [Nine Pillars of AI-Driven Development](https://ai-native.panaversity.org/docs/Introducing-AI-Driven-Development/nine-pillars), [Claude Code](https://ai-native.panaversity.org/docs/AI-Tool-Landscape/claude-code-features-and-workflows), [Spec-Driven Development with Reusable Intelligence](https://ai-native.panaversity.org/docs/SDD-RI-Fundamentals) and Cloud-Native AI technologies through hands-on implementation.
 
-**Excel in the Hackathon and Launch Your Journey as an AI Startup Founder 🚀**  
-We've recently launched **Panaversity (panaversity.org)**, an initiative focused on teaching cutting-edge AI courses. If you perform well in this hackathon, you may be invited for an interview to join the **Panaversity core team** and potentially step into the role of a **startup founder** within this growing ecosystem. You will get a chance to work with Panaversity founders Zia, Rehan, Junaid, and Wania and become the very best. You may also get a chance to teach at Panaversity, PIAIC, and GIAIC.
+
 
 # **What You Will Learn**
 
@@ -370,7 +369,7 @@ Goal: Students act as Product Architects, using AI to build progressively comple
 
 ### **Project Overview**
 
-This project simulates the real-world evolution of software. You will start with a simple script and end with a Kubernetes-managed, event-driven, AI-powered distributed system.
+This project is Muhammad's submission for **Hackathon II**.of software. You will start with a simple script and end with a Kubernetes-managed, event-driven, AI-powered distributed system.
 
 ### **Phase Breakdown**
 

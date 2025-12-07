@@ -129,7 +129,7 @@ PROJECTS
 ────────────────────────────────────
 taskflow      TaskFlow Platform
 personal      Personal Tasks
-panaversity   Panaversity Courses
+robolearn     Robolearn
 ```
 
 ### `taskflow project show`
