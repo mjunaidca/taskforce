@@ -1,14 +1,45 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Bot, Users, CheckSquare, ArrowRight, Zap } from "lucide-react"
-import { initiateLogin } from "@/lib/auth"
+import { initiateLogin, getSession } from "@/lib/auth"
 
 export default function Home() {
+  const router = useRouter()
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    // Check if user is already logged in
+    getSession().then((session) => {
+      if (session.authenticated) {
+        router.push("/dashboard")
+      } else {
+        setChecking(false)
+      }
+    })
+  }, [router])
+
   const handleGetStarted = () => {
     initiateLogin()
+  }
+
+  // Show loading while checking auth status
+  if (checking) {
+    return (
+      <div className="min-h-screen ifk-atmosphere flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center mx-auto glow-primary-sm">
+            <Zap className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <Skeleton className="h-4 w-32 mx-auto" />
+        </div>
+      </div>
+    )
   }
 
   return (

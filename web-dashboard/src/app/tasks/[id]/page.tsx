@@ -4,13 +4,15 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
-import { TaskRead, MemberRead, AuditRead } from "@/types"
+import { TaskRead, MemberRead, AuditRead, TaskPriority } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -19,20 +21,41 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
   ArrowLeft,
-  CheckSquare,
   Bot,
   User,
   Clock,
   Calendar,
   ChevronRight,
   Play,
-  Pause,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Plus,
   FileText,
+  Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react"
 
 export default function TaskDetailPage() {
@@ -47,26 +70,48 @@ export default function TaskDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const taskData = await api.getTask(taskId)
-        setTask(taskData)
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editPriority, setEditPriority] = useState<TaskPriority>("medium")
+  const [editDueDate, setEditDueDate] = useState("")
+  const [editTags, setEditTags] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
 
-        const [membersData, auditData] = await Promise.all([
-          api.getProjectMembers(taskData.project_id),
-          api.getTaskAudit(taskId, { limit: 10 }),
-        ])
-        setMembers(membersData)
-        setAudit(auditData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load task")
-      } finally {
-        setLoading(false)
-      }
+  // Delete state
+  const [deleting, setDeleting] = useState(false)
+
+  // Subtask dialog state
+  const [subtaskDialogOpen, setSubtaskDialogOpen] = useState(false)
+  const [subtaskTitle, setSubtaskTitle] = useState("")
+  const [subtaskDescription, setSubtaskDescription] = useState("")
+  const [subtaskPriority, setSubtaskPriority] = useState<TaskPriority>("medium")
+  const [subtaskAssigneeId, setSubtaskAssigneeId] = useState<string>("")
+  const [addingSubtask, setAddingSubtask] = useState(false)
+  const [subtaskError, setSubtaskError] = useState<string | null>(null)
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const taskData = await api.getTask(taskId)
+      setTask(taskData)
+
+      const [membersData, auditData] = await Promise.all([
+        api.getProjectMembers(taskData.project_id),
+        api.getTaskAudit(taskId, { limit: 10 }),
+      ])
+      setMembers(membersData)
+      setAudit(auditData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load task")
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     if (taskId) {
       fetchData()
     }
@@ -92,6 +137,8 @@ export default function TaskDetailPage() {
 
   const handleAssign = async (workerId: string) => {
     if (!task) return
+    // Skip if selecting "unassigned" - would need unassign API endpoint
+    if (workerId === "unassigned") return
     try {
       setUpdating(true)
       const updatedTask = await api.assignTask(task.id, {
@@ -105,6 +152,91 @@ export default function TaskDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to assign task")
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleAddSubtask = async () => {
+    if (!task || !subtaskTitle.trim()) {
+      setSubtaskError("Title is required")
+      return
+    }
+
+    try {
+      setAddingSubtask(true)
+      setSubtaskError(null)
+      await api.createSubtask(task.id, {
+        title: subtaskTitle.trim(),
+        description: subtaskDescription.trim() || undefined,
+        priority: subtaskPriority,
+        assignee_id: subtaskAssigneeId ? Number(subtaskAssigneeId) : undefined,
+      })
+      setSubtaskDialogOpen(false)
+      setSubtaskTitle("")
+      setSubtaskDescription("")
+      setSubtaskPriority("medium")
+      setSubtaskAssigneeId("")
+      // Refresh task to get updated subtasks
+      const updatedTask = await api.getTask(taskId)
+      setTask(updatedTask)
+      // Refresh audit
+      const auditData = await api.getTaskAudit(taskId, { limit: 10 })
+      setAudit(auditData)
+    } catch (err) {
+      setSubtaskError(err instanceof Error ? err.message : "Failed to create subtask")
+    } finally {
+      setAddingSubtask(false)
+    }
+  }
+
+  const openEditDialog = () => {
+    if (!task) return
+    setEditTitle(task.title)
+    setEditDescription(task.description || "")
+    setEditPriority(task.priority)
+    setEditDueDate(task.due_date ? task.due_date.split("T")[0] : "")
+    setEditTags(task.tags.join(", "))
+    setEditError(null)
+    setEditDialogOpen(true)
+  }
+
+  const handleEditTask = async () => {
+    if (!task) return
+    if (!editTitle.trim()) {
+      setEditError("Title is required")
+      return
+    }
+
+    try {
+      setSaving(true)
+      setEditError(null)
+      const updatedTask = await api.updateTask(task.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        priority: editPriority,
+        due_date: editDueDate || undefined,
+        tags: editTags ? editTags.split(",").map(t => t.trim()).filter(Boolean) : [],
+      })
+      setTask(updatedTask)
+      setEditDialogOpen(false)
+      // Refresh audit
+      const auditData = await api.getTaskAudit(taskId, { limit: 10 })
+      setAudit(auditData)
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Failed to update task")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteTask = async () => {
+    if (!task) return
+    try {
+      setDeleting(true)
+      await api.deleteTask(task.id)
+      router.push(`/projects/${task.project_id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task")
+      setDeleting(false)
     }
   }
 
@@ -183,7 +315,135 @@ export default function TaskDetailPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={openEditDialog}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete &quot;{task.title}&quot;? This action cannot be undone.
+                  {task.subtasks.length > 0 && (
+                    <span className="block mt-2 text-warning">
+                      Warning: This task has {task.subtasks.length} subtask(s) that will also be deleted.
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteTask}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update task details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {editError && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                {editError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="editTitle">Title *</Label>
+              <Input
+                id="editTitle"
+                placeholder="Task title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                disabled={saving}
+                maxLength={500}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editDescription">Description</Label>
+              <textarea
+                id="editDescription"
+                placeholder="Task description..."
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                disabled={saving}
+                rows={4}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editPriority">Priority</Label>
+                <Select value={editPriority} onValueChange={(v) => setEditPriority(v as TaskPriority)} disabled={saving}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editDueDate">Due Date</Label>
+                <Input
+                  id="editDueDate"
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                  disabled={saving}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editTags">Tags</Label>
+              <Input
+                id="editTags"
+                placeholder="Comma-separated tags (e.g., bug, frontend, urgent)"
+                value={editTags}
+                onChange={(e) => setEditTags(e.target.value)}
+                disabled={saving}
+              />
+              <p className="text-xs text-muted-foreground">
+                Separate multiple tags with commas
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditTask} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
@@ -239,10 +499,99 @@ export default function TaskDetailPage() {
                   {task.subtasks.length} subtask{task.subtasks.length !== 1 ? "s" : ""}
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Subtask
-              </Button>
+              <Dialog open={subtaskDialogOpen} onOpenChange={setSubtaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Subtask
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Subtask</DialogTitle>
+                    <DialogDescription>
+                      Create a new subtask for &quot;{task.title}&quot;
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {subtaskError && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                        {subtaskError}
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="subtaskTitle">Title *</Label>
+                      <Input
+                        id="subtaskTitle"
+                        placeholder="What needs to be done?"
+                        value={subtaskTitle}
+                        onChange={(e) => setSubtaskTitle(e.target.value)}
+                        disabled={addingSubtask}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subtaskDescription">Description</Label>
+                      <textarea
+                        id="subtaskDescription"
+                        placeholder="Add details..."
+                        value={subtaskDescription}
+                        onChange={(e) => setSubtaskDescription(e.target.value)}
+                        disabled={addingSubtask}
+                        rows={3}
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subtaskPriority">Priority</Label>
+                        <Select value={subtaskPriority} onValueChange={(v) => setSubtaskPriority(v as TaskPriority)} disabled={addingSubtask}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="subtaskAssignee">Assignee</Label>
+                        <Select value={subtaskAssigneeId || "unassigned"} onValueChange={(v) => setSubtaskAssigneeId(v === "unassigned" ? "" : v)} disabled={addingSubtask}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {members.map((member) => (
+                              <SelectItem key={member.worker_id} value={member.worker_id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  {member.type === "agent" ? (
+                                    <Bot className="h-4 w-4 text-primary" />
+                                  ) : (
+                                    <User className="h-4 w-4" />
+                                  )}
+                                  <span>{member.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setSubtaskDialogOpen(false)} disabled={addingSubtask}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddSubtask} disabled={addingSubtask}>
+                      {addingSubtask && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create Subtask
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {task.subtasks.length === 0 ? (

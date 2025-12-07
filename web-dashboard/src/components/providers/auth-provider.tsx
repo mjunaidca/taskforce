@@ -1,14 +1,8 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react"
 import { JWTClaims } from "@/types"
-import {
-  checkAuthStatus,
-  getCurrentUser,
-  isAuthenticated,
-  logout as authLogout,
-  initiateLogin,
-} from "@/lib/auth"
+import { getSession, initiateLogin, logout as authLogout } from "@/lib/auth"
 
 interface AuthContextType {
   user: JWTClaims | null
@@ -16,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean
   login: () => void
   logout: () => void
+  refreshAuth: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -25,16 +20,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuth, setIsAuth] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Check auth status on mount
-    checkAuthStatus().then((authenticated) => {
-      setIsAuth(authenticated)
-      if (authenticated) {
-        setUser(getCurrentUser())
-      }
+  const refreshAuth = useCallback(async () => {
+    try {
+      const session = await getSession()
+      setIsAuth(session.authenticated)
+      setUser(session.user)
+    } catch {
+      setIsAuth(false)
+      setUser(null)
+    } finally {
       setIsLoading(false)
-    })
+    }
   }, [])
+
+  useEffect(() => {
+    refreshAuth()
+  }, [refreshAuth])
 
   const login = () => {
     initiateLogin()
@@ -42,8 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     authLogout()
-    setUser(null)
-    setIsAuth(false)
   }
 
   return (
@@ -54,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        refreshAuth,
       }}
     >
       {children}
