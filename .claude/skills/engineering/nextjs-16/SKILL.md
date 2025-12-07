@@ -301,6 +301,116 @@ my-app/
 
 ## Common Patterns
 
+### httpOnly Cookie Proxy (Auth Token Forwarding)
+
+When using Better Auth or similar with httpOnly cookies, JavaScript cannot access the token. Create a server-side API route to forward requests with the token:
+
+```typescript
+// app/api/proxy/[...path]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  const cookieStore = await cookies();
+
+  // Read httpOnly cookie (only accessible server-side)
+  const idToken = cookieStore.get("auth_token")?.value;
+
+  if (!idToken) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Build target URL
+  const targetPath = "/" + path.join("/");
+  const url = new URL(targetPath, BACKEND_URL);
+
+  // Forward query params
+  request.nextUrl.searchParams.forEach((value, key) => {
+    url.searchParams.set(key, value);
+  });
+
+  try {
+    const body = await request.text();
+
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+      body: body || undefined,
+    });
+
+    // Handle SSE streaming responses
+    if (response.headers.get("content-type")?.includes("text/event-stream")) {
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    const data = await response.json().catch(() => null);
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error("[Proxy] Error:", error);
+    return NextResponse.json({ error: "Proxy request failed" }, { status: 500 });
+  }
+}
+
+// Add GET, PUT, DELETE as needed with same pattern
+```
+
+**Key points:**
+- httpOnly cookies are a security feature - JavaScript cannot read them
+- Server-side API routes CAN read all cookies via `cookies()` from `next/headers`
+- Always handle SSE streaming by passing through `response.body`
+- Use `credentials: "include"` on client fetch to send cookies to the proxy
+
+**Evidence**: `web-dashboard/src/app/api/chatkit/route.ts`
+
+### Script Loading for Web Components (beforeInteractive)
+
+External web component scripts must load before React hydration. Use `beforeInteractive` in root layout:
+
+```tsx
+// app/layout.tsx
+import Script from "next/script";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        {/* MUST be in <head> with beforeInteractive for web components */}
+        <Script
+          src="https://cdn.example.com/web-component.js"
+          strategy="beforeInteractive"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+**Script strategies:**
+| Strategy | When It Loads | Use Case |
+|----------|---------------|----------|
+| `beforeInteractive` | Before hydration, in `<head>` | Web components, critical JS |
+| `afterInteractive` | After page interactive | Analytics, non-critical |
+| `lazyOnload` | During idle time | Low priority |
+
+**Evidence**: `web-dashboard/src/app/layout.tsx`
+
 ### Dynamic Route with Data Fetching
 
 ```typescript
@@ -567,6 +677,32 @@ experimental: { turbo: {} }
 
 // CORRECT
 turbopack: {}
+```
+
+### 5. Reading httpOnly cookies from JavaScript
+
+```typescript
+// WRONG - httpOnly cookies cannot be read from JavaScript
+const token = document.cookie.split('; ')
+  .find(row => row.startsWith('auth_token='));
+// Returns undefined even if cookie exists
+
+// CORRECT - Use server-side API route proxy
+// app/api/proxy/route.ts reads cookies via next/headers
+const cookieStore = await cookies();
+const token = cookieStore.get("auth_token")?.value;
+```
+
+### 6. Script afterInteractive for web components
+
+```typescript
+// WRONG - Web component not defined when React renders
+<Script src="https://cdn.example.com/component.js" strategy="afterInteractive" />
+
+// CORRECT - Load before React hydration
+<head>
+  <Script src="https://cdn.example.com/component.js" strategy="beforeInteractive" />
+</head>
 ```
 
 ## References

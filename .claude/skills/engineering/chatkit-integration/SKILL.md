@@ -19,7 +19,8 @@ You are a full-stack engineer integrating OpenAI ChatKit framework with a custom
 
 2. **Frontend Integration**:
    - What frontend framework? (React, Next.js, Docusaurus)
-   - How is authentication handled? (OAuth, JWT, session cookies)
+   - How is authentication handled? (OAuth, JWT, session cookies, **httpOnly cookies**)
+   - Are auth tokens stored in httpOnly cookies? (Requires server-side proxy)
    - What context can you extract client-side? (page URL, title, DOM content)
    - Do you need custom UI features? (text selection, personalization menu)
 
@@ -102,6 +103,18 @@ You are a full-stack engineer integrating OpenAI ChatKit framework with a custom
    - Show login prompt if not authenticated
    - Redirect to OAuth flow
    - **Rationale**: User ID required for conversation persistence
+
+6. **httpOnly Cookie Proxy (Next.js)**
+   - httpOnly cookies cannot be accessed from JavaScript (security feature)
+   - Create server-side API route to read cookies and add Authorization header
+   - Proxy forwards requests to backend with JWT token
+   - **Rationale**: Secure token storage requires server-side access
+
+7. **Next.js Script Loading Strategy**
+   - Use `beforeInteractive` for web component scripts in `layout.tsx`
+   - Place Script in `<head>` element
+   - Script must load before React hydration for custom elements
+   - **Rationale**: Web components must be defined before React renders them
 
 ## Implementation Patterns
 
@@ -387,6 +400,190 @@ const handleAskSelectedText = useCallback(async () => {
 
 **Evidence**: `robolearn-interface/src/components/ChatKitWidget/index.tsx:153-187`, `273-331`
 
+### Pattern 6: httpOnly Cookie Proxy (Next.js App Router)
+
+**When**: Authentication tokens stored in httpOnly cookies (cannot be read by JavaScript)
+
+**Implementation**:
+```typescript
+// app/api/chatkit/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+export async function POST(request: NextRequest) {
+  const cookieStore = await cookies();
+
+  // Read httpOnly cookie (only accessible server-side)
+  const idToken = cookieStore.get("taskflow_id_token")?.value;
+
+  if (!idToken) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Build target URL - note: ChatKit endpoint is at /chatkit, NOT /api/chatkit
+  const url = new URL("/chatkit", API_BASE);
+
+  try {
+    const body = await request.text();
+
+    // Forward request with Authorization header
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+        // Forward custom headers
+        "X-User-ID": request.headers.get("X-User-ID") || "",
+        "X-Page-URL": request.headers.get("X-Page-URL") || "",
+      },
+      body: body || undefined,
+    });
+
+    // Handle SSE streaming responses
+    if (response.headers.get("content-type")?.includes("text/event-stream")) {
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    // Return JSON for non-streaming responses
+    const data = await response.json().catch(() => null);
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error("[ChatKit Proxy] Error:", error);
+    return NextResponse.json({ error: "ChatKit proxy request failed" }, { status: 500 });
+  }
+}
+```
+
+**Evidence**: `web-dashboard/src/app/api/chatkit/route.ts`
+
+### Pattern 7: Next.js Script Loading for Web Components
+
+**When**: ChatKit script must load before React hydration
+
+**Implementation**:
+```tsx
+// app/layout.tsx
+import Script from "next/script";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        {/* MUST be in <head> with beforeInteractive for web components */}
+        <Script
+          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+          strategy="beforeInteractive"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+**In ChatKit Widget** - wait for custom element:
+```typescript
+// components/chat/ChatKitWidget.tsx
+const [scriptStatus, setScriptStatus] = useState<'pending' | 'ready' | 'error'>(
+  isBrowser && window.customElements?.get('openai-chatkit') ? 'ready' : 'pending'
+);
+
+useEffect(() => {
+  if (!isBrowser) return;
+
+  // Already registered
+  if (window.customElements?.get('openai-chatkit')) {
+    setScriptStatus('ready');
+    return;
+  }
+
+  // Wait for custom element to be defined
+  customElements.whenDefined('openai-chatkit').then(() => {
+    setScriptStatus('ready');
+  });
+}, []);
+
+// Only render when ready
+{isOpen && scriptStatus === 'ready' && <ChatKit control={control} />}
+```
+
+**Evidence**: `web-dashboard/src/app/layout.tsx`, `web-dashboard/src/components/chat/ChatKitWidget.tsx:42-93`
+
+### Pattern 8: Custom Fetch with Proxy Authentication (Next.js)
+
+**When**: Using useChatKit with httpOnly cookie proxy
+
+**Implementation**:
+```typescript
+const chatkitProxyUrl = "/api/chatkit"; // Proxy handles auth
+
+const { control, sendUserMessage } = useChatKit({
+  api: {
+    url: chatkitProxyUrl,
+    domainKey: domainKey,
+
+    // Custom fetch - auth handled by proxy, inject context
+    fetch: async (input: RequestInfo | URL, options?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+
+      // Client-side auth check (proxy will verify token)
+      if (!isAuthenticated) {
+        throw new Error('User must be logged in');
+      }
+
+      const userId = user.sub;
+      const pageContext = getPageContext();
+
+      // Inject metadata into request body
+      let modifiedOptions = { ...options } as RequestInit;
+      if (modifiedOptions.body && typeof modifiedOptions.body === 'string') {
+        try {
+          const parsed = JSON.parse(modifiedOptions.body);
+          if (parsed.type === 'threads.create' && parsed.params?.input) {
+            parsed.params.input.metadata = {
+              userId,
+              userInfo: { id: userId, name: user.name },
+              pageContext,
+              ...parsed.params.input.metadata,
+            };
+            modifiedOptions.body = JSON.stringify(parsed);
+          } else if (parsed.type === 'threads.run' && parsed.params?.input) {
+            parsed.params.input.metadata = {
+              ...parsed.params.input.metadata,
+              userInfo: { id: userId, name: user.name },
+              pageContext,
+            };
+            modifiedOptions.body = JSON.stringify(parsed);
+          }
+        } catch { /* Ignore non-JSON */ }
+      }
+
+      return fetch(url, {
+        ...modifiedOptions,
+        credentials: 'include', // Include cookies for proxy auth
+        headers: {
+          ...modifiedOptions.headers,
+          'X-User-ID': userId,
+          'X-Page-URL': pageContext?.url || '',
+          'Content-Type': 'application/json',
+        },
+      });
+    },
+  },
+});
+```
+
+**Evidence**: `web-dashboard/src/components/chat/ChatKitWidget.tsx:168-296`
+
 ## When to Apply
 
 - Integrating ChatKit with custom backend
@@ -394,6 +591,8 @@ const handleAskSelectedText = useCallback(async () => {
 - Injecting context (user, page) into agent prompts
 - Implementing text selection "Ask" functionality
 - Building conversational AI interfaces
+- **Next.js App Router with httpOnly cookies** (use Pattern 6-8)
+- **External web component scripts in Next.js** (use Pattern 7)
 
 ## Contraindications
 
@@ -419,10 +618,25 @@ const handleAskSelectedText = useCallback(async () => {
 5. **Database Not Warmed**: First request takes 7+ seconds
    - **Fix**: Pre-warm connection pool on startup
 
-6. **MCP Tools Missing Auth Token**: Agent calls MCP tools without credentials
+6. **httpOnly Cookies Not Accessible (Next.js)**: Can't read auth token from JavaScript
+   - **Symptom**: `document.cookie` returns nothing, "id_token not found"
+   - **Why**: httpOnly cookies are a security feature - cannot be read by JavaScript
+   - **Fix**: Create server-side API route proxy that reads cookies and adds Authorization header
+
+7. **Script Loading Too Late (Next.js)**: "ChatKit web component is unavailable"
+   - **Symptom**: 404 errors, custom element not defined
+   - **Why**: `afterInteractive` strategy loads after React hydration
+   - **Fix**: Use `beforeInteractive` in `<head>` within `layout.tsx`
+
+8. **Wrong Backend Endpoint**: 404 on ChatKit requests
+   - **Symptom**: `/api/proxy/chatkit` returns 404
+   - **Why**: General proxy adds `/api/` prefix, but ChatKit is at `/chatkit`
+   - **Fix**: Create dedicated proxy that routes to exact endpoint path
+
+9. **MCP Tools Missing Auth Token**: Agent calls MCP tools without credentials
    - **Fix**: Pass token via system prompt so LLM includes in tool calls
 
-7. **E402 Linter Error**: Imports after load_dotenv()
+10. **E402 Linter Error**: Imports after load_dotenv()
    - **Fix**: Add `# noqa: E402` to intentional imports after dotenv
 
 ## Pattern 6: MCP Agent Authentication (NEW)
@@ -511,6 +725,11 @@ class StoreConfig(BaseSettings):
 ## References
 
 - **ChatKit Server Spec**: `specs/007-chatkit-server/spec.md`
+- **ChatKit UI Spec**: `specs/008-chatkit-ui-widget/spec.md`, `specs/005-chatkit-ui/spec.md`
+- **Docusaurus Implementation**: `robolearn-interface/src/components/ChatKitWidget/`
+- **Next.js Implementation**: `web-dashboard/src/components/chat/ChatKitWidget.tsx`
+- **Next.js httpOnly Proxy**: `web-dashboard/src/app/api/chatkit/route.ts`
+- **Reference Docs**: `references/nextjs-httponly-cookie-proxy.md`, `references/nextjs-script-loading.md`
 - **ChatKit UI Spec**: `specs/008-chatkit-ui-widget/spec.md`
 - **TaskFlow Chat Spec**: `specs/006-chat-server/spec.md`
 - **Implementation**: `rag-agent/chatkit_server.py`, `packages/api/src/taskflow_api/services/chatkit_server.py`

@@ -441,6 +441,78 @@ backend/
     └── test_auth.py     # Auth tests
 ```
 
+## Critical: Async Session Patterns (MissingGreenlet Prevention)
+
+After `session.commit()`, SQLAlchemy objects become **detached**. Accessing attributes triggers lazy loading which fails in async context with `MissingGreenlet` error.
+
+### The Pattern: Extract → Flush → Commit
+
+```python
+@app.post("/api/tasks", response_model=TaskRead, status_code=201)
+async def create_task(
+    task: TaskCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
+    # 1. Extract primitives from user BEFORE any commits
+    actor_id = current_user["id"]
+
+    # 2. Create entity and flush to get ID
+    db_task = Task.model_validate(task)
+    session.add(db_task)
+    await session.flush()
+    task_id = db_task.id  # Extract immediately after flush
+
+    # 3. Call services with primitives (NOT objects)
+    await log_action(session, actor_id=actor_id, task_id=task_id)
+
+    # 4. Single commit at end
+    await session.commit()
+    await session.refresh(db_task)
+    return db_task
+```
+
+### Service Functions: Never Commit Internally
+
+```python
+# WRONG - breaks caller's transaction
+async def log_action(session: AsyncSession, ...):
+    log = AuditLog(...)
+    session.add(log)
+    await session.commit()  # ❌ Caller loses control
+
+# CORRECT - caller owns transaction
+async def log_action(session: AsyncSession, ...):
+    log = AuditLog(...)
+    session.add(log)
+    return log  # No commit
+```
+
+### Input Validation for API Schemas
+
+```python
+from pydantic import field_validator
+from datetime import UTC, datetime
+
+class TaskCreate(SQLModel):
+    assignee_id: int | None = None
+    due_date: datetime | None = None
+
+    @field_validator("assignee_id", mode="after")
+    @classmethod
+    def zero_to_none(cls, v: int | None) -> int | None:
+        """Swagger UI sends 0 for empty int fields."""
+        return None if v == 0 else v
+
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def normalize_datetime(cls, v: datetime | None) -> datetime | None:
+        """Strip timezone for naive UTC database columns."""
+        if v and v.tzinfo:
+            return v.astimezone(UTC).replace(tzinfo=None)
+        return v
+```
+
 ## Testing with Pytest
 
 ```python

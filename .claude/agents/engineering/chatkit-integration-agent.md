@@ -1,7 +1,18 @@
 ---
 name: chatkit-integration-agent
 description: Agent for integrating ChatKit framework with custom backends and AI agents. Handles server setup, React component integration, context injection, and conversation persistence.
-skills: chatkit-integration
+skills:
+  - chatkit-integration
+  - nextjs-16
+  - better-auth-setup
+  - fastapi-backend
+tools:
+  - mcp__next-devtools__init
+  - mcp__next-devtools__nextjs_index
+  - mcp__next-devtools__nextjs_call
+  - mcp__next-devtools__browser_eval
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
 ---
 
 # ChatKit Integration Agent
@@ -46,6 +57,8 @@ This agent helps integrate OpenAI ChatKit framework with custom backends and AI 
 - What context is available? (user profile, page info)
 - What frontend framework? (React, Next.js, Docusaurus)
 - How is authentication handled?
+- **Are auth tokens stored in httpOnly cookies?** (Requires server-side proxy - see Pattern 4)
+- **Is this Next.js App Router?** (Requires `beforeInteractive` script strategy)
 
 **Read**:
 - Existing agent implementation (if any)
@@ -152,6 +165,36 @@ This agent helps integrate OpenAI ChatKit framework with custom backends and AI 
 
 **Evidence**: `robolearn-interface/src/components/ChatKitWidget/index.tsx:67-113` (script detection)
 
+### Pattern: httpOnly Cookies Not Accessible (Next.js)
+
+**What happens**: `[ChatKit] No id_token found in cookies`, 401 errors
+
+**Why it happens**: httpOnly cookies cannot be read by JavaScript (security feature)
+
+**How to prevent**: Create server-side API route proxy that reads cookies and adds Authorization header
+
+**Evidence**: `web-dashboard/src/app/api/chatkit/route.ts` (proxy implementation)
+
+### Pattern: Script Loading Too Late (Next.js)
+
+**What happens**: "ChatKit web component is unavailable", 404 errors
+
+**Why it happens**: `afterInteractive` strategy loads scripts after React hydration - too late for web components
+
+**How to prevent**: Use `beforeInteractive` in `<head>` within `layout.tsx`
+
+**Evidence**: `web-dashboard/src/app/layout.tsx` (Script placement)
+
+### Pattern: Wrong Backend Endpoint Routing
+
+**What happens**: 404 on `/api/proxy/chatkit`
+
+**Why it happens**: General proxy adds `/api/` prefix, but ChatKit is at `/chatkit` not `/api/chatkit`
+
+**How to prevent**: Create dedicated ChatKit proxy that routes to exact backend path
+
+**Evidence**: `web-dashboard/src/app/api/chatkit/route.ts` (dedicated proxy)
+
 ## Self-Monitoring Checklist
 
 Before finalizing ChatKit integration:
@@ -168,6 +211,9 @@ Before finalizing ChatKit integration:
 - [ ] Error handling implemented (graceful degradation)
 - [ ] Conversation history persists correctly
 - [ ] User isolation works (no cross-user data)
+- [ ] **(Next.js)** httpOnly cookie proxy created if using secure cookies
+- [ ] **(Next.js)** Script uses `beforeInteractive` in `layout.tsx` `<head>`
+- [ ] **(Next.js)** Dedicated ChatKit proxy routes to correct endpoint path
 - [ ] MCP tools receive auth token (via system prompt)
 - [ ] ChatKit store uses separate schema
 - [ ] E402 noqa comments on imports after load_dotenv()
@@ -189,6 +235,12 @@ Before finalizing ChatKit integration:
 
 ## References
 
+- **Spec**: `specs/007-chatkit-server/spec.md`, `specs/008-chatkit-ui-widget/spec.md`, `specs/005-chatkit-ui/spec.md`
+- **Skill**: `.claude/skills/engineering/chatkit-integration/SKILL.md`
+- **Docusaurus Implementation**: `robolearn-interface/src/components/ChatKitWidget/`
+- **Next.js Implementation**: `web-dashboard/src/components/chat/ChatKitWidget.tsx`
+- **Next.js httpOnly Proxy**: `web-dashboard/src/app/api/chatkit/route.ts`
+- **Reference Docs**: `.claude/skills/engineering/chatkit-integration/references/`
 - **Spec**: `specs/007-chatkit-server/spec.md`, `specs/008-chatkit-ui-widget/spec.md`, `specs/006-chat-server/spec.md`
 - **Skill**: `.claude/skills/engineering/chatkit-integration/skill.md`
 - **Implementation**: `rag-agent/chatkit_server.py`, `packages/api/src/taskflow_api/services/chatkit_server.py`
