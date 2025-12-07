@@ -633,6 +633,95 @@ const { control, sendUserMessage } = useChatKit({
    - **Why**: General proxy adds `/api/` prefix, but ChatKit is at `/chatkit`
    - **Fix**: Create dedicated proxy that routes to exact endpoint path
 
+9. **MCP Tools Missing Auth Token**: Agent calls MCP tools without credentials
+   - **Fix**: Pass token via system prompt so LLM includes in tool calls
+
+10. **E402 Linter Error**: Imports after load_dotenv()
+   - **Fix**: Add `# noqa: E402` to intentional imports after dotenv
+
+## Pattern 6: MCP Agent Authentication (NEW)
+
+**When**: MCP tools need to call authenticated APIs
+
+**Problem**: MCP protocol doesn't forward auth headers. Tools need user credentials.
+
+**Solution**: Pass auth credentials via agent system prompt. LLM includes them in every tool call.
+
+**Implementation**:
+```python
+# 1. Extract token at endpoint
+@app.post("/chatkit")
+async def chatkit_endpoint(request: Request):
+    auth_header = request.headers.get("Authorization")
+    access_token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        access_token = auth_header[7:]  # Remove "Bearer " prefix
+
+    # Add to metadata
+    metadata["access_token"] = access_token
+
+# 2. System prompt template
+SYSTEM_PROMPT = """You are Assistant.
+
+## Authentication Context
+- User ID: {user_id}
+- Access Token: {access_token}
+
+CRITICAL: When calling ANY MCP tool, you MUST ALWAYS include:
+- user_id: "{user_id}"
+- access_token: "{access_token}"
+
+{rest_of_prompt}
+"""
+
+# 3. Format with credentials
+instructions = SYSTEM_PROMPT.format(
+    user_id=context.user_id,
+    access_token=context.metadata.get("access_token", ""),
+    ...
+)
+```
+
+**Flow**:
+```
+Frontend (Authorization: Bearer <jwt>)
+    → /chatkit endpoint (extract token)
+    → ChatKit server (add to metadata)
+    → Agent prompt (include credentials)
+    → LLM (includes in tool params)
+    → MCP tool (receives token)
+    → API call (Authorization header)
+```
+
+**Evidence**: `packages/api/src/taskflow_api/main.py`, `packages/api/src/taskflow_api/services/chat_agent.py`
+
+## Pattern 7: Separate ChatKit Store Configuration
+
+**When**: ChatKit needs its own database schema/connection
+
+**Implementation**:
+```python
+# config.py - Ignore ChatKit env vars in main Settings
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        extra="ignore",  # Ignore TASKFLOW_CHATKIT_* vars
+    )
+
+    @property
+    def chat_enabled(self) -> bool:
+        return os.getenv("TASKFLOW_CHATKIT_DATABASE_URL") is not None
+
+# chatkit_store/config.py - Separate config for ChatKit
+class StoreConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="TASKFLOW_CHATKIT_",  # Reads TASKFLOW_CHATKIT_DATABASE_URL
+    )
+    database_url: str
+    schema_name: str = "taskflow_chat"  # Separate schema
+```
+
+**Evidence**: `packages/api/src/taskflow_api/config.py`, `packages/api/src/taskflow_api/chatkit_store/config.py`
+
 ## References
 
 - **ChatKit Server Spec**: `specs/007-chatkit-server/spec.md`
@@ -641,5 +730,8 @@ const { control, sendUserMessage } = useChatKit({
 - **Next.js Implementation**: `web-dashboard/src/components/chat/ChatKitWidget.tsx`
 - **Next.js httpOnly Proxy**: `web-dashboard/src/app/api/chatkit/route.ts`
 - **Reference Docs**: `references/nextjs-httponly-cookie-proxy.md`, `references/nextjs-script-loading.md`
+- **ChatKit UI Spec**: `specs/008-chatkit-ui-widget/spec.md`
+- **TaskFlow Chat Spec**: `specs/006-chat-server/spec.md`
+- **Implementation**: `rag-agent/chatkit_server.py`, `packages/api/src/taskflow_api/services/chatkit_server.py`
 
 

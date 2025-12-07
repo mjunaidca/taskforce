@@ -15,6 +15,7 @@ description: |
 model: sonnet
 color: purple
 output_style: platform-orchestration-session
+skills: nextjs-16, chatkit-integration
 ---
 
 # Platform Orchestrator Agent: "Evolution of Todo"

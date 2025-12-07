@@ -214,6 +214,18 @@ Before finalizing ChatKit integration:
 - [ ] **(Next.js)** httpOnly cookie proxy created if using secure cookies
 - [ ] **(Next.js)** Script uses `beforeInteractive` in `layout.tsx` `<head>`
 - [ ] **(Next.js)** Dedicated ChatKit proxy routes to correct endpoint path
+- [ ] MCP tools receive auth token (via system prompt)
+- [ ] ChatKit store uses separate schema
+- [ ] E402 noqa comments on imports after load_dotenv()
+
+### MCP Integration Checklist (NEW)
+
+- [ ] Extract JWT from Authorization header at /chatkit endpoint
+- [ ] Add access_token to metadata
+- [ ] Include user_id and access_token in system prompt
+- [ ] Add CRITICAL instruction to include credentials in every tool call
+- [ ] MCP server validates token before API calls
+- [ ] Test full auth flow: Frontend → ChatKit → Agent → MCP → API
 
 ## Skills Used
 
@@ -229,5 +241,9 @@ Before finalizing ChatKit integration:
 - **Next.js Implementation**: `web-dashboard/src/components/chat/ChatKitWidget.tsx`
 - **Next.js httpOnly Proxy**: `web-dashboard/src/app/api/chatkit/route.ts`
 - **Reference Docs**: `.claude/skills/engineering/chatkit-integration/references/`
+- **Spec**: `specs/007-chatkit-server/spec.md`, `specs/008-chatkit-ui-widget/spec.md`, `specs/006-chat-server/spec.md`
+- **Skill**: `.claude/skills/engineering/chatkit-integration/skill.md`
+- **Implementation**: `rag-agent/chatkit_server.py`, `packages/api/src/taskflow_api/services/chatkit_server.py`
+- **PHRs**: `history/prompts/006-chat-server/`
 
 

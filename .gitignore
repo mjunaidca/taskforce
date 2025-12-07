@@ -57,3 +57,6 @@ robolearn-interface/
 .env.local
 
 cookies.txt
+
+panaversity-fs/
+rag-agent/
