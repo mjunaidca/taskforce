@@ -1,5 +1,6 @@
 """TaskFlow API - Human-Agent Task Management Backend."""
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -11,14 +12,28 @@ from .config import settings
 from .database import create_db_and_tables
 from .routers import agents, audit, health, members, projects, tasks
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if settings.debug else getattr(logging, settings.log_level.upper()),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
+    logger.info("Starting TaskFlow API...")
+    logger.info("Debug mode: %s", settings.debug)
+    logger.info("Dev mode (auth bypass): %s", settings.dev_mode)
+    logger.info("SSO URL: %s", settings.sso_url)
     await create_db_and_tables()
+    logger.info("Database initialized")
     yield
-    # Shutdown (nothing to do)
+    # Shutdown
+    logger.info("Shutting down TaskFlow API...")
 
 
 app = FastAPI(
