@@ -13,12 +13,13 @@ Demo first
 ```>> start 3```
 ```>> progress 3 --percent 50```
 ```>> complete 3```
+```>> audit list --task 3```
 
   ```>>add "Review PR #42" --description "Check authentication logic and error handling"```
   ```>>edit 3 --description "Updated requirements based on feedback" ```
   ```>>start 4```
   ```>>progress 4 --percent 50 --note "Completed initial review, waiting for tests"```
-  
+
 
   taskflow> # View a task
   taskflow> show 3
