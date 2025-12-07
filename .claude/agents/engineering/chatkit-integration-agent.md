@@ -1,6 +1,7 @@
 ---
 name: chatkit-integration-agent
 description: Agent for integrating ChatKit framework with custom backends and AI agents. Handles server setup, React component integration, context injection, and conversation persistence.
+skills: chatkit-integration
 ---
 
 # ChatKit Integration Agent
