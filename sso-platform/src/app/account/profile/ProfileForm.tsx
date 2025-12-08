@@ -344,49 +344,49 @@ export default function ProfileForm({
         </p>
       </section>
 
-      {/* Learning Profile Section */}
+      {/* Work Profile Section */}
       <section className="space-y-5">
         <div className="border-b-2 border-slate-200 pb-3">
-          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Learning Profile</h3>
-          <p className="text-sm text-slate-600 mt-1">Personalize your educational experience</p>
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Work Profile</h3>
+          <p className="text-sm text-slate-600 mt-1">Help us personalize your experience</p>
         </div>
 
-        {/* Software Background */}
+        {/* Role */}
         <div className="space-y-3">
           <label className="block text-sm font-semibold text-slate-700">
-            Software Background
+            Your Role
           </label>
           <select
             value={formData.softwareBackground}
             onChange={(e) => setFormData({...formData, softwareBackground: e.target.value})}
             className={selectClass}
           >
-            <option value="beginner">Beginner — Just starting out</option>
-            <option value="intermediate">Intermediate — Some experience</option>
-            <option value="advanced">Advanced — Professional level</option>
+            <option value="beginner">Individual — Working independently on projects</option>
+            <option value="intermediate">Team Member — Collaborating with a team</option>
+            <option value="advanced">Team Lead — Managing projects or teams</option>
           </select>
         </div>
 
-        {/* Hardware & OS */}
+        {/* Use Case */}
         <div className="space-y-3">
           <label className="block text-sm font-semibold text-slate-700">
-            Hardware & Operating System
+            Primary Use Case
           </label>
           <select
             value={formData.hardwareTier}
             onChange={(e) => setFormData({...formData, hardwareTier: e.target.value})}
             className={selectClass}
           >
-            <option value="tier1">Windows PC — Desktop or laptop</option>
-            <option value="tier2">Mac — MacBook or iMac</option>
-            <option value="tier3">Linux — Ubuntu, Fedora, etc.</option>
-            <option value="tier4">Chromebook/Web — Browser-based only</option>
+            <option value="tier1">Personal — Side projects & learning</option>
+            <option value="tier2">Work — Professional use</option>
+            <option value="tier3">Both — Personal and work</option>
+            <option value="tier4">Exploring — Just checking things out</option>
           </select>
           <p className="text-xs text-slate-500 leading-relaxed flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            Your hardware and OS setup for development
+            How you plan to use Taskflow
           </p>
         </div>
       </section>

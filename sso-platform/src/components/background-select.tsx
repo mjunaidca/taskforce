@@ -8,21 +8,24 @@ interface BackgroundSelectProps {
   error?: string;
 }
 
+// Repurposed: Software Background → Primary Role
+// Maps to existing DB field without schema changes:
+// beginner → individual, intermediate → team_member, advanced → leader
 const backgrounds: { value: SoftwareBackground; label: string; description: string }[] = [
   {
     value: "beginner",
-    label: "Beginner",
-    description: "New to programming or robotics",
+    label: "Individual",
+    description: "Working independently on projects",
   },
   {
     value: "intermediate",
-    label: "Intermediate",
-    description: "Some experience with Python or similar languages",
+    label: "Team Member",
+    description: "Collaborating with a team",
   },
   {
     value: "advanced",
-    label: "Advanced",
-    description: "Professional developer or robotics engineer",
+    label: "Team Lead",
+    description: "Managing projects or teams",
   },
 ];
 
@@ -30,7 +33,7 @@ export function BackgroundSelect({ value, onChange, error }: BackgroundSelectPro
   return (
     <div className="space-y-3">
       <label className="block mt-6 px-4 py-3 bg-primary/10 border-l-4 border-primary rounded-r-lg text-sm font-bold text-foreground">
-        What&apos;s your software background?
+        What best describes your role?
       </label>
       <div className="grid grid-cols-3 gap-3">
         {backgrounds.map((bg) => (
