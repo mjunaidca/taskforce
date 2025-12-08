@@ -279,3 +279,65 @@ Run migrations from host machine connecting to Docker postgres:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/db" pnpm db:push
 ```
 This keeps images slim (no Drizzle CLI in production image).
+
+### 7. MCP Server Transport Security (421 Misdirected Request)
+**Check for:** FastMCP usage in MCP servers
+**Problem:** MCP SDK validates Host header, rejects Docker service names
+**Error:** `421 Misdirected Request - Invalid Host header`
+**Solution:** Configure `TransportSecuritySettings` with `allowed_hosts` including Docker container names:
+```python
+transport_security = TransportSecuritySettings(
+    allowed_hosts=["127.0.0.1:*", "localhost:*", "mcp-server:*"],
+)
+```
+
+### 8. MCP Server Health Check (406 Not Acceptable)
+**Check for:** MCP servers using `/mcp` endpoint
+**Problem:** MCP `/mcp` endpoint returns 406 on GET requests
+**Solution:** Add `/health` endpoint via ASGI middleware (NOT Starlette Mount - breaks lifespan)
+
+### 9. Database Migration Order (Drizzle vs SQLModel)
+**Check for:** Multiple ORMs sharing one database (e.g., Drizzle + SQLModel)
+**Problem:** If API creates tables, then Drizzle `db:push` runs, Drizzle DROPS API tables
+**Solution:** Staged startup: `postgres → migrations → other services`
+**Flag in scan:** Look for `drizzle-kit` + `sqlmodel` or `sqlalchemy` in same project
+
+### 10. SQLModel Table Creation
+**Check for:** SQLModel `create_all()` usage
+**Problem:** Tables not created because models not imported
+**Solution:** Explicit model imports before `create_all()`:
+```python
+from .models import User, Task, Project  # noqa: F401
+```
+
+### 11. JWKS Key Mismatch
+**Check for:** JWT validation across SSO instances
+**Problem:** Logged in via local SSO, Docker API validates against Docker SSO's JWKS
+**Error:** `Key not found - token kid: ABC, available kids: ['XYZ']`
+**Solution:** Clear cookies, login fresh through target environment
+
+### 12. uv Network Timeout
+**Check for:** `uv pip install` in Dockerfiles
+**Problem:** Network timeout during build
+**Solution:** Add `UV_HTTP_TIMEOUT=120` to Dockerfile
+
+---
+
+## Additional Scan Targets
+
+When scanning, also check for:
+
+```bash
+# MCP Server Transport Security
+grep -r "FastMCP\|streamable_http" --include="*.py"
+
+# Multiple ORM Usage (migration conflict risk)
+grep -r "drizzle\|prisma" --include="*.ts" --include="*.json"
+grep -r "SQLModel\|sqlalchemy" --include="*.py"
+
+# Model imports before create_all
+grep -r "create_all\|create_db_and_tables" --include="*.py"
+
+# UV in Dockerfiles
+grep -r "uv pip install" --include="Dockerfile*"
+```

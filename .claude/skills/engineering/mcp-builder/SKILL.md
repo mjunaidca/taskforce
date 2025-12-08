@@ -235,6 +235,75 @@ Load these resources as needed during development:
   - Common issues and fixes (session timeout, auth errors)
   - Package structure for REST API wrappers
 
+---
+
+## 🐳 Docker/Containerization
+
+When deploying MCP servers in Docker, be aware of transport security requirements.
+
+### Transport Security (allowed_hosts)
+
+FastMCP validates the `Host` header for DNS rebinding protection. Default allowed hosts:
+```python
+["127.0.0.1:*", "localhost:*", "[::1]:*"]
+```
+
+**Docker Problem:** Requests from other containers use service names (e.g., `http://mcp-server:8001/mcp`), which are rejected with `421 Misdirected Request`.
+
+**Solution:** Configure transport security:
+```python
+from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
+
+transport_security = TransportSecuritySettings(
+    allowed_hosts=[
+        "127.0.0.1:*",
+        "localhost:*",
+        "[::1]:*",
+        "mcp-server:*",  # Docker container name
+        "0.0.0.0:*",
+    ],
+)
+
+mcp = FastMCP("my_server", transport_security=transport_security)
+```
+
+### Health Check Endpoint
+
+MCP's `/mcp` endpoint returns 406 on GET requests. Add a `/health` endpoint via middleware:
+
+```python
+from starlette.responses import JSONResponse
+
+class HealthMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/health":
+            response = JSONResponse({"status": "healthy"})
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+# Apply without breaking MCP lifespan
+_mcp_app = mcp.streamable_http_app()
+app = HealthMiddleware(_mcp_app)
+```
+
+**Important:** Don't use `Starlette(routes=[Mount(...)])` - it breaks MCP's lifespan context.
+
+### Docker Compose Health Check
+```yaml
+healthcheck:
+  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health').read()"]
+  interval: 30s
+  timeout: 10s
+  start_period: 20s
+```
+
+---
+
 ### Evaluation Guide (Load During Phase 4)
 - [✅ Evaluation Guide](./reference/evaluation.md) - Complete evaluation creation guide with:
   - Question creation guidelines

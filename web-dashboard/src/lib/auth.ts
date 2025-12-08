@@ -38,27 +38,34 @@ function setCookie(name: string, value: string, maxAge: number) {
 
 // Initiate OAuth login flow
 export async function initiateLogin(): Promise<void> {
-  // Generate PKCE code verifier and challenge
-  const codeVerifier = generateRandomString(64);
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  try {
+    // Generate PKCE code verifier and challenge
+    const codeVerifier = generateRandomString(64);
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-  // Store code verifier in cookie (will be read by API route)
-  // 10 minute expiry - enough for OAuth flow
-  setCookie("taskflow_code_verifier", codeVerifier, 600);
+    // Store code verifier in cookie (will be read by API route)
+    // 10 minute expiry - enough for OAuth flow
+    setCookie("taskflow_code_verifier", codeVerifier, 600);
 
-  // Build authorization URL
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    scope: SCOPE,
-    code_challenge: codeChallenge,
-    code_challenge_method: "S256",
-    state: generateRandomString(16),
-  });
+    // Build authorization URL
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      scope: SCOPE,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+      state: generateRandomString(16),
+    });
 
-  // Redirect to SSO authorization endpoint
-  window.location.href = `${SSO_URL}/api/auth/oauth2/authorize?${params.toString()}`;
+    // Redirect to SSO authorization endpoint
+    window.location.href = `${SSO_URL}/api/auth/oauth2/authorize?${params.toString()}`;
+  } catch (error) {
+    // Alert user about the error (crypto.subtle not available, etc.)
+    const message = error instanceof Error ? error.message : "Failed to initiate login";
+    alert(message);
+    console.error("[Auth] Login initiation failed:", error);
+  }
 }
 
 // Session type from API

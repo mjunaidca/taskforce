@@ -289,6 +289,72 @@ Code can check: `url.includes("sslmode=disable")` → local postgres
 **Problem:** playwright (300MB+) in dependencies bloats image
 **Solution:** Keep test tools in devDependencies, ensure `postgres` driver is in dependencies
 
+### 10. MCP Server Host Validation (421 Misdirected Request)
+**Problem:** FastMCP's transport security rejects Docker service names
+**Error:** `421 Misdirected Request - Invalid Host header`
+**Cause:** MCP SDK defaults to `allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*"]`
+**Solution:** Configure transport security to allow Docker container names:
+```python
+from mcp.server.transport_security import TransportSecuritySettings
+
+transport_security = TransportSecuritySettings(
+    allowed_hosts=[
+        "127.0.0.1:*",
+        "localhost:*",
+        "[::1]:*",
+        "mcp-server:*",  # Docker container name
+        "0.0.0.0:*",
+    ],
+)
+mcp = FastMCP(..., transport_security=transport_security)
+```
+
+### 11. MCP Server Health Check (406 Not Acceptable)
+**Problem:** MCP `/mcp` endpoint returns 406 on GET requests
+**Solution:** Add a separate `/health` endpoint via ASGI middleware:
+```python
+class HealthMiddleware:
+    def __init__(self, app): self.app = app
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/health":
+            response = JSONResponse({"status": "healthy"})
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+```
+
+### 12. Database Migration Order (Drizzle vs SQLModel)
+**Problem:** Drizzle `db:push` drops tables not in its schema (including API tables)
+**Root Cause:** If API creates tables, then Drizzle runs, Drizzle drops them
+**Solution:** Startup order must be:
+1. Start postgres ONLY
+2. Run Drizzle migrations (db:push)
+3. THEN start API (creates its own tables)
+See `references/startup-script-pattern.md`
+
+### 13. SQLModel Table Creation
+**Problem:** `SQLModel.metadata.create_all()` doesn't create tables
+**Cause:** Models not imported before `create_all()` runs
+**Solution:** Explicitly import all models in database.py:
+```python
+# MUST import before create_all()
+from .models import User, Task, Project  # noqa: F401
+```
+
+### 14. JWKS Key Mismatch (401 Unauthorized)
+**Problem:** JWT validated against wrong SSO instance's keys
+**Error:** `Key not found - token kid: ABC, available kids: ['XYZ']`
+**Cause:** Logged in via local SSO, but Docker API validates against Docker SSO
+**Solution:** Clear browser cookies and login fresh through Docker stack
+
+### 15. uv Network Timeout in Docker Build
+**Problem:** `uv pip install` fails with network timeout
+**Error:** `Failed to download distribution due to network timeout`
+**Solution:** Increase timeout in Dockerfile:
+```dockerfile
+RUN UV_HTTP_TIMEOUT=120 uv pip install --system --no-cache -r pyproject.toml
+```
+
 ---
 
 ## Output Checklist

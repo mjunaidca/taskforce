@@ -18,8 +18,8 @@ RUN pip install --no-cache-dir uv
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies
-RUN uv pip install --system --no-cache -r pyproject.toml
+# Install dependencies (increase timeout for slow networks)
+RUN UV_HTTP_TIMEOUT=120 uv pip install --system --no-cache -r pyproject.toml
 
 # Copy source code
 COPY src ./src
@@ -51,6 +51,6 @@ USER appuser
 EXPOSE 8001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/mcp').read()" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health').read()" || exit 1
 
 CMD ["python", "-m", "taskflow_mcp.server"]

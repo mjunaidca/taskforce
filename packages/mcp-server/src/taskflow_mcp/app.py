@@ -11,6 +11,7 @@ Configuration:
 """
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 
 def _create_mcp() -> FastMCP:
@@ -19,10 +20,24 @@ def _create_mcp() -> FastMCP:
     Returns:
         FastMCP: Configured MCP server instance
     """
+    # Configure transport security to allow Docker container names
+    # Default allowed_hosts is ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+    # We add "mcp-server:*" for Docker networking
+    transport_security = TransportSecuritySettings(
+        allowed_hosts=[
+            "127.0.0.1:*",
+            "localhost:*",
+            "[::1]:*",
+            "mcp-server:*",  # Docker container name
+            "0.0.0.0:*",
+        ],
+    )
+
     return FastMCP(
         "taskflow_mcp",
         stateless_http=True,  # Stateless Streamable HTTP transport
         json_response=True,  # Pure JSON responses (no SSE)
+        transport_security=transport_security,
     )
 
 

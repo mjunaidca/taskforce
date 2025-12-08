@@ -61,31 +61,30 @@ echo -e "${BLUE}=== TaskFlow Docker Startup ===${NC}"
 echo ""
 
 # Step 1: Stop existing containers
-echo -e "${YELLOW}[1/5] Stopping existing containers...${NC}"
+echo -e "${YELLOW}[1/6] Stopping existing containers...${NC}"
 docker compose down 2>/dev/null || true
 
 # Step 2: Clean if requested
 if [ "$CLEAN" = true ]; then
-    echo -e "${YELLOW}[2/5] Cleaning Docker resources...${NC}"
+    echo -e "${YELLOW}[2/6] Cleaning Docker resources...${NC}"
     docker compose down -v 2>/dev/null || true
     docker system prune -f
     docker volume rm tf-k8_postgres_data 2>/dev/null || true
     docker volume rm tf-k8_pgadmin_data 2>/dev/null || true
 else
-    echo -e "${GREEN}[2/5] Skipping clean (use --clean for full cleanup)${NC}"
+    echo -e "${GREEN}[2/6] Skipping clean (use --clean for full cleanup)${NC}"
 fi
 
-# Step 3: Build/Start containers
+# Step 3: Start postgres first (need it for migrations)
+echo -e "${YELLOW}[3/6] Starting PostgreSQL...${NC}"
 if [ "$QUICK" = true ]; then
-    echo -e "${YELLOW}[3/5] Quick restart (no rebuild)...${NC}"
-    docker compose up -d
+    docker compose up -d postgres pgadmin
 else
-    echo -e "${YELLOW}[3/5] Building and starting containers...${NC}"
-    docker compose up -d --build
+    docker compose up -d --build postgres pgadmin
 fi
 
 # Step 4: Wait for postgres to be healthy
-echo -e "${YELLOW}[4/5] Waiting for PostgreSQL to be healthy...${NC}"
+echo -e "${YELLOW}[4/6] Waiting for PostgreSQL to be healthy...${NC}"
 MAX_RETRIES=30
 RETRY_COUNT=0
 
@@ -105,11 +104,12 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
-# Step 5: Run migrations (from host, connecting to Docker postgres)
-echo -e "${YELLOW}[5/5] Running database migrations...${NC}"
+# Step 5: Run SSO migrations BEFORE starting other services
+# This must happen before API starts, because API will create its own tables
+echo -e "${YELLOW}[5/6] Running SSO database migrations...${NC}"
 cd sso-platform
 
-echo "  - Pushing schema..."
+echo "  - Pushing SSO schema..."
 DATABASE_URL="${DATABASE_URL}" pnpm db:push 2>/dev/null || {
     echo -e "${YELLOW}  Schema push skipped (may already be up to date)${NC}"
 }
@@ -120,6 +120,18 @@ DATABASE_URL="${DATABASE_URL}" pnpm seed:setup 2>/dev/null || {
 }
 
 cd ..
+
+# Step 6: Now start all other services (API will create its tables on startup)
+echo -e "${YELLOW}[6/6] Starting remaining services...${NC}"
+if [ "$QUICK" = true ]; then
+    docker compose up -d
+else
+    docker compose up -d --build
+fi
+
+# Wait for services to be healthy
+echo "Waiting for services to be healthy..."
+sleep 10
 
 # Final status
 echo ""
