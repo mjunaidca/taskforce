@@ -1,0 +1,236 @@
+# =============================================================================
+# TaskFlow Platform - Docker Compose
+# =============================================================================
+# Local development stack with all services
+#
+# Services:
+#   - postgres: Main PostgreSQL database (port 5432)
+#   - sso-platform: Better Auth SSO (port 3001)
+#   - api: FastAPI backend (port 8000)
+#   - mcp-server: MCP HTTP server (port 8001)
+#   - web-dashboard: Next.js frontend (port 3000)
+#
+# Usage:
+#   cp .env.example .env
+#   # Fill in OPENAI_API_KEY and BETTER_AUTH_SECRET
+#   docker compose up -d
+#
+# Access:
+#   - Dashboard: http://localhost:3000
+#   - SSO: http://localhost:3001
+#   - API: http://localhost:8000
+#   - MCP: http://localhost:8001
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database (single DB for all services)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: taskflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # SSO Platform (Better Auth)
+  # ===========================================================================
+  # NOTE: Run migrations once after first startup:
+  #   cd sso-platform && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/taskflow" pnpm db:push && pnpm seed:setup
+  # ===========================================================================
+  sso-platform:
+    build:
+      context: ./sso-platform
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001
+    environment:
+      # Use development to allow localhost redirect URIs
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow?sslmode=disable
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=http://localhost:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://web-dashboard:3000,http://api:8000
+      # Email (optional)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      # Dev mode - skip email verification
+      - DISABLE_EMAIL_VERIFICATION=true
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # TaskFlow API (FastAPI)
+  # ===========================================================================
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow
+      - SSO_URL=http://sso-platform:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://web-dashboard:3000,http://sso-platform:3001
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - DEV_MODE=false
+      - MCP_SERVER_URL=http://mcp-server:8001/mcp
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # ChatKit database - override in .env to use external Neon for persistence
+      # Default: local postgres | Override: set TASKFLOW_CHATKIT_DATABASE_URL in .env
+      - TASKFLOW_CHATKIT_DATABASE_URL=${TASKFLOW_CHATKIT_DATABASE_URL:-postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sso-platform:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # MCP Server (HTTP transport)
+  # ===========================================================================
+  mcp-server:
+    build:
+      context: ./packages/mcp-server
+      dockerfile: Dockerfile
+    environment:
+      - TASKFLOW_API_URL=http://api:8000
+      - TASKFLOW_MCP_HOST=0.0.0.0
+      - TASKFLOW_MCP_PORT=8001
+      - TASKFLOW_DEV_MODE=false
+      - TASKFLOW_API_TIMEOUT=30.0
+    ports:
+      - "8001:8001"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/mcp').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # Web Dashboard (Next.js)
+  # ===========================================================================
+  # URL PATTERN: Separate variable names for browser vs server
+  # - NEXT_PUBLIC_* = browser (baked at build, uses localhost via port mapping)
+  # - SERVER_* = server-side routes (runtime, uses container names)
+  # ===========================================================================
+  web-dashboard:
+    build:
+      context: ./web-dashboard
+      dockerfile: Dockerfile
+      args:
+        # BROWSER: baked into JS bundle, runs on user's machine
+        - NEXT_PUBLIC_SSO_URL=http://localhost:3001
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_OAUTH_CLIENT_ID=taskflow-sso-public-client
+        - NEXT_PUBLIC_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/callback
+        - NEXT_PUBLIC_OAUTH_SCOPE=openid profile email
+        - NEXT_PUBLIC_CHATKIT_DOMAIN_KEY=${NEXT_PUBLIC_CHATKIT_DOMAIN_KEY:-domain_pk_local_dev}
+    environment:
+      - NODE_ENV=production
+      # SERVER: read at runtime by API routes, uses container names
+      - SERVER_API_URL=http://api:8000
+      - SERVER_SSO_URL=http://sso-platform:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      sso-platform:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # pgAdmin (Database UI)
+  # ===========================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+networks:
+  taskflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+# =============================================================================
+# STARTUP ORDER:
+#   1. postgres (database)
+#   2. sso-platform (auth, depends on postgres)
+#   3. api (backend, depends on postgres + sso)
+#   4. mcp-server (agent tools, depends on api)
+#   5. web-dashboard (frontend, depends on sso + api)
+#
+# EXTERNAL DEPENDENCY:
+#   - OPENAI_API_KEY required for chat features
+# =============================================================================

@@ -38,8 +38,8 @@ const TASKFLOW_SSO_CLIENT = {
   clientSecret: null,
   name: "Taskflow SSO",
   redirectUrls: [
-    "http://localhost:3000/auth/callback",
-    "https://taskflow.org/auth/callback",
+    "http://localhost:3000/api/auth/callback",
+    "https://taskflow.org/api/auth/callback",
   ].join(","),
   type: "public",
   disabled: false,
@@ -149,7 +149,7 @@ async function seed() {
   console.log("3. Example authorization URL:");
   console.log(`   ${process.env.BETTER_AUTH_URL || "http://localhost:3001"}/api/auth/oauth2/authorize?`);
   console.log(`     client_id=taskflow-sso-public-client`);
-  console.log(`     &redirect_uri=http://localhost:3000/auth/callback`);
+  console.log(`     &redirect_uri=http://localhost:3000/api/auth/callback`);
   console.log(`     &response_type=code`);
   console.log(`     &scope=openid+profile+email`);
   console.log(`     &code_challenge=YOUR_PKCE_CHALLENGE`);

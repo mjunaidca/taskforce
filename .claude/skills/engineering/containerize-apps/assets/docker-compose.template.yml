@@ -1,0 +1,141 @@
+# ============================================================================
+# Docker Compose Template
+# ============================================================================
+# NETWORK TOPOLOGY:
+#   Browser → localhost:3000 → web container
+#   Browser → localhost:8000 → api container
+#   web → api: http://api:8000 (Docker network)
+#   api → db: External Neon (not in Docker)
+#
+# CUSTOMIZATION:
+#   1. Update service names to match your project
+#   2. Set build contexts to correct directories
+#   3. Configure environment variables
+#   4. Add/remove services as needed
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # Frontend (Next.js)
+  # ==========================================================================
+  web:
+    build:
+      context: ./web-dashboard
+      dockerfile: Dockerfile
+      args:
+        # Build-time: These are baked into Next.js at build
+        # Use localhost because browser accesses via port mapping
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_SSO_URL=http://localhost:3001
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ==========================================================================
+  # Backend API (FastAPI)
+  # ==========================================================================
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    environment:
+      # External database (Neon - not in Docker)
+      - DATABASE_URL=${DATABASE_URL}
+
+      # Auth configuration
+      - BETTER_AUTH_URL=http://sso:3001
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+
+      # CORS: Include both localhost (browser) and Docker service names
+      - CORS_ORIGINS=http://localhost:3000,http://web:3000
+
+      # For server-side calls to frontend (if needed)
+      - FRONTEND_URL=http://web:3000
+
+      # App module (customize for your project)
+      - APP_MODULE=taskflow_api.main:app
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ==========================================================================
+  # SSO Service (Better Auth) - Optional if separate from web
+  # ==========================================================================
+  # sso:
+  #   build:
+  #     context: ./sso-platform
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - DATABASE_URL=${DATABASE_URL}
+  #     - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+  #     - BETTER_AUTH_URL=http://sso:3001
+  #     # Trusted origins: localhost + Docker service names
+  #     - TRUSTED_ORIGINS=http://localhost:3000,http://localhost:8000,http://web:3000,http://api:8000
+  #   ports:
+  #     - "3001:3001"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+
+  # ==========================================================================
+  # MCP Server - Optional
+  # ==========================================================================
+  # mcp:
+  #   build:
+  #     context: ./packages/mcp-server
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - API_URL=http://api:8000
+  #     - APP_MODULE=taskflow_mcp.server:app
+  #   ports:
+  #     - "8001:8001"
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+# ============================================================================
+# USAGE:
+#
+# 1. Create .env file with:
+#    DATABASE_URL=postgresql://...@neon.tech/...
+#    BETTER_AUTH_SECRET=your-secret-here
+#
+# 2. Build and run:
+#    docker compose build
+#    docker compose up -d
+#
+# 3. Check health:
+#    docker compose ps
+#    docker compose logs -f
+#
+# 4. Stop:
+#    docker compose down
+# ============================================================================

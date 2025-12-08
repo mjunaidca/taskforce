@@ -42,30 +42,16 @@ export const DEFAULT_ORG_SLUG = "taskflow";
 
 const ROBOLEARN_INTERFACE_CLIENT_ID = "robolearn-public-client";
 
-/**
- * Helper to filter redirect URLs based on environment
- * - Development: Allow localhost URLs
- * - Production: Remove localhost URLs for security
- */
-function getRedirectUrls(urls: string[]): string[] {
-  if (process.env.NODE_ENV === "production") {
-    return urls.filter((url) => {
-      // Remove localhost and 127.0.0.1 URLs in production
-      return !url.includes("localhost") && !url.includes("127.0.0.1");
-    });
-  }
-  return urls;
-}
 
 export const TRUSTED_CLIENTS = [
   {
     clientId: ROBOLEARN_INTERFACE_CLIENT_ID,
     name: "RoboLearn Book Interface",
     type: "public" as const,
-    redirectUrls: getRedirectUrls([
+    redirectUrls: [
       "http://localhost:3000/auth/callback",
       "https://mjunaidca.github.io/robolearn/auth/callback",
-    ]),
+    ],
     disabled: false,
     skipConsent: true,
     metadata: {},
@@ -75,9 +61,9 @@ export const TRUSTED_CLIENTS = [
     name: "RoboLearn Backend Service (Test)",
     type: "web" as const, // "web" type for server-side confidential clients with secrets
     clientSecret: "robolearn-confidential-secret-for-testing-only",
-    redirectUrls: getRedirectUrls([
+    redirectUrls: [
       "http://localhost:8000/auth/callback",
-    ]),
+    ],
     disabled: false,
     skipConsent: true,
     metadata: {},
@@ -86,10 +72,10 @@ export const TRUSTED_CLIENTS = [
     clientId: "taskflow-sso-public-client",
     name: "Taskflow SSO",
     type: "public" as const,
-    redirectUrls: getRedirectUrls([
+    redirectUrls: [
       "http://localhost:3000/api/auth/callback",
       "https://taskflow.org/api/auth/callback",
-    ]),
+    ],
     disabled: false,
     skipConsent: true,
     metadata: {},

@@ -1,0 +1,75 @@
+# ============================================================================
+# FastAPI Dockerfile Blueprint
+# ============================================================================
+# CUSTOMIZATION POINTS:
+#   - {{APP_MODULE}}: Entry point (e.g., taskflow_api.main:app)
+#   - {{PORT}}: Exposed port (default: 8000)
+#   - {{PYTHON_VERSION}}: Python version (default: 3.13)
+#
+# IMPACT NOTES:
+#   - Health check assumes /health endpoint exists
+#   - Runs as non-root user (uid 1000)
+#   - Uses uv for fast dependency resolution
+# ============================================================================
+
+# ----- Stage 1: Dependency Resolution -----
+FROM python:3.13-slim AS requirements-stage
+LABEL maintainer="devops-team"
+WORKDIR /tmp
+
+# Install uv for fast dependency resolution
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY ./pyproject.toml ./uv.lock* /tmp/
+
+# Export dependencies to requirements.txt
+RUN uv pip compile \
+    --python-version 3.13 \
+    pyproject.toml \
+    --output-file requirements.txt
+
+# ----- Stage 2: Runtime -----
+FROM python:3.13-slim
+
+LABEL maintainer="devops-team" \
+      description="Production-ready FastAPI application" \
+      version="1.0.0"
+
+WORKDIR /code
+
+# Security: Create non-root user
+RUN useradd --create-home --home-dir /home/appuser --uid 1000 appuser
+
+# Copy requirements from build stage
+COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
+
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /code/requirements.txt && \
+    rm -rf /code/requirements.txt ~/.cache/pip
+
+# Environment configuration
+# NOTE: These are defaults - override via docker-compose or K8s
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/code/src \
+    PORT=8000
+
+# Copy application code
+COPY --chown=appuser:appuser ./src /code/src
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (override with --build-arg PORT=xxxx if needed)
+EXPOSE ${PORT}
+
+# Health check
+# NOTE: Ensure your app has a /health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health').read()" || exit 1
+
+# Run application
+# CUSTOMIZE: Replace module path with your app's entry point
+CMD ["sh", "-c", "uvicorn ${APP_MODULE:-main:app} --host 0.0.0.0 --port ${PORT} --workers 2"]

@@ -1,0 +1,101 @@
+# ============================================================================
+# Next.js Dockerfile Blueprint
+# ============================================================================
+# CUSTOMIZATION POINTS:
+#   - Build ARGs for NEXT_PUBLIC_* variables (baked at build time)
+#   - PORT: Default 3000
+#
+# IMPACT NOTES:
+#   - Requires `output: "standalone"` in next.config.ts
+#   - NEXT_PUBLIC_* vars are baked at build time - cannot change at runtime
+#   - For browser access, NEXT_PUBLIC_* should use localhost (mapped ports)
+#   - Runs as non-root user (uid 1001)
+# ============================================================================
+
+# ----- Stage 1: Dependencies -----
+FROM node:22-alpine AS deps
+LABEL maintainer="devops-team"
+
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# ----- Stage 2: Builder -----
+FROM node:22-alpine AS builder
+LABEL maintainer="devops-team"
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build-time environment variables
+# IMPORTANT: These are baked into the build - use localhost for browser access
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_SSO_URL=http://localhost:3001
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SSO_URL=$NEXT_PUBLIC_SSO_URL
+
+# Build the application
+# NOTE: Requires `output: "standalone"` in next.config.ts
+RUN pnpm build
+
+# ----- Stage 3: Runner -----
+FROM node:22-alpine AS runner
+LABEL maintainer="devops-team" \
+      description="Production-ready Next.js application" \
+      version="1.0.0"
+
+WORKDIR /app
+
+# Runtime environment
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME="0.0.0.0"
+
+# Security: Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy public assets
+COPY --from=builder /app/public ./public
+
+# Set up .next directory with correct permissions
+RUN mkdir -p .next && chown nextjs:nodejs .next
+
+# Copy standalone build
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Switch to non-root user
+USER nextjs
+
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+CMD ["node", "server.js"]
+
+# ============================================================================
+# REQUIRED: next.config.ts must include:
+#
+# const nextConfig: NextConfig = {
+#   output: "standalone",
+# };
+#
+# export default nextConfig;
+# ============================================================================

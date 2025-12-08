@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001";
+// SERVER_SSO_URL for Docker (container names), fallback to NEXT_PUBLIC for local dev
+const SSO_URL = process.env.SERVER_SSO_URL || process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001";
 const CLIENT_ID = process.env.NEXT_PUBLIC_OAUTH_CLIENT_ID || "taskflow-sso-public-client";
 const REDIRECT_URI = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI || "http://localhost:3000/api/auth/callback";
 
