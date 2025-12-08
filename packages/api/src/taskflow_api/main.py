@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TaskFlow API",
     description="Human-Agent Task Management API - Equal API access for humans and AI agents",
-    version="1.0.0",
+    version="1.0.1",
     lifespan=lifespan,
 )
 

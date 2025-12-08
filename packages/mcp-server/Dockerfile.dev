@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# MCP Server - Development Dockerfile
+# =============================================================================
+# Hot reload with uvicorn --reload + polling for Docker volume mounts
+# =============================================================================
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install uv for fast package management
+RUN pip install uv
+
+# Install dependencies first (cached layer)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN UV_HTTP_TIMEOUT=120 uv pip install --system -e '.[dev]'
+
+# Polling for macOS Docker volume mounts
+ENV WATCHFILES_FORCE_POLLING=true
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8001
+
+# Hot reload command - uses watchfiles for auto-reload
+CMD ["python", "-m", "taskflow_mcp.server"]

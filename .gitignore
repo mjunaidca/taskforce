@@ -61,4 +61,6 @@ cookies.txt
 panaversity-fs/
 rag-agent/
 
+pnpm-store
+.pnpm-store/
 blueprints/

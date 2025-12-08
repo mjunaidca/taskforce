@@ -1,0 +1,191 @@
+# =============================================================================
+# TaskFlow Platform - Development Docker Compose
+# =============================================================================
+# Development stack with hot reloading for all services
+#
+# Uses Dockerfile.dev for each service with:
+#   - Polling-based file watching (macOS Docker compatible)
+#   - Hot reload commands built-in
+#
+# Usage:
+#   ./docker-dev.sh          # Start dev environment
+#   ./docker-dev.sh --logs   # Start and follow logs
+#   ./docker-dev.sh --clean  # Clean volumes and restart
+#
+# Hot Reload:
+#   - Python: uvicorn --reload with polling
+#   - Next.js: Fast Refresh with polling
+# =============================================================================
+
+name: taskflow-dev
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database (shared with production)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: taskflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # pgAdmin (Database UI)
+  # ===========================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # SSO Platform (Better Auth) - Development with Hot Reload
+  # ===========================================================================
+  sso-platform:
+    build:
+      context: ./sso-platform
+      dockerfile: Dockerfile.dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow?sslmode=disable
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://web-dashboard:3000,http://api:8000
+      - DISABLE_EMAIL_VERIFICATION=true
+    volumes:
+      - ./sso-platform:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # TaskFlow API (FastAPI) - Development with Hot Reload
+  # ===========================================================================
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile.dev
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow
+      - SSO_URL=http://sso-platform:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://web-dashboard:3000,http://sso-platform:3001
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - DEV_MODE=true
+      - MCP_SERVER_URL=http://mcp-server:8001/mcp
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TASKFLOW_CHATKIT_DATABASE_URL=${TASKFLOW_CHATKIT_DATABASE_URL:-postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow}
+    volumes:
+      - ./packages/api/src:/app/src
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # MCP Server (HTTP transport) - Development with Hot Reload
+  # ===========================================================================
+  mcp-server:
+    build:
+      context: ./packages/mcp-server
+      dockerfile: Dockerfile.dev
+    environment:
+      - TASKFLOW_API_URL=http://api:8000
+      - TASKFLOW_MCP_HOST=0.0.0.0
+      - TASKFLOW_MCP_PORT=8001
+      - TASKFLOW_DEV_MODE=true
+      - TASKFLOW_API_TIMEOUT=30.0
+    volumes:
+      - ./packages/mcp-server/src:/app/src
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+  # ===========================================================================
+  # Web Dashboard (Next.js) - Development with Fast Refresh
+  # ===========================================================================
+  web-dashboard:
+    build:
+      context: ./web-dashboard
+      dockerfile: Dockerfile.dev
+    environment:
+      # Browser URLs (used by client-side code)
+      - NEXT_PUBLIC_SSO_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_OAUTH_CLIENT_ID=taskflow-sso-public-client
+      - NEXT_PUBLIC_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/callback
+      - NEXT_PUBLIC_OAUTH_SCOPE=openid profile email
+      - NEXT_PUBLIC_CHATKIT_DOMAIN_KEY=${NEXT_PUBLIC_CHATKIT_DOMAIN_KEY:-domain_pk_local_dev}
+      # Server URLs (used by API routes)
+      - SERVER_API_URL=http://api:8000
+      - SERVER_SSO_URL=http://sso-platform:3001
+    volumes:
+      - ./web-dashboard:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskflow-network
+
+networks:
+  taskflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+# =============================================================================
+# HOT RELOAD:
+#   - Edit src/ files → auto-reload in ~3-5 seconds
+#   - Dependencies installed in Docker image (not mounted)
+#   - Only src/ and public/ folders are mounted for hot reload
+# =============================================================================
