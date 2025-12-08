@@ -1,0 +1,112 @@
+{
+  "version": "1.0",
+  "name": "articleList",
+  "description": "Rich article cards with images and client-side navigation. Shows complex layout with Box, Row, Col, Image, Text, Button.",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "articles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "title": { "type": "string", "minLength": 1 },
+            "author": { "type": "string", "minLength": 1 },
+            "heroImageUrl": { "type": "string", "format": "uri" },
+            "date": { "type": "string", "minLength": 1 }
+          },
+          "required": ["id", "title", "author", "heroImageUrl", "date"]
+        }
+      }
+    },
+    "required": ["articles"]
+  },
+  "outputJsonPreview": {
+    "type": "ListView",
+    "children": [
+      {
+        "type": "ListViewItem",
+        "key": "article-1",
+        "children": [
+          {
+            "type": "Box",
+            "maxWidth": 450,
+            "minWidth": 300,
+            "padding": 0,
+            "border": { "color": "gray-900", "size": 1 },
+            "children": [
+              {
+                "type": "Row",
+                "align": "stretch",
+                "gap": 0,
+                "children": [
+                  {
+                    "type": "Image",
+                    "src": "https://example.com/image.jpg",
+                    "alt": "Article title",
+                    "fit": "cover",
+                    "position": "top",
+                    "height": 200,
+                    "width": 160,
+                    "radius": "none",
+                    "frame": true
+                  },
+                  {
+                    "type": "Col",
+                    "padding": { "x": 4, "y": 3 },
+                    "gap": 2,
+                    "flex": 1,
+                    "align": "stretch",
+                    "justify": "between",
+                    "children": [
+                      {
+                        "type": "Col",
+                        "gap": 2,
+                        "flex": 1,
+                        "children": [
+                          { "type": "Text", "value": "Feb 4, 2025", "color": "tertiary", "size": "xs" },
+                          { "type": "Text", "value": "Article Title Here", "size": "sm", "weight": "semibold", "maxLines": 4 },
+                          { "type": "Text", "value": "by Author Name", "color": "tertiary", "size": "xs" }
+                        ]
+                      },
+                      {
+                        "type": "Row",
+                        "justify": "end",
+                        "children": [
+                          {
+                            "type": "Button",
+                            "label": "View",
+                            "size": "sm",
+                            "iconSize": "sm",
+                            "pill": true,
+                            "variant": "ghost",
+                            "color": "warning",
+                            "iconEnd": "chevron-right",
+                            "onClickAction": {
+                              "type": "open_article",
+                              "handler": "client",
+                              "payload": { "id": "article-1" }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "Complex layout: Box > Row > (Image + Col)",
+    "Uses padding object: { x: 4, y: 3 }",
+    "Image with frame: true for border",
+    "Button with iconEnd for trailing icon",
+    "Client action 'open_article' navigates to article page"
+  ]
+}
