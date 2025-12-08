@@ -358,7 +358,7 @@ export function SignUpForm() {
               <span className={`transition-colors duration-300 ${
                 currentStep === 2 ? "text-primary" : "text-muted-foreground"
               }`}>
-                Learning Profile
+                About You
               </span>
             </div>
           </div>
@@ -552,7 +552,7 @@ export function SignUpForm() {
                   Back
                 </button>
                 <h2 className="text-2xl font-semibold text-foreground mb-2">Tell us about yourself</h2>
-                <p className="text-sm text-muted-foreground">Help us personalize your learning experience</p>
+                <p className="text-sm text-muted-foreground">Help us personalize your experience</p>
               </div>
 
               <BackgroundSelect

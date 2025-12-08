@@ -49,7 +49,7 @@ export default async function ProfilePage({
                 Profile Settings
               </h1>
               <p className="text-base text-slate-600 leading-relaxed max-w-xl">
-                Manage your account details and personalize your learning experience
+                Manage your account details and personalize your experience
               </p>
             </div>
           </div>

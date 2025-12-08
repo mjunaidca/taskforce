@@ -8,30 +8,33 @@ interface HardwareTierSelectProps {
   error?: string;
 }
 
+// Repurposed: Hardware Tier → Primary Use Case
+// Maps to existing DB field without schema changes:
+// tier1 → personal, tier2 → work, tier3 → both, tier4 → exploring
 const hardwareTiers: { value: HardwareTier; label: string; shortLabel: string; description: string }[] = [
   {
     value: "tier1",
-    label: "Windows PC",
-    shortLabel: "Windows PC",
-    description: "Desktop or laptop",
+    label: "Personal Projects",
+    shortLabel: "Personal",
+    description: "Side projects & learning",
   },
   {
     value: "tier2",
-    label: "Mac (macOS)",
-    shortLabel: "Mac",
-    description: "MacBook or iMac",
+    label: "Work / Business",
+    shortLabel: "Work",
+    description: "Professional use",
   },
   {
     value: "tier3",
-    label: "Linux PC",
-    shortLabel: "Linux",
-    description: "Ubuntu, Fedora, etc.",
+    label: "Both",
+    shortLabel: "Both",
+    description: "Personal and work",
   },
   {
     value: "tier4",
-    label: "Chromebook/Web",
-    shortLabel: "Chromebook/Web",
-    description: "Browser-based only",
+    label: "Just Exploring",
+    shortLabel: "Exploring",
+    description: "Checking things out",
   },
 ];
 
@@ -39,7 +42,7 @@ export function HardwareTierSelect({ value, onChange, error }: HardwareTierSelec
   return (
     <div className="space-y-3">
       <label className="block mt-6 px-4 py-3 bg-primary/10 border-l-4 border-primary rounded-r-lg text-sm font-bold text-foreground">
-        What hardware and OS do you use?
+        How do you plan to use Taskflow?
       </label>
       <div className="grid grid-cols-2 gap-3">
         {hardwareTiers.map((tier) => (
