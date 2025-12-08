@@ -8,6 +8,7 @@ import { jwt } from "better-auth/plugins";
 import { username } from "better-auth/plugins";
 import { haveIBeenPwned } from "better-auth/plugins";
 import { apiKey } from "better-auth/plugins";
+import { genericOAuth } from "better-auth/plugins"; // 008-social-login-providers
 import { db } from "./db";
 import * as schema from "../../auth-schema"; // Use Better Auth generated schema
 import { member } from "../../auth-schema";
@@ -507,6 +508,32 @@ export const auth = betterAuth({
   trustedOrigins: process.env.ALLOWED_ORIGINS?.split(",") ||
     (process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://localhost:3001"] : []),
 
+  // =============================================================================
+  // Social Login Providers (008-social-login-providers)
+  // Environment-driven: providers only load when env vars are set
+  // =============================================================================
+  socialProviders: {
+    // Google OAuth 2.0 - loads only if GOOGLE_CLIENT_ID is set
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        // Redirect URI: {BETTER_AUTH_URL}/api/auth/callback/google
+      },
+    } : {}),
+
+    // GitHub OAuth - loads only if GITHUB_CLIENT_ID is set
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? {
+      github: {
+        clientId: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        // GitHub requires explicit email scope (GitHub Apps don't expose email by default)
+        scope: ["user:email"],
+        // Redirect URI: {BETTER_AUTH_URL}/api/auth/callback/github
+      },
+    } : {}),
+  },
+
   // Plugins
   plugins: [
     // JWT Plugin - Enables JWKS endpoint for asymmetric key signing (RS256)
@@ -645,6 +672,25 @@ export const auth = betterAuth({
         maxExpiresIn: 365, // Maximum 1 year
       },
     }),
+
+    // =============================================================================
+    // RoboLearn SSO (Generic OIDC) - 008-social-login-providers
+    // Loads only when ROBOLEARN_CLIENT_ID, ROBOLEARN_CLIENT_SECRET, and ROBOLEARN_SSO_URL are set
+    // =============================================================================
+    ...(process.env.ROBOLEARN_CLIENT_ID && process.env.ROBOLEARN_CLIENT_SECRET && process.env.ROBOLEARN_SSO_URL
+      ? [genericOAuth({
+          config: [{
+            providerId: "robolearn",
+            clientId: process.env.ROBOLEARN_CLIENT_ID,
+            clientSecret: process.env.ROBOLEARN_CLIENT_SECRET,
+            // OIDC discovery endpoint - auto-discovers auth/token/userinfo URLs
+            discoveryUrl: `${process.env.ROBOLEARN_SSO_URL}/.well-known/openid-configuration`,
+            scopes: ["openid", "profile", "email"],
+            // IMPORTANT: genericOAuth callback path is /api/auth/oauth2/callback/{providerId}
+            // Register this in RoboLearn SSO: {BETTER_AUTH_URL}/api/auth/oauth2/callback/robolearn
+          }],
+        })]
+      : []),
   ],
 
   // Database hooks - Automatically add new users to default organization
