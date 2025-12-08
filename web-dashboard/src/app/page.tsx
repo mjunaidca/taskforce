@@ -75,7 +75,7 @@ export default function Home() {
           </h1>
 
           <p className="max-w-2xl text-lg text-muted-foreground">
-            TaskFlow revolutionizes project management by treating AI agents as first-class citizens.
+            TaskFlow rethinks project management by treating AI agents as first-class citizens.
             Assign tasks, track progress, and audit actions whether the worker is human or AI.
           </p>
 

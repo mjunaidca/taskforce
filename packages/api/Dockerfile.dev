@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# TaskFlow API - Development Dockerfile
+# =============================================================================
+# Hot reload with uvicorn --reload + polling for Docker volume mounts
+# =============================================================================
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install uv for fast package management
+RUN pip install uv
+
+# Install dependencies first (cached layer)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN uv pip install --system -e '.[dev]'
+
+# Polling for macOS Docker volume mounts
+ENV WATCHFILES_FORCE_POLLING=true
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# Hot reload command - watches /app/src for changes
+CMD ["uvicorn", "taskflow_api.main:app", "--reload", "--reload-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000"]
