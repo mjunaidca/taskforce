@@ -9,6 +9,8 @@ Follows MCP SDK best practices:
 """
 
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from taskflow_mcp.app import mcp
 from taskflow_mcp.config import get_config
@@ -21,14 +23,31 @@ import taskflow_mcp.tools.projects  # noqa: F401 - 1 project tool
 # Load configuration
 config = get_config()
 
-
 # Use FastMCP's built-in streamable_http_app directly
 # It already handles lifespan and includes the /mcp route
 _mcp_app = mcp.streamable_http_app()
 
+
+class HealthMiddleware:
+    """Add /health endpoint to an ASGI app without breaking lifespan."""
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"] == "/health":
+            response = JSONResponse({"status": "healthy", "service": "taskflow-mcp"})
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+# Add health endpoint middleware, then CORS
+app_with_health = HealthMiddleware(_mcp_app)
+
 # Wrap with CORS middleware for MCP Inspector and browser-based clients
 streamable_http_app = CORSMiddleware(
-    _mcp_app,
+    app_with_health,
     allow_origins=["*"],  # Allow all origins for MCP clients
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],

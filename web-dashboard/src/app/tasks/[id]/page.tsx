@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import { TaskRead, MemberRead, AuditRead, TaskPriority } from "@/types"
@@ -61,6 +61,7 @@ import {
 export default function TaskDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const taskId = Number(params.id)
 
   const [task, setTask] = useState<TaskRead | null>(null)
@@ -116,6 +117,18 @@ export default function TaskDetailPage() {
       fetchData()
     }
   }, [taskId])
+
+  // Auto-open edit dialog when ?edit=true
+  useEffect(() => {
+    if (task && searchParams.get("edit") === "true") {
+      setEditTitle(task.title)
+      setEditDescription(task.description || "")
+      setEditPriority(task.priority)
+      setEditDueDate(task.due_date ? task.due_date.split("T")[0] : "")
+      setEditTags(task.tags?.join(", ") || "")
+      setEditDialogOpen(true)
+    }
+  }, [task, searchParams])
 
   const handleStatusChange = async (newStatus: string) => {
     if (!task) return

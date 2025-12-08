@@ -122,7 +122,10 @@ const member = pgTable("member", {
  */
 async function initDatabase() {
   const databaseUrl = process.env.DATABASE_URL!;
-  const isLocalPostgres = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
+  const isLocalPostgres =
+    databaseUrl.includes("localhost") ||
+    databaseUrl.includes("127.0.0.1") ||
+    databaseUrl.includes("sslmode=disable");  // Docker/standard postgres
 
   if (isLocalPostgres) {
     // Standard PostgreSQL (CI, local development with standard Postgres)

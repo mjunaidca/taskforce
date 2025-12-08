@@ -93,7 +93,7 @@ export default function NewAgentPage() {
         agent_type: agentType as "claude" | "qwen" | "gemini" | "custom",
         capabilities: capabilities.length > 0 ? capabilities : undefined,
       })
-      router.push(`/agents/${agent.id}`)
+      router.push(`/agents`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to register agent")
     } finally {

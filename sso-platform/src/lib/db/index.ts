@@ -27,7 +27,9 @@ const getDatabaseUrl = (): string => {
 function initDatabase() {
   const databaseUrl = getDatabaseUrl();
   const isLocalPostgres =
-    databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
+    databaseUrl.includes("localhost") ||
+    databaseUrl.includes("127.0.0.1") ||
+    databaseUrl.includes("sslmode=disable");  // Docker/standard postgres
 
   if (isLocalPostgres) {
     // Standard PostgreSQL (CI, local development with standard Postgres)

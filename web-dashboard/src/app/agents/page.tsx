@@ -217,7 +217,7 @@ export default function AgentsPage() {
                             <Link href={`/agents/${agent.id}`}>View Details</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/agents/${agent.id}/edit`}>Edit</Link>
+                            <Link href={`/agents/${agent.id}?edit=true`}>Edit</Link>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

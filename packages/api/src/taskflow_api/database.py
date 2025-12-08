@@ -9,6 +9,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .config import settings
 
+# Import all models to ensure they're registered with SQLModel.metadata
+# This MUST happen before create_db_and_tables() is called
+from .models import AuditLog, Project, ProjectMember, Task, Worker  # noqa: F401
+
 
 def get_async_database_url(url: str) -> str:
     """Convert sync PostgreSQL URL to async-compatible format.

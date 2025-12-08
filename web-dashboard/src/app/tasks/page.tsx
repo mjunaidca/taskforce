@@ -39,6 +39,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Loader2, Trash2 } from "lucide-react"
 
 function TasksContent() {
   const searchParams = useSearchParams()
@@ -53,6 +64,11 @@ function TasksContent() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Delete state
+  const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null)
+  const [deleteTaskTitle, setDeleteTaskTitle] = useState<string>("")
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     async function fetchProjects() {
@@ -104,6 +120,21 @@ function TasksContent() {
   const filteredTasks = tasks.filter((task) =>
     task.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleDeleteTask = async () => {
+    if (!deleteTaskId) return
+    try {
+      setDeleting(true)
+      await api.deleteTask(deleteTaskId)
+      setTasks(tasks.filter((t) => t.id !== deleteTaskId))
+      setDeleteTaskId(null)
+      setDeleteTaskTitle("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -317,7 +348,17 @@ function TasksContent() {
                             <Link href={`/tasks/${task.id}`}>View Details</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/tasks/${task.id}/edit`}>Edit</Link>
+                            <Link href={`/tasks/${task.id}?edit=true`}>Edit</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              setDeleteTaskId(task.id)
+                              setDeleteTaskTitle(task.title)
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -329,6 +370,29 @@ function TasksContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteTaskId !== null} onOpenChange={(open) => !open && setDeleteTaskId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteTaskTitle}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTask}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

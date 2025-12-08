@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TaskFlow Local",
+      "Group": "Docker",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "taskflow",
+      "Username": "postgres",
+      "PassFile": "/pgadmin4/pgpass",
+      "SSLMode": "disable"
+    }
+  }
+}

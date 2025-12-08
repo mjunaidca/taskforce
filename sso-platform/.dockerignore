@@ -1,0 +1,59 @@
+# Dependencies (copied via multi-stage build)
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Tests
+tests/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+playwright-report/
+test-results/
+
+# Documentation
+*.md
+!README.md
+docs/
+papers/
+
+# Development
+.turbo
+.vercel
+.eslintcache
+tsconfig.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
