@@ -24,5 +24,5 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8001
 
-# Hot reload command - watches /app/src for changes
-CMD ["uvicorn", "taskflow_mcp.http_server:app", "--reload", "--reload-dir", "/app/src", "--host", "0.0.0.0", "--port", "8001"]
+# Hot reload command - uses watchfiles for auto-reload
+CMD ["python", "-m", "taskflow_mcp.server"]
