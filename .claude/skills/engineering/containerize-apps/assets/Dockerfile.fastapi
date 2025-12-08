@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ============================================================================
 # FastAPI Dockerfile Blueprint
 # ============================================================================
@@ -68,7 +69,7 @@ EXPOSE ${PORT}
 # Health check
 # NOTE: Ensure your app has a /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health').read()" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PORT}/health').read()" || exit 1
 
 # Run application
 # CUSTOMIZE: Replace module path with your app's entry point

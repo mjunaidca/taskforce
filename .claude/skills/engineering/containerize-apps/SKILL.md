@@ -235,6 +235,19 @@ See `assets/docker-compose.template.yml` for:
 
 ## Common Gotchas (Battle-Tested)
 
+### 0. Missing Syntax Directive
+**Problem:** Dockerfile may not use latest features or build checks
+**Solution:** Always add `# syntax=docker/dockerfile:1` as the **first line**:
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM python:3.13-slim
+...
+```
+This ensures:
+- Latest stable Dockerfile features (build checks, heredocs, COPY --exclude)
+- Auto-updates without upgrading Docker/BuildKit
+- Can run `docker build --check` for linting
+
 ### 1. Browser vs Server URLs - Use Separate Variable Names
 **Problem:** Browser runs on host (needs localhost), server runs in container (needs service names)
 **Solution:** Use DIFFERENT variable names - no confusion:
