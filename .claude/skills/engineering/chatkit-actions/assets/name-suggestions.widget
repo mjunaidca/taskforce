@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "name": "nameSuggestions",
+  "description": "Client-side selection widget with 'more' button. Demonstrates client action handling.",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "reason": { "type": "string", "minLength": 1 }
+          },
+          "required": ["name"]
+        }
+      },
+      "selected": {
+        "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+      }
+    },
+    "required": ["items", "selected"]
+  },
+  "outputJsonPreview": {
+    "type": "ListView",
+    "children": [
+      {
+        "type": "ListViewItem",
+        "key": "Willow",
+        "onClickAction": {
+          "type": "cats.select_name",
+          "handler": "client",
+          "payload": {
+            "name": "Willow",
+            "options": [
+              { "name": "Willow", "reason": "Calm, playful vibes" },
+              { "name": "Pixel", "reason": "Bright, curious, energetic" }
+            ]
+          }
+        },
+        "children": [
+          {
+            "type": "Row",
+            "gap": 3,
+            "align": "center",
+            "children": [
+              { "type": "Icon", "name": "dot", "color": "gray-300", "size": "xl" },
+              {
+                "type": "Col",
+                "gap": 1,
+                "children": [
+                  { "type": "Text", "value": "Willow", "weight": "semibold" },
+                  { "type": "Text", "value": "Calm, playful vibes", "color": "tertiary", "size": "sm" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "more",
+        "children": [
+          {
+            "type": "Button",
+            "onClickAction": {
+              "type": "cats.more_names",
+              "handler": "client",
+              "payload": {}
+            },
+            "variant": "outline",
+            "color": "discovery",
+            "size": "lg",
+            "pill": true,
+            "block": true,
+            "label": "Suggest more names",
+            "iconEnd": "sparkle",
+            "disabled": false
+          }
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "handler: 'client' processes action in frontend onAction callback",
+    "cats.select_name - handled by sending message or updating local state",
+    "cats.more_names - triggers sendUserMessage with 'more please' text",
+    "Button disabled when selection made (disabled: !!selected)"
+  ]
+}

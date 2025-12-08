@@ -1,0 +1,86 @@
+{
+  "version": "1.0",
+  "name": "lineSelect",
+  "description": "List of selectable items with server-side action handling. Shows colored indicators and selection state.",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "selected": {
+        "anyOf": [{ "type": "string" }, { "type": "null" }]
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "color": { "type": "string" }
+          },
+          "required": ["id", "label", "color"]
+        }
+      }
+    },
+    "required": ["selected", "items"]
+  },
+  "outputJsonPreview": {
+    "type": "ListView",
+    "children": [
+      {
+        "type": "ListViewItem",
+        "key": "blue",
+        "gap": 5,
+        "onClickAction": {
+          "type": "line.select",
+          "payload": { "id": "blue" },
+          "handler": "server"
+        },
+        "children": [
+          {
+            "type": "Box",
+            "size": 25,
+            "radius": "full",
+            "background": "#06b6d4"
+          },
+          {
+            "type": "Text",
+            "value": "Blue Line",
+            "color": "gray-900",
+            "size": "sm"
+          }
+        ]
+      },
+      {
+        "type": "ListViewItem",
+        "key": "purple",
+        "gap": 5,
+        "onClickAction": {
+          "type": "line.select",
+          "payload": { "id": "purple" },
+          "handler": "server"
+        },
+        "children": [
+          {
+            "type": "Box",
+            "size": 25,
+            "radius": "full",
+            "background": "#a855f7"
+          },
+          {
+            "type": "Text",
+            "value": "Purple Line",
+            "color": "gray-900",
+            "size": "sm"
+          }
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "handler: 'server' triggers backend action() method",
+    "Action type 'line.select' is routed in server action() handler",
+    "Selected state disables click actions (returns null)",
+    "Check icon shown when selected === item.id"
+  ]
+}

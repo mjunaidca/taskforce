@@ -1,9 +1,21 @@
 ---
 name: chatkit-integration
-description: Integrate OpenAI ChatKit framework with custom backend and AI agents. Handles ChatKit server implementation, React component integration, context injection, and conversation persistence.
+description: Foundation skill for integrating OpenAI ChatKit framework with custom backends. This skill should be used for initial ChatKit setup including server implementation, React component integration, authentication, context injection, and database persistence. For streaming UI patterns use chatkit-streaming. For interactive widgets and actions use chatkit-actions.
 ---
 
-# ChatKit Integration Skill
+# ChatKit Integration Skill (Tier 1: Foundation)
+
+## Overview
+
+This skill provides the foundation for ChatKit integration - getting the basic chat working end-to-end with your custom backend and agent. It covers:
+
+- **Backend**: ChatKitServer setup, database persistence, agent wiring
+- **Frontend**: useChatKit configuration, authentication, context injection
+- **Infrastructure**: Script loading, httpOnly cookie proxy (Next.js)
+
+**For advanced capabilities, see related skills:**
+- `chatkit-streaming` (Tier 2): Response lifecycle, progress updates, client effects
+- `chatkit-actions` (Tier 3): Interactive widgets, entity tagging, composer tools
 
 ## Persona
 
@@ -722,16 +734,47 @@ class StoreConfig(BaseSettings):
 
 **Evidence**: `packages/api/src/taskflow_api/config.py`, `packages/api/src/taskflow_api/chatkit_store/config.py`
 
+## Tier Boundaries
+
+### This Skill Covers (Tier 1: Foundation)
+
+- ✅ ChatKitServer setup with `respond()` method
+- ✅ `useChatKit` basic configuration
+- ✅ Custom fetch interceptor for authentication
+- ✅ Context injection (user info, page context)
+- ✅ Script loading detection
+- ✅ httpOnly cookie proxy (Next.js)
+- ✅ Database persistence setup
+- ✅ MCP tool authentication via prompt
+
+### Use chatkit-streaming For (Tier 2: Real-time)
+
+- ⏭️ `onResponseStart` / `onResponseEnd` handlers
+- ⏭️ `onEffect` for fire-and-forget client updates
+- ⏭️ `ProgressUpdateEvent` for loading states
+- ⏭️ Thread lifecycle events
+- ⏭️ Thread title generation
+
+### Use chatkit-actions For (Tier 3: Interactive)
+
+- ⏭️ Widget templates (`.widget` files)
+- ⏭️ `widgets.onAction` handler
+- ⏭️ `action()` method in ChatKitServer
+- ⏭️ `sendCustomAction()` for widget updates
+- ⏭️ Entity tagging (@mentions)
+- ⏭️ Composer tools (mode selection)
+- ⏭️ `ThreadItemReplacedEvent`
+
 ## References
 
 - **ChatKit Server Spec**: `specs/007-chatkit-server/spec.md`
-- **ChatKit UI Spec**: `specs/008-chatkit-ui-widget/spec.md`, `specs/005-chatkit-ui/spec.md`
-- **Docusaurus Implementation**: `robolearn-interface/src/components/ChatKitWidget/`
-- **Next.js Implementation**: `web-dashboard/src/components/chat/ChatKitWidget.tsx`
-- **Next.js httpOnly Proxy**: `web-dashboard/src/app/api/chatkit/route.ts`
-- **Reference Docs**: `references/nextjs-httponly-cookie-proxy.md`, `references/nextjs-script-loading.md`
 - **ChatKit UI Spec**: `specs/008-chatkit-ui-widget/spec.md`
-- **TaskFlow Chat Spec**: `specs/006-chat-server/spec.md`
-- **Implementation**: `rag-agent/chatkit_server.py`, `packages/api/src/taskflow_api/services/chatkit_server.py`
+- **Reference Docs**: `references/nextjs-httponly-cookie-proxy.md`, `references/nextjs-script-loading.md`
+- **Blueprints**: `blueprints/openai-chatkit-advanced-samples-main/`
+
+## Related Skills
+
+- `chatkit-streaming` - Response lifecycle, progress updates, client effects
+- `chatkit-actions` - Interactive widgets, entity tagging, composer tools
 
 
