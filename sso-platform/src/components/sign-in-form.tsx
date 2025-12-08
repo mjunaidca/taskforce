@@ -158,6 +158,12 @@ export function SignInForm() {
   // Uses Better Auth's signIn.social() for built-in providers (Google, GitHub)
   // and authClient.signIn.oauth2() for generic OAuth providers (RoboLearn)
   // =============================================================================
+  const providerDisplayNames: Record<string, string> = {
+    google: 'Google',
+    github: 'GitHub',
+    robolearn: 'RoboLearn',
+  };
+
   const handleSocialSignIn = async (provider: 'google' | 'github' | 'robolearn') => {
     setIsLoading(true);
     setErrors({});
@@ -200,7 +206,9 @@ export function SignInForm() {
       }
     } catch (error) {
       console.error(`[SignIn] Social sign-in error (${provider}):`, error);
-      setErrors({ general: `Failed to sign in with ${provider}. Please try again.` });
+      const displayName = providerDisplayNames[provider] || provider;
+      setErrors({ general: `Failed to sign in with ${displayName}. Please try again.` });
+    } finally {
       setIsLoading(false);
     }
   };

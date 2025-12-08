@@ -223,14 +223,7 @@ When a user signs in with a social provider, Better Auth automatically manages d
 
 ### Account Linking Behavior
 
-Account linking is enabled with trusted providers:
-
-```typescript
-accountLinking: {
-  enabled: true,
-  trustedProviders: ["google", "github", "robolearn"],
-}
-```
+> **Note:** Account linking is enabled by default in Better Auth. If a user logs in with multiple providers (Google, GitHub, RoboLearn) using the same email address, their accounts will be linked to a single user record automatically. No explicit configuration is required.
 
 This means:
 - **Same email across providers** → All accounts link to single user record
