@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { OrgSwitcher } from "@/components/OrgSwitcher"
 import { LogOut, User, Settings, Moon, Sun } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -55,6 +56,9 @@ export function Header() {
 
       {/* Right side - user menu */}
       <div className="flex items-center gap-4">
+        {/* Organization Switcher */}
+        <OrgSwitcher />
+
         {/* Theme toggle */}
         <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

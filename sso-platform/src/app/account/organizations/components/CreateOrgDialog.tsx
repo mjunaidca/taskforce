@@ -31,7 +31,8 @@ const orgSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
   description: z.string().max(500).optional(),
-  logo: z.instanceof(FileList).optional(),
+  // FileList is browser-only, use any for SSR compatibility
+  logo: z.any().optional(),
 });
 
 type OrgFormData = z.infer<typeof orgSchema>;
@@ -145,7 +146,7 @@ export function CreateOrgDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="bg-gradient-to-r from-taskflow-500 to-taskflow-600">
+        <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
           <svg
             className="w-5 h-5 mr-2"
             fill="none"

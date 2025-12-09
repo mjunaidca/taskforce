@@ -7,6 +7,7 @@ export interface JWTClaims {
   role: "user" | "admin";
   tenant_id: string;
   organization_ids: string[];
+  organization_names: string[];
   iat: number;
   exp: number;
   iss: string;

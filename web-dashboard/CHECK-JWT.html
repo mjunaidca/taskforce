@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check JWT Claims</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #fff; }
+    pre { background: #2d2d2d; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    .error { color: #ff6b6b; }
+    .success { color: #51cf66; }
+    button { padding: 10px 20px; background: #228be6; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+    button:hover { background: #1c7ed6; }
+  </style>
+</head>
+<body>
+  <h1>JWT Claims Checker</h1>
+
+  <button onclick="checkJWT()">Check Current JWT</button>
+  <button onclick="clearAndReload()">Logout & Refresh</button>
+
+  <div id="output"></div>
+
+  <script>
+    function checkJWT() {
+      const output = document.getElementById('output');
+
+      // Get JWT from cookie
+      const jwt = document.cookie.split('; ').find(c => c.startsWith('taskflow_id_token='))?.split('=')[1];
+
+      if (!jwt) {
+        output.innerHTML = '<pre class="error">❌ No JWT found in cookies!\nYou need to login first.</pre>';
+        return;
+      }
+
+      try {
+        // Decode JWT
+        const payload = JSON.parse(atob(jwt.split('.')[1]));
+
+        // Check for org claims
+        const hasTenantId = !!payload.tenant_id;
+        const hasOrgIds = Array.isArray(payload.organization_ids) && payload.organization_ids.length > 0;
+
+        let html = '<h2>JWT Payload:</h2><pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+
+        html += '<h2>Organization Claims:</h2>';
+        if (hasTenantId && hasOrgIds) {
+          html += '<pre class="success">✅ tenant_id: ' + payload.tenant_id + '\n';
+          html += '✅ organization_ids: ' + JSON.stringify(payload.organization_ids) + '\n\n';
+          html += 'OrgSwitcher should be visible!</pre>';
+        } else {
+          html += '<pre class="error">❌ Missing organization claims!\n\n';
+          html += 'tenant_id: ' + (payload.tenant_id || 'NOT PRESENT') + '\n';
+          html += 'organization_ids: ' + (payload.organization_ids ? JSON.stringify(payload.organization_ids) : 'NOT PRESENT') + '\n\n';
+          html += '👉 You need to LOGOUT and LOGIN AGAIN to get fresh JWT with org data!\n';
+          html += '👉 Click "Logout & Refresh" button above.</pre>';
+        }
+
+        output.innerHTML = html;
+      } catch (e) {
+        output.innerHTML = '<pre class="error">❌ Failed to decode JWT: ' + e.message + '</pre>';
+      }
+    }
+
+    function clearAndReload() {
+      // Clear all taskflow cookies
+      document.cookie.split(";").forEach(c => {
+        const name = c.trim().split("=")[0];
+        if (name.includes('taskflow') || name.includes('robolearn') || name.includes('better-auth')) {
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=" + location.hostname;
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+        }
+      });
+
+      alert('Cookies cleared! Redirecting to login...');
+      window.location.href = '/';
+    }
+
+    // Auto-check on load
+    window.onload = checkJWT;
+  </script>
+</body>
+</html>

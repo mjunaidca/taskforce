@@ -36,6 +36,8 @@ export async function GET() {
         preferred_username: claims.preferred_username,
         role: claims.role,
         tenant_id: claims.tenant_id,
+        organization_ids: claims.organization_ids as string[] | undefined,
+        organization_names: claims.organization_names as string[] | undefined,
       },
       expiresAt: expiresAtNum,
     });
