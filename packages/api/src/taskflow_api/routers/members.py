@@ -1,6 +1,5 @@
 """Project member endpoints."""
 
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
