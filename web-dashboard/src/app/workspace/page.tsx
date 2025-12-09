@@ -122,7 +122,7 @@ export default function WorkspacePage() {
     }
 
     fetchData();
-  }, [isAuthenticated, selectedProject]);
+  }, [isAuthenticated]); // selectedProject removed - only set on initial load
 
   // Load tasks when project changes
   useEffect(() => {

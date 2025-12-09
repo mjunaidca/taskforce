@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { usePathname, useParams, useRouter } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import styles from "./styles.module.css";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { ContextBadge } from "./ContextBadge";
@@ -68,7 +68,6 @@ export function ChatKitWidget({
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const pathname = usePathname();
   const params = useParams();
-  const router = useRouter();
 
   // Use dedicated ChatKit proxy endpoint - handles auth via httpOnly cookies
   // The proxy at /api/chatkit will forward to the backend /chatkit with Authorization header
