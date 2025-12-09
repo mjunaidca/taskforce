@@ -69,6 +69,12 @@ export default function AdminLayout({
                   Users
                 </Link>
                 <Link
+                  href="/admin/organizations"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Organizations
+                </Link>
+                <Link
                   href="/admin/clients"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >

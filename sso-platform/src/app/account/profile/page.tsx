@@ -2,6 +2,14 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import ProfileForm from "./ProfileForm";
+import { db } from "@/lib/db";
+import { organization, member } from "@/lib/db/schema-export";
+import { eq, sql } from "drizzle-orm";
+import { OrgLogo } from "@/components/organizations/OrgLogo";
+import { OrgBadge } from "@/components/organizations/OrgBadge";
+import { formatMemberCount } from "@/lib/utils/organization";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function ProfilePage({
   searchParams,
@@ -18,6 +26,42 @@ export default async function ProfilePage({
 
   const params = await searchParams;
   const redirectUrl = params.redirect || null;
+
+  // Fetch active organization if any
+  let activeOrg = null;
+  let userRole = null;
+  let memberCount = 0;
+
+  if (session.session.activeOrganizationId) {
+    const result = await db
+      .select({
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        logo: organization.logo,
+        userRole: member.role,
+        memberCount: sql<number>`(
+          SELECT COUNT(*)::int
+          FROM ${member}
+          WHERE ${member.organizationId} = ${organization.id}
+        )`,
+      })
+      .from(organization)
+      .innerJoin(member, eq(member.organizationId, organization.id))
+      .where(eq(organization.id, session.session.activeOrganizationId))
+      .limit(1);
+
+    if (result.length > 0) {
+      activeOrg = {
+        id: result[0].id,
+        name: result[0].name,
+        slug: result[0].slug,
+        logo: result[0].logo,
+      };
+      userRole = result[0].userRole;
+      memberCount = result[0].memberCount;
+    }
+  }
 
   return (
     <div className="py-8 px-4">
@@ -54,6 +98,33 @@ export default async function ProfilePage({
             </div>
           </div>
         </div>
+
+        {/* Active Organization Section */}
+        {activeOrg && (
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-taskflow-100/20 via-transparent to-purple-100/20 rounded-2xl blur-2xl -z-10" />
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/50 p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Active Organization</h2>
+              <div className="flex items-center gap-4">
+                <OrgLogo name={activeOrg.name} logo={activeOrg.logo} size="lg" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-slate-900">{activeOrg.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm text-slate-600">
+                      {formatMemberCount(memberCount)}
+                    </p>
+                    <span className="text-slate-400">•</span>
+                    <OrgBadge role={userRole as any} />
+                  </div>
+                </div>
+                <Button variant="outline" asChild>
+                  <Link href="/account/organizations">Manage Organizations</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form Card with Enhanced Shadow */}
         <div className="relative">
