@@ -1,8 +1,9 @@
 """Task management MCP tools.
 
-Implements 9 tools for task operations:
+Implements 10 tools for task operations:
 - taskflow_add_task: Create new task
 - taskflow_list_tasks: List project tasks
+- taskflow_show_task_form: Show interactive task creation form
 - taskflow_complete_task: Mark task complete
 - taskflow_delete_task: Remove task
 - taskflow_update_task: Modify task
@@ -145,6 +146,42 @@ async def taskflow_list_tasks(params: ListTasksInput, ctx: Context) -> str:
         return _format_error(e)
     except Exception as e:
         return json.dumps({"error": True, "message": str(e)})
+
+
+@mcp.tool(
+    name="taskflow_show_task_form",
+    annotations={
+        "title": "Show Task Creation Form",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def taskflow_show_task_form(params: TaskIdInput, ctx: Context) -> str:
+    """Show interactive task creation form widget.
+
+    Triggers the form widget UI for creating a new task with all fields.
+    This is used when the user wants to create a task but hasn't provided all details.
+
+    Args:
+        params: TaskIdInput with user_id and access_token (task_id is ignored)
+
+    Returns:
+        JSON with action="show_form" signal
+
+    Example:
+        Input: {"user_id": "user123", "access_token": "token"}
+        Output: {"action": "show_form", "form_type": "task_creation"}
+    """
+    return json.dumps(
+        {
+            "action": "show_form",
+            "form_type": "task_creation",
+            "user_id": params.user_id,
+        },
+        indent=2,
+    )
 
 
 @mcp.tool(

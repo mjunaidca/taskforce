@@ -1,21 +1,86 @@
 """Project member endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import select
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..auth import CurrentUser, get_current_user
 from ..database import get_session
 from ..models.project import Project, ProjectMember
 from ..models.worker import Worker
-from ..schemas.project import MemberCreate, MemberRead
+from ..schemas.project import MemberCreate, MemberRead, MemberSearchResult
 from ..services.audit import log_action
 from ..services.user_setup import ensure_user_setup
 
-router = APIRouter(tags=["Members"])
+# Search router for global member search (at /api/members)
+search_router = APIRouter(tags=["Members"])
+
+# Project-specific router (at /api/projects/{project_id}/members)
+project_router = APIRouter(tags=["Members"])
+
+# Keep backward-compatible reference
+router = project_router
 
 
-@router.get("", response_model=list[MemberRead])
+@search_router.get("/search", response_model=MemberSearchResult)
+async def search_members(
+    q: Optional[str] = Query(None, description="Search query for name or handle"),
+    project_id: Optional[int] = Query(None, description="Filter by project membership"),
+    limit: int = Query(10, ge=1, le=50, description="Maximum results to return"),
+    session: AsyncSession = Depends(get_session),
+    user: CurrentUser = Depends(get_current_user),
+) -> MemberSearchResult:
+    """Search for members (workers) by name or handle.
+
+    Used for @mention autocomplete in chat composer.
+    Returns both human workers and AI agents.
+    """
+    await ensure_user_setup(session, user)
+
+    # Build base query for workers
+    if project_id:
+        # Filter to project members
+        stmt = (
+            select(Worker)
+            .join(ProjectMember, ProjectMember.worker_id == Worker.id)
+            .where(ProjectMember.project_id == project_id)
+        )
+    else:
+        # Get all workers (agents are global, humans tied to projects)
+        stmt = select(Worker)
+
+    # Apply search filter if provided
+    if q:
+        search_term = f"%{q.lower()}%"
+        stmt = stmt.where(
+            or_(
+                Worker.handle.ilike(search_term),
+                Worker.name.ilike(search_term),
+            )
+        )
+
+    # Order agents first (more likely to be mentioned), then by name
+    stmt = stmt.order_by(Worker.type.desc(), Worker.name).limit(limit)
+
+    result = await session.exec(stmt)
+    workers = result.all()
+
+    members = []
+    for worker in workers:
+        members.append({
+            "id": worker.handle,  # Use handle as ID for @mention
+            "name": worker.name,
+            "handle": worker.handle,
+            "type": worker.type,
+            "description": f"{'AI Agent' if worker.type == 'agent' else 'Team Member'}",
+        })
+
+    return MemberSearchResult(members=members, total=len(members))
+
+
+@project_router.get("", response_model=list[MemberRead])
 async def list_members(
     project_id: int,
     session: AsyncSession = Depends(get_session),
@@ -60,7 +125,7 @@ async def list_members(
     return members
 
 
-@router.post("", response_model=MemberRead, status_code=201)
+@project_router.post("", response_model=MemberRead, status_code=201)
 async def add_member(
     project_id: int,
     data: MemberCreate,
@@ -190,7 +255,7 @@ async def add_member(
     )
 
 
-@router.delete("/{member_id}")
+@project_router.delete("/{member_id}")
 async def remove_member(
     project_id: int,
     member_id: int,

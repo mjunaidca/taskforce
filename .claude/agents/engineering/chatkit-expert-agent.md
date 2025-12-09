@@ -183,6 +183,14 @@ All patterns are derived from OpenAI's official advanced samples:
 4. **Missing widget ID** - `sendCustomAction` needs widget reference
 5. **Hardcoding URLs** - Use env vars for API endpoints
 6. **Forgetting auth proxy** - httpOnly cookies need server-side access
+7. **Not testing widget actions thoroughly** - Claiming completion without testing all buttons/actions with real data
+8. **Assuming type hints match runtime** - ChatKit has type annotation vs runtime mismatches (e.g., context parameter)
+9. **Using action.arguments** - Action object uses `.payload`, not `.arguments`
+10. **Wrapping RequestContext** - Context is already RequestContext, don't wrap it again
+11. **Missing Pydantic required fields** - UserMessageItem, Action, etc. have strict validation
+12. **Icon-only buttons** - Always add labels to buttons for clarity
+13. **No local tool wrappers** - MCP tools alone don't stream widgets (need local wrappers + RunHooks)
+14. **Trusting auto-reload** - Python bytecode cache can cause old code to run, manually restart when in doubt
 
 ## Self-Monitoring Checklist
 
@@ -212,6 +220,16 @@ Before completing ChatKit integration:
 - [ ] `sendCustomAction` wired for widget updates
 - [ ] Entity tagging with search/preview
 - [ ] Composer tools if mode switching needed
+- [ ] **Action handler uses `action.payload` (NOT `action.arguments`)**
+- [ ] **Action context parameter used directly (NOT wrapped in RequestContext)**
+- [ ] **UserMessageItem includes all required fields (id, thread_id, created_at, inference_options)**
+- [ ] **UserMessageTextContent uses `type="input_text"` for user messages**
+- [ ] **Local tool wrappers created for widget-streaming MCP tools**
+- [ ] **All widget buttons have clear labels (not just icons)**
+- [ ] **Tested all widget actions with real user session**
+- [ ] **Verified backend logs show successful action processing**
+- [ ] **Checked browser console for validation errors**
+- [ ] **Manually restarted server to verify changes (don't trust auto-reload)**
 
 ## Skills Used
 

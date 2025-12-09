@@ -21,9 +21,14 @@ def get_async_database_url(url: str) -> str:
     - Driver prefix: postgresql:// → postgresql+asyncpg://
     - SSL param: sslmode=require → ssl=require
     - Removes unsupported params (channel_binding, etc.)
+    - SQLite URLs for testing (returned as-is)
     """
     if not url:
         raise ValueError("DATABASE_URL is required")
+
+    # SQLite URLs for testing - return as-is
+    if url.startswith("sqlite"):
+        return url
 
     # Convert driver prefix
     if url.startswith("postgresql://"):
@@ -64,14 +69,22 @@ def get_async_database_url(url: str) -> str:
 # Create async engine with cleaned URL
 DATABASE_URL = get_async_database_url(settings.database_url)
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=settings.debug,
-    pool_size=5,
-    max_overflow=10,
-    pool_pre_ping=True,  # Check connection is alive before using (essential for Neon)
-    pool_recycle=300,  # Recycle connections after 5 minutes (Neon closes idle connections)
-)
+# SQLite doesn't support connection pooling params
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=settings.debug,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=settings.debug,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,  # Check connection is alive before using (essential for Neon)
+        pool_recycle=300,  # Recycle connections after 5 minutes (Neon closes idle connections)
+    )
 
 
 async def create_db_and_tables() -> None:

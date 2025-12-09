@@ -109,6 +109,12 @@ fi
 echo -e "${YELLOW}[5/6] Running SSO database migrations...${NC}"
 cd sso-platform
 
+# Ensure node_modules exists on host for migrations
+if [ ! -d "node_modules" ]; then
+    echo "  - Installing dependencies (first time setup)..."
+    pnpm install --frozen-lockfile
+fi
+
 echo "  - Pushing SSO schema..."
 DATABASE_URL="${DATABASE_URL}" pnpm db:push 2>/dev/null || {
     echo -e "${YELLOW}  Schema push skipped (may already be up to date)${NC}"

@@ -195,6 +195,53 @@ This agent helps integrate OpenAI ChatKit framework with custom backends and AI 
 
 **Evidence**: `web-dashboard/src/app/api/chatkit/route.ts` (dedicated proxy)
 
+### Pattern: Type Annotation vs Runtime Mismatch
+
+**What happens**: ValidationError when trying to create RequestContext from what's already a RequestContext
+
+**Why it happens**: Action handler type hint says `context: dict[str, Any]` but ChatKit SDK passes `RequestContext` object at runtime
+
+**How to prevent**: Use `context` directly without wrapping. Type hints are documentation, runtime is reality.
+
+**Evidence**:
+```python
+# ❌ WRONG
+async def action(self, thread, action, sender, context: dict[str, Any]):
+    request_context = RequestContext(metadata=context)  # ValidationError!
+
+# ✅ CORRECT
+async def action(self, thread, action, sender, context: dict[str, Any]):
+    user_id = context.user_id  # Use directly, it's already RequestContext
+    metadata = context.metadata
+```
+
+### Pattern: Missing Pydantic Required Fields
+
+**What happens**: Multiple "Field required" ValidationErrors when creating ChatKit objects
+
+**Why it happens**: Pydantic models strictly validate, all required fields must be present
+
+**How to prevent**: Check ChatKit type definitions for required fields. Common culprits:
+- UserMessageItem: id, thread_id, created_at, inference_options
+- UserMessageTextContent: type="input_text" (not "text")
+- Action: payload (not arguments)
+
+**Evidence**: Session debugging showed cascading validation errors until all fields added
+
+### Pattern: Python Auto-Reload Failure
+
+**What happens**: Code changes don't take effect, old code continues running
+
+**Why it happens**: Python bytecode cache (.pyc) or uvicorn reload mechanism lag
+
+**How to prevent**:
+1. Use `--reload` flag with uvicorn
+2. When in doubt, manually kill process and restart
+3. Delete `__pycache__` directories if needed
+4. **Never trust auto-reload 100%** - verify changes with logs/breakpoints
+
+**Evidence**: Had to manually restart server multiple times during widget action debugging
+
 ## Self-Monitoring Checklist
 
 Before finalizing ChatKit integration:

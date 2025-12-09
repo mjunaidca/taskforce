@@ -651,6 +651,24 @@ const { control, sendUserMessage } = useChatKit({
 10. **E402 Linter Error**: Imports after load_dotenv()
    - **Fix**: Add `# noqa: E402` to intentional imports after dotenv
 
+11. **Type Annotation vs Runtime Mismatch (Action context parameter)**
+   - **Symptom**: ValidationError trying to create RequestContext from RequestContext
+   - **Why**: Type hint says `context: dict[str, Any]` but ChatKit SDK passes `RequestContext` object
+   - **Fix**: Use `context` directly, don't wrap it in RequestContext constructor
+   - **Detection**: Error message shows `Input should be a valid dictionary [input_value=RequestContext(...)]`
+
+12. **Python Auto-Reload Not Working**: Changes don't take effect
+   - **Symptom**: Old code still runs despite file changes
+   - **Why**: Python bytecode cache (.pyc files) or uvicorn reload mechanism lag
+   - **Fix**: Kill process manually and restart, or delete __pycache__ directories
+   - **Prevention**: Use `--reload` flag with uvicorn, but be aware it's not 100% reliable
+
+13. **Missing Pydantic Model Required Fields**: ValidationError on ChatKit types
+   - **Symptom**: "Field required" errors when creating UserMessageItem, Action, etc.
+   - **Why**: Pydantic models have strict validation, all required fields must be present
+   - **Fix**: Check ChatKit type definitions, include all required fields with correct types
+   - **Common mistakes**: Missing id, thread_id, created_at, inference_options fields
+
 ## Pattern 6: MCP Agent Authentication (NEW)
 
 **When**: MCP tools need to call authenticated APIs

@@ -17,7 +17,7 @@ from taskflow_mcp.config import get_config
 
 # Import all tool modules to register their @mcp.tool() decorators
 # These imports have side effects: they register tools with the mcp instance
-import taskflow_mcp.tools.tasks  # noqa: F401 - 9 task tools
+import taskflow_mcp.tools.tasks  # noqa: F401 - 10 task tools
 import taskflow_mcp.tools.projects  # noqa: F401 - 1 project tool
 
 # Load configuration

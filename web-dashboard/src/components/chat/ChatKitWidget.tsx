@@ -17,8 +17,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
 import styles from "./styles.module.css";
+import { ProgressIndicator } from "./ProgressIndicator";
+import { ContextBadge } from "./ContextBadge";
+import { type StreamingState } from "@/lib/chatkit-config";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -50,9 +53,22 @@ export function ChatKitWidget({
   const personalizeMenuRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
 
+  // Streaming state for UI locking and progress
+  const [streamingState, setStreamingState] = useState<StreamingState>({
+    isResponding: false,
+    progressMessage: null,
+  });
+
+  // Project context for scoping
+  const [projectContext, setProjectContext] = useState<{
+    id?: number;
+    name?: string;
+  }>({});
+
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const pathname = usePathname();
   const params = useParams();
+  const router = useRouter();
 
   // Use dedicated ChatKit proxy endpoint - handles auth via httpOnly cookies
   // The proxy at /api/chatkit will forward to the backend /chatkit with Authorization header
@@ -73,6 +89,46 @@ export function ChatKitWidget({
     const match = pathname?.match(/\/projects\/(\d+)/);
     return match ? parseInt(match[1], 10) : undefined;
   })();
+
+  // Sync project context from URL changes and fetch project name
+  useEffect(() => {
+    if (projectId) {
+      setProjectContext((prev) => ({
+        ...prev,
+        id: projectId,
+        name: prev.id === projectId ? prev.name : undefined, // Keep existing name if same project
+      }));
+
+      // Fetch project name from API
+      const fetchProjectName = async () => {
+        try {
+          const response = await fetch(`/api/proxy/projects/${projectId}`, {
+            credentials: "include",
+          });
+          if (response.ok) {
+            const project = await response.json();
+            if (isMountedRef.current && project.name) {
+              setProjectContext((prev) => ({
+                ...prev,
+                name: project.name,
+              }));
+            }
+          }
+        } catch (error) {
+          console.warn("[ChatKit] Failed to fetch project name:", error);
+          // Keep using placeholder on error
+          if (isMountedRef.current) {
+            setProjectContext((prev) => ({
+              ...prev,
+              name: prev.name || `Project ${projectId}`,
+            }));
+          }
+        }
+      };
+
+      fetchProjectName();
+    }
+  }, [projectId]);
 
   // Wait for ChatKit custom element to be defined (script loaded via layout.tsx)
   useEffect(() => {
@@ -287,13 +343,50 @@ export function ChatKitWidget({
     composer: {
       placeholder: "Ask about your tasks...",
     },
+    widgets: {
+      onAction: async (action: { type: string; payload: any }) => {
+        console.log("[ChatKit] Action received:", action.type, action.payload);
+
+        switch (action.type) {
+          case "task.view":
+            if (action.payload?.task_id) {
+              console.log("[ChatKit] Navigating to task:", action.payload.task_id);
+              // Open in new tab
+              window.open(`/tasks/${action.payload.task_id}`, "_blank");
+            }
+            break;
+
+          case "project.view":
+            if (action.payload?.project_id) {
+              console.log("[ChatKit] Navigating to project:", action.payload.project_id);
+              // Open in new tab
+              window.open(`/projects/${action.payload.project_id}`, "_blank");
+            }
+            break;
+
+          case "form.cancel":
+            // Form cancel may be handled by ChatKit automatically
+            console.log("[ChatKit] Form cancelled");
+            break;
+
+          default:
+            console.warn("[ChatKit] Unknown client action:", action.type);
+        }
+      },
+    },
     onError: ({ error }) => {
       console.error("[ChatKit] Error received:", error);
       console.error("[ChatKit] Error name:", error?.name);
       console.error("[ChatKit] Error message:", error?.message);
       console.error("[ChatKit] Full error object:", JSON.stringify(error, null, 2));
+      // Reset streaming state on error
+      setStreamingState({ isResponding: false, progressMessage: null });
     },
   });
+
+  // Track response state for UI updates
+  // Note: ChatKit's streaming handlers may vary by version
+  // The component tracks streaming state locally based on control state
 
   // Handle "Ask" button click for selected text
   const handleAskSelectedText = useCallback(async () => {
@@ -531,6 +624,33 @@ export function ChatKitWidget({
               </button>
               <button
                 className={styles.personalizeButton}
+                onClick={() => {
+                  setShowPersonalizeMenu(false);
+                  setIsOpen(true);
+                  setTimeout(async () => {
+                    if (sendUserMessage) {
+                      await sendUserMessage({
+                        text: "Show me the task creation form",
+                        newThread: false,
+                      });
+                    }
+                  }, 500);
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Create New Task
+              </button>
+              <button
+                className={styles.personalizeButton}
                 onClick={handlePersonalize}
               >
                 <svg
@@ -582,7 +702,25 @@ export function ChatKitWidget({
 
       {/* ChatKit Component */}
       {isOpen && scriptStatus === "ready" && isAuthenticated && (
-        <div className={styles.chatKitContainer}>
+        <div className={`${styles.chatKitContainer} ${streamingState.isResponding ? styles.streamingActive : ""}`}>
+          {/* Chat Header with Context Badge */}
+          <div className={styles.chatHeader}>
+            <span className={styles.chatHeaderTitle}>TaskFlow Assistant</span>
+            <div className={styles.chatHeaderActions}>
+              <ContextBadge
+                projectId={projectContext.id}
+                projectName={projectContext.name}
+                onClearContext={() => setProjectContext({})}
+              />
+            </div>
+          </div>
+
+          {/* Progress Indicator */}
+          <ProgressIndicator
+            message={streamingState.progressMessage || "Thinking..."}
+            isVisible={streamingState.isResponding}
+          />
+
           <ChatKit
             control={control}
             className={styles.chatKit}

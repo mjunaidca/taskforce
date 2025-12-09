@@ -124,7 +124,9 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 # Include routers
 app.include_router(health.router)
 app.include_router(projects.router, prefix="/api/projects")
-app.include_router(members.router, prefix="/api/projects/{project_id}/members")
+# Split members routes: search is at /api/members/search, project-specific at /api/projects/{id}/members
+app.include_router(members.search_router, prefix="/api/members")
+app.include_router(members.project_router, prefix="/api/projects/{project_id}/members")
 app.include_router(agents.router, prefix="/api/workers/agents")
 app.include_router(tasks.router)  # Has its own prefixes defined
 app.include_router(audit.router, prefix="/api")
