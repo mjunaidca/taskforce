@@ -1,6 +1,5 @@
 """Project member endpoints."""
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import or_, select
@@ -26,8 +25,8 @@ router = project_router
 
 @search_router.get("/search", response_model=MemberSearchResult)
 async def search_members(
-    q: Optional[str] = Query(None, description="Search query for name or handle"),
-    project_id: Optional[int] = Query(None, description="Filter by project membership"),
+    q: str | None = Query(None, description="Search query for name or handle"),
+    project_id: int | None = Query(None, description="Filter by project membership"),
     limit: int = Query(10, ge=1, le=50, description="Maximum results to return"),
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
@@ -69,13 +68,15 @@ async def search_members(
 
     members = []
     for worker in workers:
-        members.append({
-            "id": worker.handle,  # Use handle as ID for @mention
-            "name": worker.name,
-            "handle": worker.handle,
-            "type": worker.type,
-            "description": f"{'AI Agent' if worker.type == 'agent' else 'Team Member'}",
-        })
+        members.append(
+            {
+                "id": worker.handle,  # Use handle as ID for @mention
+                "name": worker.name,
+                "handle": worker.handle,
+                "type": worker.type,
+                "description": f"{'AI Agent' if worker.type == 'agent' else 'Team Member'}",
+            }
+        )
 
     return MemberSearchResult(members=members, total=len(members))
 

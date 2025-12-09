@@ -6,14 +6,13 @@ These are pure unit tests that don't require database or API fixtures.
 # ruff: noqa: E402
 # Patch settings before import to allow standalone testing
 import os
+
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SSO_URL", "http://localhost:3000")
 os.environ.setdefault("ALLOWED_ORIGINS", "http://localhost:3000")
 os.environ.setdefault("DEV_MODE", "true")
 
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from taskflow_api.services.widgets import (
     build_audit_timeline_widget,
@@ -30,11 +29,16 @@ class TestTaskListWidget:
         """Empty task list shows empty state widget."""
         widget = build_task_list_widget([], project_id=1)
 
-        assert widget["type"] == "Box"
+        assert widget["type"] == "Card"
         # Should be empty state with create button
         children = widget["children"]
+        # Check for empty state content (Title with "No tasks found")
+        col = children[0]
+        assert col["type"] == "Col"
         assert any(
-            child.get("content") == "No tasks found" for child in children if child.get("type") == "Text"
+            child.get("value") == "No tasks found"
+            for child in col["children"]
+            if child.get("type") == "Title"
         )
 
     def test_build_task_list_with_tasks(self) -> None:
@@ -105,7 +109,13 @@ class TestTaskListWidget:
     def test_status_badge_colors(self) -> None:
         """Status badges have correct colors."""
         tasks = [
-            {"id": 1, "title": "Pending", "status": "pending", "priority": "low", "assigned_to": None},
+            {
+                "id": 1,
+                "title": "Pending",
+                "status": "pending",
+                "priority": "low",
+                "assigned_to": None,
+            },
             {
                 "id": 2,
                 "title": "In Progress",
@@ -215,7 +225,9 @@ class TestTaskCreatedConfirmation:
 
     def test_confirmation_shows_task_info(self) -> None:
         """Confirmation displays task details."""
-        widget = build_task_created_confirmation(task_id=42, title="New Task", project_name="Project X")
+        widget = build_task_created_confirmation(
+            task_id=42, title="New Task", project_name="Project X"
+        )
 
         assert widget["type"] == "Box"
 
@@ -282,7 +294,7 @@ class TestAuditTimelineWidget:
 
     def test_timeline_with_entries(self) -> None:
         """Timeline renders audit entries."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         entries = [
             {
                 "id": 1,
@@ -323,7 +335,14 @@ class TestAuditTimelineWidget:
     def test_timeline_with_entity_title(self) -> None:
         """Timeline shows entity title in header."""
         widget = build_audit_timeline_widget(
-            [{"action": "created", "actor_id": "@user", "actor_type": "human", "created_at": "2024-01-01"}],
+            [
+                {
+                    "action": "created",
+                    "actor_id": "@user",
+                    "actor_type": "human",
+                    "created_at": "2024-01-01",
+                }
+            ],
             entity_type="task",
             entity_title="Important Task",
         )
@@ -345,9 +364,24 @@ class TestAuditTimelineWidget:
     def test_action_badge_colors(self) -> None:
         """Different actions have different badge colors."""
         entries = [
-            {"action": "created", "actor_id": "@user", "actor_type": "human", "created_at": "2024-01-01"},
-            {"action": "completed", "actor_id": "@user", "actor_type": "human", "created_at": "2024-01-02"},
-            {"action": "deleted", "actor_id": "@user", "actor_type": "human", "created_at": "2024-01-03"},
+            {
+                "action": "created",
+                "actor_id": "@user",
+                "actor_type": "human",
+                "created_at": "2024-01-01",
+            },
+            {
+                "action": "completed",
+                "actor_id": "@user",
+                "actor_type": "human",
+                "created_at": "2024-01-02",
+            },
+            {
+                "action": "deleted",
+                "actor_id": "@user",
+                "actor_type": "human",
+                "created_at": "2024-01-03",
+            },
         ]
 
         # Just verify it builds without error
@@ -356,7 +390,7 @@ class TestAuditTimelineWidget:
 
     def test_relative_time_formatting(self) -> None:
         """Timestamps are formatted as relative time."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         entries = [
             {
                 "action": "created",
@@ -375,7 +409,12 @@ class TestAuditTimelineWidget:
             nonlocal has_relative
             if node.get("type") == "Text":
                 content = str(node.get("content", ""))
-                if "just now" in content or "minute" in content or "hour" in content or "ago" in content:
+                if (
+                    "just now" in content
+                    or "minute" in content
+                    or "hour" in content
+                    or "ago" in content
+                ):
                     has_relative = True
             for child in node.get("children", []):
                 check_children(child)

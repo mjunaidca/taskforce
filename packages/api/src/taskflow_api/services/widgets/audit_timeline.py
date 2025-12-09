@@ -3,7 +3,7 @@
 Builds Timeline widgets for displaying task/project audit history.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -57,88 +57,92 @@ def build_audit_timeline_widget(
         if details:
             for key, value in details.items():
                 if value is not None and key not in ("id", "task_id", "project_id"):
-                    details_children.append({
-                        "type": "Text",
-                        "content": f"{key}: {value}",
-                        "size": "xs",
-                        "color": "muted",
-                    })
+                    details_children.append(
+                        {
+                            "type": "Text",
+                            "content": f"{key}: {value}",
+                            "size": "xs",
+                            "color": "muted",
+                        }
+                    )
 
-        timeline_items.append({
-            "type": "Box",
-            "direction": "row",
-            "gap": "md",
-            "padding": "sm",
-            "children": [
-                # Timeline dot and line
-                {
-                    "type": "Box",
-                    "direction": "column",
-                    "align": "center",
-                    "children": [
-                        {
-                            "type": "Icon",
-                            "name": actor_icon,
-                            "size": "sm",
-                            "color": "primary",
-                        },
-                        {
-                            "type": "Box",
-                            "style": {
-                                "width": "2px",
-                                "height": "100%",
-                                "backgroundColor": "var(--border)",
-                                "minHeight": "20px",
+        timeline_items.append(
+            {
+                "type": "Box",
+                "direction": "row",
+                "gap": "md",
+                "padding": "sm",
+                "children": [
+                    # Timeline dot and line
+                    {
+                        "type": "Box",
+                        "direction": "column",
+                        "align": "center",
+                        "children": [
+                            {
+                                "type": "Icon",
+                                "name": actor_icon,
+                                "size": "sm",
+                                "color": "primary",
                             },
-                        },
-                    ],
-                },
-                # Content
-                {
-                    "type": "Box",
-                    "direction": "column",
-                    "gap": "xs",
-                    "flex": 1,
-                    "children": [
-                        {
-                            "type": "Box",
-                            "direction": "row",
-                            "justify": "space-between",
-                            "align": "center",
-                            "children": [
-                                {
-                                    "type": "Box",
-                                    "direction": "row",
-                                    "gap": "xs",
-                                    "align": "center",
-                                    "children": [
-                                        {
-                                            "type": "Text",
-                                            "content": f"@{actor_id}",
-                                            "weight": "medium",
-                                            "size": "sm",
-                                        },
-                                        {
-                                            "type": "Badge",
-                                            "label": action.replace("_", " ").title(),
-                                            "color": action_color,
-                                            "size": "sm",
-                                        },
-                                    ],
+                            {
+                                "type": "Box",
+                                "style": {
+                                    "width": "2px",
+                                    "height": "100%",
+                                    "backgroundColor": "var(--border)",
+                                    "minHeight": "20px",
                                 },
-                                {
-                                    "type": "Text",
-                                    "content": relative_time,
-                                    "size": "xs",
-                                    "color": "muted",
-                                },
-                            ],
-                        },
-                        *details_children,
-                    ],
-                },
-            ],
-        })
+                            },
+                        ],
+                    },
+                    # Content
+                    {
+                        "type": "Box",
+                        "direction": "column",
+                        "gap": "xs",
+                        "flex": 1,
+                        "children": [
+                            {
+                                "type": "Box",
+                                "direction": "row",
+                                "justify": "space-between",
+                                "align": "center",
+                                "children": [
+                                    {
+                                        "type": "Box",
+                                        "direction": "row",
+                                        "gap": "xs",
+                                        "align": "center",
+                                        "children": [
+                                            {
+                                                "type": "Text",
+                                                "content": f"@{actor_id}",
+                                                "weight": "medium",
+                                                "size": "sm",
+                                            },
+                                            {
+                                                "type": "Badge",
+                                                "label": action.replace("_", " ").title(),
+                                                "color": action_color,
+                                                "size": "sm",
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        "type": "Text",
+                                        "content": relative_time,
+                                        "size": "xs",
+                                        "color": "muted",
+                                    },
+                                ],
+                            },
+                            *details_children,
+                        ],
+                    },
+                ],
+            }
+        )
 
     # Remove the line from last item
     if timeline_items:
@@ -231,9 +235,9 @@ def _build_empty_audit_widget(
 
 def _format_relative_time(dt: datetime) -> str:
     """Format datetime as relative time string."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
 
     diff = now - dt
     seconds = diff.total_seconds()

@@ -113,119 +113,131 @@ def build_task_list_widget(
 
         if status == "pending":
             # Pending: Can Start
-            action_buttons.append({
-                "type": "Button",
-                "label": "Start",
-                "iconStart": "play",
-                "size": "sm",
-                "style": "primary",
-                "onClickAction": {
-                    "type": "task.start",
-                    "handler": "server",
-                    "payload": {"task_id": task_id},
-                },
-            })
+            action_buttons.append(
+                {
+                    "type": "Button",
+                    "label": "Start",
+                    "iconStart": "play",
+                    "size": "sm",
+                    "style": "primary",
+                    "onClickAction": {
+                        "type": "task.start",
+                        "handler": "server",
+                        "payload": {"task_id": task_id},
+                    },
+                }
+            )
         elif status == "in_progress":
             # In Progress: Can Complete or Request Review
-            action_buttons.extend([
-                {
-                    "type": "Button",
-                    "label": "Complete",
-                    "iconStart": "check",
-                    "size": "sm",
-                    "style": "primary",
-                    "color": "success",
-                    "onClickAction": {
-                        "type": "task.complete",
-                        "handler": "server",
-                        "payload": {"task_id": task_id},
+            action_buttons.extend(
+                [
+                    {
+                        "type": "Button",
+                        "label": "Complete",
+                        "iconStart": "check",
+                        "size": "sm",
+                        "style": "primary",
+                        "color": "success",
+                        "onClickAction": {
+                            "type": "task.complete",
+                            "handler": "server",
+                            "payload": {"task_id": task_id},
+                        },
                     },
-                },
-                {
-                    "type": "Button",
-                    "label": "Review",
-                    "iconStart": "eye",
-                    "size": "sm",
-                    "variant": "outline",
-                    "onClickAction": {
-                        "type": "task.request_review",
-                        "handler": "server",
-                        "payload": {"task_id": task_id},
+                    {
+                        "type": "Button",
+                        "label": "Review",
+                        "iconStart": "eye",
+                        "size": "sm",
+                        "variant": "outline",
+                        "onClickAction": {
+                            "type": "task.request_review",
+                            "handler": "server",
+                            "payload": {"task_id": task_id},
+                        },
                     },
-                },
-            ])
+                ]
+            )
         elif status == "review":
             # Review: Can Approve (Complete) or Reject (Back to In Progress)
-            action_buttons.extend([
-                {
-                    "type": "Button",
-                    "label": "Approve",
-                    "iconStart": "check",
-                    "size": "sm",
-                    "style": "primary",
-                    "color": "success",
-                    "onClickAction": {
-                        "type": "task.complete",
-                        "handler": "server",
-                        "payload": {"task_id": task_id},
+            action_buttons.extend(
+                [
+                    {
+                        "type": "Button",
+                        "label": "Approve",
+                        "iconStart": "check",
+                        "size": "sm",
+                        "style": "primary",
+                        "color": "success",
+                        "onClickAction": {
+                            "type": "task.complete",
+                            "handler": "server",
+                            "payload": {"task_id": task_id},
+                        },
                     },
-                },
-                {
-                    "type": "Button",
-                    "label": "Reject",
-                    "iconStart": "x",
-                    "size": "sm",
-                    "variant": "outline",
-                    "color": "error",
-                    "onClickAction": {
-                        "type": "task.reject",
-                        "handler": "server",
-                        "payload": {"task_id": task_id},
+                    {
+                        "type": "Button",
+                        "label": "Reject",
+                        "iconStart": "x",
+                        "size": "sm",
+                        "variant": "outline",
+                        "color": "error",
+                        "onClickAction": {
+                            "type": "task.reject",
+                            "handler": "server",
+                            "payload": {"task_id": task_id},
+                        },
                     },
-                },
-            ])
+                ]
+            )
         elif status == "blocked":
             # Blocked: Can Unblock (back to In Progress)
-            action_buttons.append({
-                "type": "Button",
-                "label": "Unblock",
-                "iconStart": "unlock",
-                "size": "sm",
-                "style": "primary",
-                "onClickAction": {
-                    "type": "task.unblock",
-                    "handler": "server",
-                    "payload": {"task_id": task_id},
-                },
-            })
+            action_buttons.append(
+                {
+                    "type": "Button",
+                    "label": "Unblock",
+                    "iconStart": "unlock",
+                    "size": "sm",
+                    "style": "primary",
+                    "onClickAction": {
+                        "type": "task.unblock",
+                        "handler": "server",
+                        "payload": {"task_id": task_id},
+                    },
+                }
+            )
         elif status == "completed":
             # Completed: Can View or Reopen
-            action_buttons.append({
-                "type": "Button",
-                "label": "Reopen",
-                "iconStart": "refresh",
-                "size": "sm",
-                "variant": "outline",
-                "onClickAction": {
-                    "type": "task.reopen",
-                    "handler": "server",
-                    "payload": {"task_id": task_id},
-                },
-            })
+            action_buttons.append(
+                {
+                    "type": "Button",
+                    "label": "Reopen",
+                    "iconStart": "refresh",
+                    "size": "sm",
+                    "variant": "outline",
+                    "onClickAction": {
+                        "type": "task.reopen",
+                        "handler": "server",
+                        "payload": {"task_id": task_id},
+                    },
+                }
+            )
 
         # Always add a View Details button
-        action_buttons.append({
-            "type": "Button",
-            "label": "Details",
-            "iconStart": "info",
-            "size": "sm",
-            "variant": "ghost",
-            "onClickAction": {
-                "type": "task.view",
-                "handler": "client",
-                "payload": {"task_id": task_id},
-            },
-        })
+        action_buttons.append(
+            {
+                "type": "Button",
+                "label": "Details",
+                "iconStart": "info",
+                "size": "sm",
+                "variant": "ghost",
+                "onClickAction": {
+                    "type": "task.view",
+                    "handler": "client",
+                    "payload": {"task_id": task_id},
+                },
+            }
+        )
 
         # Build list item
         item = {

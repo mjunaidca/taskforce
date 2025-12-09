@@ -19,17 +19,16 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Annotated, Any
 
-from agents import Agent, Runner, RunContextWrapper, RunHooks, Tool, function_tool
+import httpx
+from agents import Agent, RunContextWrapper, RunHooks, Runner, Tool, function_tool
 from agents.mcp import MCPServerStreamableHttp
+from chatkit.actions import Action
 from chatkit.agents import AgentContext, stream_agent_response
 from chatkit.server import ChatKitServer
-from chatkit.actions import Action
 from chatkit.types import (
     AssistantMessageContent,
     AssistantMessageItem,
-    ProgressUpdateEvent,
     ThreadItemDoneEvent,
-    ThreadItemReplacedEvent,
     ThreadMetadata,
     ThreadStreamEvent,
     UserMessageItem,
@@ -71,7 +70,9 @@ def _parse_mcp_result(result: Any) -> Any:
         return []
 
     # Log what we received
-    logger.debug("[MCP] Result attributes: %s", dir(result) if hasattr(result, "__dir__") else "N/A")
+    logger.debug(
+        "[MCP] Result attributes: %s", dir(result) if hasattr(result, "__dir__") else "N/A"
+    )
 
     # Try structuredContent first (if available)
     if hasattr(result, "structuredContent") and result.structuredContent:
@@ -86,15 +87,24 @@ def _parse_mcp_result(result: Any) -> Any:
             first_item = content_list[0]
             logger.debug("[MCP] First content item type=%s", type(first_item).__name__)
             if hasattr(first_item, "text"):
-                logger.debug("[MCP] Content text (first 200 chars): %s", first_item.text[:200] if first_item.text else "empty")
+                logger.debug(
+                    "[MCP] Content text (first 200 chars): %s",
+                    first_item.text[:200] if first_item.text else "empty",
+                )
                 try:
                     parsed = json.loads(first_item.text)
-                    logger.info("[MCP] Parsed JSON successfully, type=%s, len=%s",
-                               type(parsed).__name__,
-                               len(parsed) if isinstance(parsed, (list, dict)) else "N/A")
+                    logger.info(
+                        "[MCP] Parsed JSON successfully, type=%s, len=%s",
+                        type(parsed).__name__,
+                        len(parsed) if isinstance(parsed, (list, dict)) else "N/A",
+                    )
                     return parsed
                 except (json.JSONDecodeError, TypeError) as e:
-                    logger.error("[MCP] JSON parse failed: %s, text=%s", e, first_item.text[:100] if first_item.text else "empty")
+                    logger.error(
+                        "[MCP] JSON parse failed: %s, text=%s",
+                        e,
+                        first_item.text[:100] if first_item.text else "empty",
+                    )
 
     # Legacy: handle if result is already a list (backwards compat)
     if isinstance(result, list) and len(result) > 0:
@@ -151,8 +161,6 @@ class TaskFlowAgentContext(AgentContext):
 # Local Function Tools - Wrap MCP calls via HTTP for hook support
 # These tools call MCP server directly and enable on_tool_end hooks
 # =============================================================================
-
-import httpx
 
 
 async def _call_mcp_tool(
@@ -219,8 +227,8 @@ async def _call_mcp_tool(
                             continue  # Skip and wait for next line
 
                         # Handle two formats:
-                        # 1. Streaming format: {"result": {"content": [{"type": "text", "text": "..."}]}}
-                        # 2. JSON format (json_response=True): {"result": [...]} or {"result": {...}}
+                        # 1. Streaming: {"result": {"content": [{"type": "text", "text": "..."}]}}
+                        # 2. JSON (json_response=True): {"result": [...]} or {"result": {...}}
 
                         # Try streaming format first (with content array)
                         if isinstance(mcp_result, dict) and "content" in mcp_result:
@@ -250,7 +258,7 @@ async def _call_mcp_tool(
     except httpx.HTTPStatusError as e:
         logger.error("[MCP] HTTP error: %s", e)
         raise Exception(f"MCP HTTP error: {e.response.status_code} - {e.response.text}")
-    except Exception as e:
+    except Exception:
         logger.exception("[MCP] Call failed")
         raise
 
@@ -294,7 +302,10 @@ async def list_tasks(
             arguments,
             agent_ctx.access_token,
         )
-        logger.info("[LOCAL TOOL] list_tasks returned %d tasks", len(result) if isinstance(result, list) else 0)
+        logger.info(
+            "[LOCAL TOOL] list_tasks returned %d tasks",
+            len(result) if isinstance(result, list) else 0,
+        )
         return json.dumps(result)
     except Exception as e:
         logger.exception("[LOCAL TOOL] list_tasks failed: %s", e)
@@ -344,7 +355,10 @@ async def add_task(
             arguments,
             agent_ctx.access_token,
         )
-        logger.info("[LOCAL TOOL] add_task created task_id=%s", result.get("task_id") if isinstance(result, dict) else "?")
+        logger.info(
+            "[LOCAL TOOL] add_task created task_id=%s",
+            result.get("task_id") if isinstance(result, dict) else "?",
+        )
         return json.dumps(result)
     except Exception as e:
         logger.exception("[LOCAL TOOL] add_task failed: %s", e)
@@ -413,7 +427,10 @@ async def list_projects(
             arguments,
             agent_ctx.access_token,
         )
-        logger.info("[LOCAL TOOL] list_projects returned %d projects", len(result) if isinstance(result, list) else 0)
+        logger.info(
+            "[LOCAL TOOL] list_projects returned %d projects",
+            len(result) if isinstance(result, list) else 0,
+        )
         return json.dumps(result)
     except Exception as e:
         logger.exception("[LOCAL TOOL] list_projects failed: %s", e)
@@ -474,7 +491,11 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
         Local tools return clean JSON (no MCP envelope wrapper).
         """
         tool_name = tool.name
-        logger.info("[HOOKS] on_tool_end for tool=%s, result_len=%d", tool_name, len(result) if result else 0)
+        logger.info(
+            "[HOOKS] on_tool_end for tool=%s, result_len=%d",
+            tool_name,
+            len(result) if result else 0,
+        )
 
         # Check if this tool should trigger a widget
         handler_name = self.WIDGET_TOOLS.get(tool_name)
@@ -485,9 +506,12 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
         # Parse the tool result - local tools return clean JSON
         try:
             data = json.loads(result)
-            logger.info("[HOOKS] Parsed tool result for %s: type=%s, len=%s",
-                       tool_name, type(data).__name__,
-                       len(data) if isinstance(data, (list, dict)) else "N/A")
+            logger.info(
+                "[HOOKS] Parsed tool result for %s: type=%s, len=%s",
+                tool_name,
+                type(data).__name__,
+                len(data) if isinstance(data, (list, dict)) else "N/A",
+            )
 
             # Check for error response
             if isinstance(data, dict) and "error" in data:
@@ -513,7 +537,13 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
     ) -> None:
         """Stream task list widget after taskflow_list_tasks."""
         # Extract tasks from result
-        tasks = data if isinstance(data, list) else data.get("tasks", []) if isinstance(data, dict) else []
+        tasks = (
+            data
+            if isinstance(data, list)
+            else data.get("tasks", [])
+            if isinstance(data, dict)
+            else []
+        )
         task_count = len(tasks)
 
         logger.info("[HOOKS] Streaming task list widget with %d tasks", task_count)
@@ -529,7 +559,9 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
         # Log the widget for debugging
         logger.info("[HOOKS] Widget structure: %s", json.dumps(widget)[:1000])
 
-        await context.context.stream_widget(widget, copy_text=f"{task_count} tasks in {project_label}")
+        await context.context.stream_widget(
+            widget, copy_text=f"{task_count} tasks in {project_label}"
+        )
 
         logger.info("[HOOKS] Task list widget streamed successfully")
 
@@ -569,7 +601,6 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
 
         # Get project info from context
         project_id = context.context.project_id
-        project_name = context.context.project_name
 
         # Fetch members for assignee dropdown via MCP
         members = []
@@ -586,7 +617,13 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
                 },
             )
             members_data = _parse_mcp_result(members_result)
-            members = members_data if isinstance(members_data, list) else members_data.get("workers", []) if isinstance(members_data, dict) else []
+            members = (
+                members_data
+                if isinstance(members_data, list)
+                else members_data.get("workers", [])
+                if isinstance(members_data, dict)
+                else []
+            )
         except Exception as e:
             logger.warning("[HOOKS] Could not fetch members for form: %s", e)
 
@@ -752,7 +789,9 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         elif action_type == "task.reopen":
             return f"Reopen task {task_id} and return to pending"
         elif action_type == "task.create_form":
-            return f"Show me the task creation form" + (f" for project {project_id}" if project_id else "")
+            return "Show me the task creation form" + (
+                f" for project {project_id}" if project_id else ""
+            )
         elif action_type == "task.refresh":
             return "Refresh and show all my tasks"
         elif action_type == "task.create":
@@ -870,9 +909,9 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
                 max_retry_attempts=3,
                 tool_filter={
                     "blocked_tool_names": [
-                        "taskflow_list_tasks",    # Replaced by local list_tasks
-                        "taskflow_add_task",      # Replaced by local add_task
-                        "taskflow_list_projects", # Replaced by local list_projects
+                        "taskflow_list_tasks",  # Replaced by local list_tasks
+                        "taskflow_add_task",  # Replaced by local add_task
+                        "taskflow_list_projects",  # Replaced by local list_projects
                     ]
                 },
             ) as mcp_server:
@@ -908,10 +947,10 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
                     name="TaskFlow Assistant",
                     instructions=instructions,
                     tools=[
-                        list_tasks,      # Local wrapper -> triggers task list widget
-                        add_task,        # Local wrapper -> triggers task created widget
+                        list_tasks,  # Local wrapper -> triggers task list widget
+                        add_task,  # Local wrapper -> triggers task created widget
                         show_task_form,  # Local wrapper -> triggers task form widget
-                        list_projects,   # Local wrapper -> triggers projects widget
+                        list_projects,  # Local wrapper -> triggers projects widget
                     ],
                     mcp_servers=[mcp_server],  # Keep MCP for other tools (complete_task, etc.)
                 )
@@ -976,7 +1015,7 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             raise ValueError("task_id required")
 
         # Call MCP tool to complete task
-        result = await mcp_server.call_tool(
+        await mcp_server.call_tool(
             "taskflow_complete_task",
             {
                 "task_id": task_id,
@@ -1014,7 +1053,7 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             raise ValueError("task_id required")
 
         # Call MCP tool to start task
-        result = await mcp_server.call_tool(
+        await mcp_server.call_tool(
             "taskflow_start_task",
             {
                 "task_id": task_id,
@@ -1079,13 +1118,13 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         description = payload.get("task.description") or payload.get("description")
         priority = payload.get("task.priority") or payload.get("priority", "medium")
         assignee_id = payload.get("task.assigneeId") or payload.get("assigned_to")
-        due_date = payload.get("task.dueDate") or payload.get("due_date")
 
         if not title:
             raise ValueError("title required")
 
-        # Note: priority, assignee_id, and due_date are collected but not yet supported by MCP tool
-        # The MCP tool taskflow_add_task only accepts title and description
+        # Note: priority and assignee_id are collected but may not be fully
+        # supported by all MCP versions. The MCP tool taskflow_add_task accepts
+        # title, description, priority, and assigned_to
 
         # Call MCP tool to create task
         result = await mcp_server.call_tool(
@@ -1134,7 +1173,13 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
                 },
             )
             data = _parse_mcp_result(members_result)
-            members = data if isinstance(data, list) else data.get("workers", []) if isinstance(data, dict) else []
+            members = (
+                data
+                if isinstance(data, list)
+                else data.get("workers", [])
+                if isinstance(data, dict)
+                else []
+            )
         except Exception:
             logger.warning("Could not fetch members for form")
 
