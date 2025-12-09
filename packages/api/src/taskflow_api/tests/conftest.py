@@ -1,6 +1,15 @@
 """Test fixtures for TaskFlow API tests."""
 
 # ruff: noqa: E402
+# Set environment defaults FIRST before any imports that might load settings
+import os
+
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("SSO_URL", "http://localhost:3000")
+os.environ.setdefault("ALLOWED_ORIGINS", "http://localhost:3000")
+os.environ.setdefault("DEV_MODE", "true")
+os.environ.setdefault("DEBUG", "true")
+
 # Patch JSONB to JSON FIRST before any model imports
 # This allows us to use SQLite in-memory for testing while using JSONB in production
 import sqlalchemy.dialects.postgresql as pg_dialects

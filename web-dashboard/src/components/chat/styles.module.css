@@ -89,6 +89,9 @@
   animation: slideUp 0.3s ease-out;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* Flexbox to properly size header + chat */
+  display: flex;
+  flex-direction: column;
 }
 
 .chatKitContainer::-webkit-scrollbar {
@@ -119,8 +122,9 @@
 
 .chatKit {
   width: 100%;
-  height: 100%;
-  border-radius: 16px;
+  flex: 1;
+  min-height: 0; /* Important for flex children to shrink */
+  border-radius: 0 0 16px 16px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -376,6 +380,143 @@
 .personalizeButton svg {
   flex-shrink: 0;
   opacity: 0.7;
+}
+
+/* Progress Indicator */
+.progressIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 8px;
+  margin: 8px 12px;
+}
+
+.progressSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+  color: hsl(var(--primary));
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progressMessage {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Context Badge */
+.contextBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: hsl(var(--primary) / 0.1);
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: hsl(var(--primary));
+  transition: all 0.2s ease;
+}
+
+.contextBadgeLoading {
+  opacity: 0.7;
+}
+
+.contextBadgeLoading .contextLabel {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.contextIcon {
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.contextLabel {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.contextClearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: hsl(var(--primary) / 0.7);
+  transition: all 0.15s ease;
+}
+
+.contextClearButton:hover {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}
+
+/* Chat Header with Context */
+.chatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  flex-shrink: 0; /* Don't shrink the header */
+}
+
+.chatHeaderTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.chatHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Streaming State - Lock UI */
+.streamingActive .widgetAction {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.widgetAction {
+  transition: opacity 0.2s ease;
+}
+
+.widgetAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Mobile Responsive */

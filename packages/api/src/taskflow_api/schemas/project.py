@@ -63,3 +63,20 @@ class MemberRead(BaseModel):
     type: Literal["human", "agent"]
     role: Literal["owner", "member"]
     joined_at: datetime
+
+
+class MemberSearchItem(BaseModel):
+    """Schema for member search result item (for @mention autocomplete)."""
+
+    id: str  # handle used as ID
+    name: str
+    handle: str
+    type: Literal["human", "agent"]
+    description: str
+
+
+class MemberSearchResult(BaseModel):
+    """Schema for member search response."""
+
+    members: list[MemberSearchItem]
+    total: int

@@ -12,10 +12,12 @@ import {
   FileText,
   Settings,
   Zap,
+  Sparkles,
 } from "lucide-react"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Workspace", href: "/workspace", icon: Sparkles, badge: "AI" },
   { name: "Projects", href: "/projects", icon: FolderKanban },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Workers", href: "/workers", icon: Users },
@@ -53,9 +55,9 @@ export function Sidebar() {
             >
               <item.icon className={cn("h-5 w-5", isActive && "text-sidebar-primary")} />
               {item.name}
-              {item.name === "Agents" && (
+              {"badge" in item && item.badge && (
                 <span className="ml-auto text-2xs px-1.5 py-0.5 rounded bg-sidebar-primary/10 text-sidebar-primary font-mono">
-                  AI
+                  {item.badge}
                 </span>
               )}
             </Link>

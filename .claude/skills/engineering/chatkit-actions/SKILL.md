@@ -526,6 +526,199 @@ interface Action {
 | @mentions | `entities.onTagSearch` | `ThreadItemConverter` | Reference entities |
 | Mode switch | `composer.tools` | Route by tool_choice | Different agents |
 
+## Critical Implementation Details
+
+### Action Object Structure
+
+**IMPORTANT**: The `Action` object uses `payload`, NOT `arguments`:
+
+```python
+# ❌ WRONG - Will cause AttributeError
+action.arguments  # 'Action' object has no attribute 'arguments'
+
+# ✅ CORRECT
+action.payload    # Access action data via .payload
+```
+
+**Action Type Definition**:
+```python
+from chatkit.types import Action
+
+# Action[str, Any] has these fields:
+action.type      # str - action identifier (e.g., "task.start")
+action.payload   # dict[str, Any] - action data
+action.handler   # "client" | "server" - where action is processed
+```
+
+### Server Action Handler Signature
+
+**CRITICAL**: The `context` parameter is `RequestContext`, NOT `dict[str, Any]`
+
+```python
+# Type annotation vs runtime reality mismatch
+async def action(
+    self,
+    thread: ThreadMetadata,
+    action: Action[str, Any],
+    sender: WidgetItem | None,
+    context: dict[str, Any],  # ⚠️ Type hint says dict, but runtime is RequestContext!
+) -> AsyncIterator[ThreadStreamEvent]:
+
+    # ❌ WRONG - Tries to wrap RequestContext inside RequestContext
+    request_context = RequestContext(metadata=context)
+
+    # ✅ CORRECT - Use context directly, it's already RequestContext
+    user_id = context.user_id
+    metadata = context.metadata
+```
+
+**Why this happens**: ChatKit SDK passes `RequestContext` object at runtime, despite type annotations suggesting `dict`. Always use `context` directly without wrapping.
+
+### UserMessageItem Required Fields
+
+When creating synthetic user messages from actions, **ALL** these fields are required:
+
+```python
+from chatkit.types import UserMessageItem, UserMessageTextContent
+from datetime import datetime
+
+# ❌ WRONG - Missing required fields causes ValidationError
+synthetic_message = UserMessageItem(
+    content=[UserMessageTextContent(type="text", text=message_text)]
+)
+
+# ✅ CORRECT - Include all required fields
+synthetic_message = UserMessageItem(
+    id=self.store.generate_item_id("message", thread, context),
+    thread_id=thread.id,
+    created_at=datetime.now(),
+    content=[UserMessageTextContent(type="input_text", text=message_text)],
+    inference_options={},
+)
+```
+
+**Required fields**:
+- `id`: Generate via `store.generate_item_id("message", thread, context)`
+- `thread_id`: From `thread.id` parameter
+- `created_at`: Current timestamp via `datetime.now()`
+- `content`: List of content blocks (UserMessageTextContent)
+- `inference_options`: Empty dict `{}` if no special options
+
+**UserMessageTextContent type values**:
+- ✅ `type="input_text"` - User text input (correct)
+- ❌ `type="text"` - Invalid for UserMessageTextContent (causes ValidationError)
+
+### Local Tool Wrappers for Widget Streaming
+
+**Problem**: Agent calls MCP tool successfully, but widget doesn't appear in UI.
+
+**Root Cause**: Widgets stream via `RunHooks` pattern. MCP tools alone don't trigger widget rendering - you need **local tool wrappers**.
+
+**Solution Pattern**:
+
+```python
+# 1. Create local tool wrapper
+from agents import function_tool
+
+@function_tool
+async def show_task_form(
+    ctx: RunContextWrapper[TaskFlowAgentContext],
+) -> str:
+    """Show interactive task creation form widget."""
+
+    agent_ctx = ctx.context
+    mcp_url = agent_ctx.mcp_server_url
+
+    # Call MCP tool via HTTP
+    result = await _call_mcp_tool(
+        mcp_url,
+        "taskflow_show_task_form",
+        arguments={"params": {"user_id": agent_ctx.user_id}},
+        access_token=agent_ctx.access_token,
+    )
+
+    # Return result - RunHooks will intercept and stream widget
+    return json.dumps(result)
+
+# 2. Register local wrapper with agent
+agent = Agent(
+    name="TaskFlow Assistant",
+    tools=[
+        show_task_form,  # Local wrapper - triggers RunHooks
+        # ... other local wrappers
+    ],
+)
+
+# 3. In RunHooks.on_tool_end() - Stream widget
+async def on_tool_end(self, output: str | None, tool_name: str) -> None:
+    if tool_name == "show_task_form":
+        result = json.loads(output)
+        if result.get("action") == "show_form":
+            widget = build_task_form_widget()
+            yield WidgetItem(...)
+```
+
+**Key insight**: Direct MCP tools → no widgets. Local wrappers → RunHooks → widgets streamed.
+
+## Common Pydantic Validation Errors
+
+### Error 1: 'Action' object has no attribute 'arguments'
+
+```
+AttributeError: 'Action[str, Any]' object has no attribute 'arguments'
+```
+
+**Fix**: Use `action.payload` instead of `action.arguments`
+
+### Error 2: UserMessageTextContent type mismatch
+
+```
+ValidationError: Input should be 'input_text' [type=literal_error, input_value='text']
+```
+
+**Fix**: Use `type="input_text"` for user input, not `type="text"`
+
+### Error 3: UserMessageItem missing required fields
+
+```
+4 validation errors for UserMessageItem
+- id: Field required
+- thread_id: Field required
+- created_at: Field required
+- inference_options: Field required
+```
+
+**Fix**: Include all required fields when creating UserMessageItem (see pattern above)
+
+### Error 4: RequestContext wrapping issue
+
+```
+2 validation errors for RequestContext
+user_id: Field required
+metadata: Input should be a valid dictionary [input_value=RequestContext(...)]
+```
+
+**Fix**: Don't wrap `context` - it's already a RequestContext object
+
+## Widget Action Testing Checklist
+
+Before claiming widget actions are complete, test:
+
+- [ ] Widget renders with correct data
+- [ ] All buttons have clear labels (not just icons)
+- [ ] Client actions navigate/update UI correctly
+- [ ] Server actions call backend successfully
+- [ ] Action payload contains all required data
+- [ ] Widget updates after server action completes
+- [ ] No AttributeError on action.payload access
+- [ ] No ValidationError on UserMessageItem creation
+- [ ] Local tool wrappers trigger widget streaming
+- [ ] All status transitions have appropriate buttons
+- [ ] Test with real user session (not mock data)
+- [ ] Check browser console for errors
+- [ ] Verify backend logs show action processing
+- [ ] Test error cases (network failure, invalid data)
+
 ## Anti-Patterns to Avoid
 
 1. **Mixing handlers** - Don't handle same action in both client and server
@@ -533,6 +726,13 @@ interface Action {
 3. **Forgetting widget ID** - `sendCustomAction` requires widget ID for updates
 4. **Not updating widget** - Server actions should yield `ThreadItemReplacedEvent`
 5. **Blocking in onAction** - Keep client handlers fast, offload to server
+6. **Using action.arguments** - Use `action.payload` (arguments doesn't exist)
+7. **Wrapping RequestContext** - Context is already RequestContext, don't wrap it
+8. **Missing UserMessageItem fields** - Include id, thread_id, created_at, inference_options
+9. **Wrong content type** - Use `type="input_text"` for user messages
+10. **No local tool wrappers** - MCP tools alone don't stream widgets
+11. **Not testing thoroughly** - Test all actions with real data before claiming done
+12. **Assuming type hints are correct** - ChatKit has type annotation vs runtime mismatches
 
 ## References
 
