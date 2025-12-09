@@ -12,7 +12,7 @@ import { genericOAuth } from "better-auth/plugins"; // 008-social-login-provider
 import { db } from "./db";
 import * as schema from "../../auth-schema"; // Use Better Auth generated schema
 import { member } from "../../auth-schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { Resend } from "resend";
 import * as nodemailer from "nodemailer";
 import { TRUSTED_CLIENTS, DEFAULT_ORG_ID } from "./trusted-clients";
@@ -578,17 +578,51 @@ export const auth = betterAuth({
       allowDynamicClientRegistration: false,
       // Add custom claims to userinfo endpoint and ID token
       async getAdditionalUserInfoClaim(user) {
+        // DEBUG: Log user object
+        console.log("[JWT] getAdditionalUserInfoClaim - user.id:", user.id);
+        console.log("[JWT] getAdditionalUserInfoClaim - user.email:", user.email);
+
         // Fetch user's organization memberships for tenant_id
         const memberships = await db
           .select()
           .from(member)
           .where(eq(member.userId, user.id));
 
+        // DEBUG: Log memberships
+        console.log("[JWT] Memberships found:", memberships.length);
+        console.log("[JWT] Memberships:", memberships);
+
         // Get all organization IDs the user belongs to
         const organizationIds = memberships.map((m: typeof memberships[number]) => m.organizationId);
 
+        // DEBUG: Log organization IDs
+        console.log("[JWT] Organization IDs:", organizationIds);
+
+        // Fetch organization names for better UX (avoids extra API calls in clients)
+        let organizationNames: string[] = [];
+        if (organizationIds.length > 0) {
+          const orgs = await db
+            .select({ id: schema.organization.id, name: schema.organization.name })
+            .from(schema.organization)
+            .where(
+              organizationIds.length === 1
+                ? eq(schema.organization.id, organizationIds[0])
+                : inArray(schema.organization.id, organizationIds)
+            );
+
+          // Preserve order of organizationIds
+          organizationNames = organizationIds.map(id => {
+            const org = orgs.find(o => o.id === id);
+            return org?.name || id.slice(0, 12); // Fallback to short ID
+          });
+
+          console.log("[JWT] Organization Names:", organizationNames);
+        }
+
         // Primary tenant is the first organization (can be extended to support active org)
         const primaryTenantId = organizationIds[0] || null;
+
+        console.log("[JWT] Primary tenant_id:", primaryTenantId);
 
         return {
           // OIDC Standard Claims (from additionalFields)
@@ -604,6 +638,7 @@ export const auth = betterAuth({
           role: user.role || "user",
           tenant_id: primaryTenantId,
           organization_ids: organizationIds,
+          organization_names: organizationNames,
           org_role: memberships[0]?.role || null,
           // Temporary: RoboLearn-specific fields (TODO: move to member.metadata in Proposal 001)
           software_background: user.softwareBackground || null,

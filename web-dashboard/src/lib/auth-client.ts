@@ -6,13 +6,14 @@ import { organizationClient } from "better-auth/client/plugins";
  *
  * Note: Taskflow uses custom OAuth flow for authentication,
  * but uses Better Auth client ONLY for organization switching.
- * This provides seamless org context updates without disrupting
- * the existing auth architecture.
+ *
+ * This client communicates with the SSO platform to:
+ * - Switch active organization (updates session.activeOrganizationId)
+ * - Trigger new JWT generation with updated tenant_id
  */
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001",
   plugins: [organizationClient()],
 });
 
-// Export organization methods
 export const { organization } = authClient;

@@ -1,5 +1,4 @@
-import Image from "next/image";
-import Link from "next/link";
+import { Navbar } from "@/components/layout/Navbar";
 
 export default function AccountLayout({
   children,
@@ -7,33 +6,18 @@ export default function AccountLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-taskflow-50/30">
-      {/* Header with Logo */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50">
-        <div className="max-w-5xl mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
-              <Image
-                src="/logo.png"
-                alt="Taskflow"
-                width={240}
-                height={60}
-                className="h-14 w-auto"
-                priority
-              />
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      {/* Main Navigation Bar */}
+      <Navbar />
 
       {/* Main Content */}
-      <main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center border-t border-slate-200/50 mt-auto">
-        <p className="text-xs text-slate-400">
+      <footer className="py-6 text-center border-t border-border mt-auto">
+        <p className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} {process.env.NEXT_PUBLIC_ORG_NAME || "Taskflow"}. All rights reserved.
         </p>
       </footer>
