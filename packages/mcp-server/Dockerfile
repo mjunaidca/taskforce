@@ -19,8 +19,11 @@ RUN pip install --no-cache-dir uv
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies (increase timeout for slow networks)
-RUN UV_HTTP_TIMEOUT=120 uv pip install --system --no-cache -r pyproject.toml
+# Install dependencies with retry logic for network issues
+# Retry 3 times with 300s timeout each attempt
+RUN UV_HTTP_TIMEOUT=300 uv pip install --system --no-cache -r pyproject.toml || \
+    (echo "Retry 1/2..." && sleep 5 && UV_HTTP_TIMEOUT=300 uv pip install --system --no-cache -r pyproject.toml) || \
+    (echo "Retry 2/2..." && sleep 10 && UV_HTTP_TIMEOUT=300 uv pip install --system --no-cache -r pyproject.toml)
 
 # Copy source code
 COPY src ./src

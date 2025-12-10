@@ -1,0 +1,19 @@
+{{- if and .Values.api.enabled .Values.api.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.api.postgresql.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "api-db") | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for StatefulSet
+  ports:
+  - port: {{ .Values.api.postgresql.service.port }}
+    targetPort: postgres
+    protocol: TCP
+    name: postgres
+  selector:
+    {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "api-db") | nindent 4 }}
+{{- end }}

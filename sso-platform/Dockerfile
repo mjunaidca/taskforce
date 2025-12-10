@@ -40,7 +40,7 @@ ENV DOCKER_BUILD=true
 
 RUN pnpm build
 
-# ----- Stage 3: Runner (slim - no migrations) -----
+# ----- Stage 3: Runner (slim production image) -----
 FROM node:22-alpine AS runner
 
 WORKDIR /app
@@ -53,7 +53,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone build only
+# Copy standalone build only (no migration deps - those run in builder image)
 COPY --from=builder /app/public ./public
 RUN mkdir -p .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

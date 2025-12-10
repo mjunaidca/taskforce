@@ -291,7 +291,10 @@ export default function WorkspacePage() {
         : "Message TaskFlow...",
     },
     widgets: {
-      onAction: async (action: { type: string; payload: any }) => {
+      onAction: async (
+        action: { type: string; payload?: Record<string, unknown> | undefined },
+        _widgetItem: { id: string; widget: unknown }
+      ) => {
         console.log("[Workspace] Widget action received:", action.type, action.payload);
 
         switch (action.type) {

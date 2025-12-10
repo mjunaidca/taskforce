@@ -1,0 +1,31 @@
+{{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.api.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "api") | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: {{ .Values.api.env.CORS_ORIGINS | quote }}
+spec:
+  ingressClassName: {{ .Values.api.ingress.className }}
+  rules:
+  - host: {{ .Values.api.ingress.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.api.name }}
+            port:
+              number: {{ .Values.api.service.port }}
+  {{- if .Values.api.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.api.ingress.host }}
+    secretName: {{ .Values.api.name }}-tls
+  {{- end }}
+{{- end }}

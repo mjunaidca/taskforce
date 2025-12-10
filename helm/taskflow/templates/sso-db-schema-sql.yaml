@@ -1,0 +1,219 @@
+---
+# SSO Database Schema SQL
+# Direct SQL to create all Better Auth tables
+{{- if .Values.sso.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sso-db-schema-sql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "sso-migration") | nindent 4 }}
+data:
+  schema.sql: |
+    -- Better Auth Schema v1.4.4
+    -- Generated from drizzle-orm schema
+
+    -- User table
+    CREATE TABLE IF NOT EXISTS "user" (
+      "id" text PRIMARY KEY NOT NULL,
+      "name" text NOT NULL,
+      "email" text NOT NULL,
+      "emailVerified" boolean NOT NULL,
+      "image" text,
+      "createdAt" timestamp NOT NULL,
+      "updatedAt" timestamp NOT NULL,
+      "role" text,
+      "banned" boolean,
+      "banReason" text,
+      "banExpires" timestamp,
+      "twoFactorEnabled" boolean,
+      "birthDate" text,
+      "country" text,
+      "city" text,
+      "addressLine1" text,
+      "addressLine2" text,
+      "postalCode" text,
+      "phoneNumber" text,
+      "phoneNumberVerified" boolean,
+      "state" text,
+      "stripeCustomerId" text,
+      "taxId" text,
+      "createdBy" text,
+      "organization" text,
+      "tenant" text,
+      CONSTRAINT "user_email_unique" UNIQUE("email")
+    );
+
+    -- Session table
+    CREATE TABLE IF NOT EXISTS "session" (
+      "id" text PRIMARY KEY NOT NULL,
+      "expiresAt" timestamp NOT NULL,
+      "token" text NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      "updatedAt" timestamp NOT NULL,
+      "ipAddress" text,
+      "userAgent" text,
+      "userId" text NOT NULL,
+      "impersonatedBy" text,
+      "activeOrganizationId" text,
+      CONSTRAINT "session_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "session_token_unique" UNIQUE("token")
+    );
+
+    -- Account table
+    CREATE TABLE IF NOT EXISTS "account" (
+      "id" text PRIMARY KEY NOT NULL,
+      "accountId" text NOT NULL,
+      "providerId" text NOT NULL,
+      "userId" text NOT NULL,
+      "accessToken" text,
+      "refreshToken" text,
+      "idToken" text,
+      "accessTokenExpiresAt" timestamp,
+      "refreshTokenExpiresAt" timestamp,
+      "scope" text,
+      "password" text,
+      "createdAt" timestamp NOT NULL,
+      "updatedAt" timestamp NOT NULL,
+      CONSTRAINT "account_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- Verification table
+    CREATE TABLE IF NOT EXISTS "verification" (
+      "id" text PRIMARY KEY NOT NULL,
+      "identifier" text NOT NULL,
+      "value" text NOT NULL,
+      "expiresAt" timestamp NOT NULL,
+      "createdAt" timestamp,
+      "updatedAt" timestamp
+    );
+
+    -- Organization table
+    CREATE TABLE IF NOT EXISTS "organization" (
+      "id" text PRIMARY KEY NOT NULL,
+      "name" text NOT NULL,
+      "slug" text,
+      "logo" text,
+      "createdAt" timestamp NOT NULL,
+      "metadata" text,
+      CONSTRAINT "organization_slug_unique" UNIQUE("slug")
+    );
+
+    -- Member table
+    CREATE TABLE IF NOT EXISTS "member" (
+      "id" text PRIMARY KEY NOT NULL,
+      "organizationId" text NOT NULL,
+      "userId" text NOT NULL,
+      "role" text NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      CONSTRAINT "member_organizationId_organization_id_fk" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "member_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- Invitation table
+    CREATE TABLE IF NOT EXISTS "invitation" (
+      "id" text PRIMARY KEY NOT NULL,
+      "organizationId" text NOT NULL,
+      "email" text NOT NULL,
+      "role" text,
+      "status" text NOT NULL,
+      "expiresAt" timestamp NOT NULL,
+      "inviterId" text NOT NULL,
+      "createdAt" timestamp,
+      CONSTRAINT "invitation_organizationId_organization_id_fk" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "invitation_inviterId_user_id_fk" FOREIGN KEY ("inviterId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- OAuth Application table
+    CREATE TABLE IF NOT EXISTS "oauth_application" (
+      "clientId" text PRIMARY KEY NOT NULL,
+      "clientSecret" text,
+      "name" text NOT NULL,
+      "redirectUrls" text NOT NULL,
+      "grantTypes" text NOT NULL,
+      "responseTypes" text NOT NULL,
+      "scopes" text NOT NULL,
+      "publicClient" boolean NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      "updatedAt" timestamp NOT NULL,
+      "metadata" json,
+      "userId" text NOT NULL,
+      CONSTRAINT "oauth_application_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- OAuth Access Token table
+    CREATE TABLE IF NOT EXISTS "oauth_access_token" (
+      "token" text PRIMARY KEY NOT NULL,
+      "userId" text NOT NULL,
+      "clientId" text NOT NULL,
+      "scopes" text,
+      "expiresAt" timestamp NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      "refreshToken" text,
+      "refreshTokenExpiresAt" timestamp,
+      "metadata" json,
+      "revokedAt" timestamp,
+      CONSTRAINT "oauth_access_token_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "oauth_access_token_clientId_oauth_application_clientId_fk" FOREIGN KEY ("clientId") REFERENCES "oauth_application"("clientId") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- OAuth Consent table
+    CREATE TABLE IF NOT EXISTS "oauth_consent" (
+      "id" text PRIMARY KEY NOT NULL,
+      "userId" text NOT NULL,
+      "clientId" text NOT NULL,
+      "scopes" text NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      "expiresAt" timestamp,
+      "metadata" json,
+      CONSTRAINT "oauth_consent_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "oauth_consent_clientId_oauth_application_clientId_fk" FOREIGN KEY ("clientId") REFERENCES "oauth_application"("clientId") ON DELETE cascade ON UPDATE no action
+    );
+
+    -- JWKS table
+    CREATE TABLE IF NOT EXISTS "jwks" (
+      "id" text PRIMARY KEY NOT NULL,
+      "publicKey" text NOT NULL,
+      "privateKey" text NOT NULL,
+      "createdAt" timestamp NOT NULL,
+      "expiresAt" timestamp
+    );
+
+    -- API Key table
+    CREATE TABLE IF NOT EXISTS "apikey" (
+      "id" text PRIMARY KEY NOT NULL,
+      "userId" text NOT NULL,
+      "name" text NOT NULL,
+      "keyHash" text NOT NULL,
+      "expiresAt" timestamp,
+      "createdAt" timestamp NOT NULL,
+      "updatedAt" timestamp NOT NULL,
+      "lastUsedAt" timestamp,
+      "description" text,
+      "scopes" text,
+      "revokedAt" timestamp,
+      "revokedReason" text,
+      "ipWhitelist" text,
+      "usageCount" integer DEFAULT 0,
+      "lastUsedFrom" text,
+      "rotatedFrom" text,
+      "rotatedAt" timestamp,
+      "isDisabled" boolean DEFAULT false,
+      "metadata" json,
+      CONSTRAINT "apikey_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "apikey_keyHash_unique" UNIQUE("keyHash")
+    );
+
+    -- Indexes for performance
+    CREATE INDEX IF NOT EXISTS "verification_identifier_idx" ON "verification" ("identifier");
+    CREATE INDEX IF NOT EXISTS "member_organizationId_idx" ON "member" ("organizationId");
+    CREATE INDEX IF NOT EXISTS "member_userId_idx" ON "member" ("userId");
+    CREATE INDEX IF NOT EXISTS "invitation_organizationId_idx" ON "invitation" ("organizationId");
+    CREATE INDEX IF NOT EXISTS "invitation_email_idx" ON "invitation" ("email");
+    CREATE INDEX IF NOT EXISTS "oauth_access_token_userId_idx" ON "oauth_access_token" ("userId");
+    CREATE INDEX IF NOT EXISTS "oauth_access_token_clientId_idx" ON "oauth_access_token" ("clientId");
+    CREATE INDEX IF NOT EXISTS "oauth_consent_userId_idx" ON "oauth_consent" ("userId");
+    CREATE INDEX IF NOT EXISTS "oauth_consent_clientId_idx" ON "oauth_consent" ("clientId");
+    CREATE INDEX IF NOT EXISTS "apikey_userId_idx" ON "apikey" ("userId");
+{{- end }}

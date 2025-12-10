@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 const SSO_URL = process.env.SERVER_SSO_URL || process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001";
 const CLIENT_ID = process.env.NEXT_PUBLIC_OAUTH_CLIENT_ID || "taskflow-sso-public-client";
 const REDIRECT_URI = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI || "http://localhost:3000/api/auth/callback";
+// APP_URL for redirects - use client-facing URL, not internal request.url which may be 0.0.0.0 in K8s
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // Cookie configuration - secure httpOnly cookies
 const COOKIE_OPTIONS = {
@@ -22,14 +24,14 @@ export async function GET(request: NextRequest) {
 
   // Handle OAuth error response
   if (error) {
-    const errorUrl = new URL("/", request.url);
+    const errorUrl = new URL("/", APP_URL);
     errorUrl.searchParams.set("error", errorDescription || error);
     return NextResponse.redirect(errorUrl);
   }
 
   // No code provided - redirect to home
   if (!code) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", APP_URL));
   }
 
   // Get code verifier from cookie (set during initiateLogin)
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
   const codeVerifier = cookieStore.get("taskflow_code_verifier")?.value;
 
   if (!codeVerifier) {
-    const errorUrl = new URL("/", request.url);
+    const errorUrl = new URL("/", APP_URL);
     errorUrl.searchParams.set("error", "session_expired");
     return NextResponse.redirect(errorUrl);
   }
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => ({}));
       console.error("Token exchange failed:", errorData);
-      const errorUrl = new URL("/", request.url);
+      const errorUrl = new URL("/", APP_URL);
       errorUrl.searchParams.set("error", errorData.error || "token_exchange_failed");
       return NextResponse.redirect(errorUrl);
     }
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Create response with redirect to dashboard
-    const response = NextResponse.redirect(new URL("/dashboard", request.url));
+    const response = NextResponse.redirect(new URL("/dashboard", APP_URL));
 
     // Set httpOnly cookies for tokens
     response.cookies.set("taskflow_access_token", tokens.access_token, {
@@ -110,7 +112,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("OAuth callback error:", err);
-    const errorUrl = new URL("/", request.url);
+    const errorUrl = new URL("/", APP_URL);
     errorUrl.searchParams.set("error", "authentication_failed");
     return NextResponse.redirect(errorUrl);
   }

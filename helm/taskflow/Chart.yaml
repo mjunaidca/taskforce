@@ -1,0 +1,17 @@
+apiVersion: v2
+name: taskflow
+description: TaskFlow Platform - Human-Agent Task Management with SSO
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - taskflow
+  - human-agent
+  - task-management
+  - sso
+  - mcp
+maintainers:
+  - name: TaskFlow Team
+    email: team@taskflow.ai
+sources:
+  - https://github.com/mjunaidca/tf-k8

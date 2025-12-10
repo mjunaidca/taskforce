@@ -109,40 +109,48 @@ if (emailEnabled) {
 }
 
 // Generic email sender - tries SMTP first, then Resend
+// IMPORTANT: Fire-and-forget to prevent slow SMTP from blocking signup
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   if (!emailEnabled || !EMAIL_FROM) {
     console.warn("[Auth] Email not configured - skipping email to:", to);
     return;
   }
 
-  try {
-    // Priority 1: SMTP (Google, custom)
-    if (smtpTransport) {
-      const result = await smtpTransport.sendMail({
-        from: EMAIL_FROM,
-        to,
-        subject,
-        html,
-      });
-      console.log("[Auth] Email sent via SMTP to:", to, "messageId:", result.messageId);
-      return;
-    }
+  // Fire-and-forget: Don't block signup/auth flow if email is slow
+  // User can request resend if email doesn't arrive
+  const sendAsync = async () => {
+    try {
+      // Priority 1: SMTP (Google, custom)
+      if (smtpTransport) {
+        const result = await smtpTransport.sendMail({
+          from: EMAIL_FROM,
+          to,
+          subject,
+          html,
+        });
+        console.log("[Auth] Email sent via SMTP to:", to, "messageId:", result.messageId);
+        return;
+      }
 
-    // Priority 2: Resend
-    if (resend) {
-      const result = await resend.emails.send({
-        from: EMAIL_FROM,
-        to,
-        subject,
-        html,
-      });
-      console.log("[Auth] Email sent via Resend to:", to, "id:", result.data?.id);
-      return;
+      // Priority 2: Resend
+      if (resend) {
+        const result = await resend.emails.send({
+          from: EMAIL_FROM,
+          to,
+          subject,
+          html,
+        });
+        console.log("[Auth] Email sent via Resend to:", to, "id:", result.data?.id);
+        return;
+      }
+    } catch (error) {
+      // Log error but don't throw - email failure shouldn't block auth
+      console.error("[Auth] Failed to send email to:", to, "error:", error);
     }
-  } catch (error) {
-    console.error("[Auth] Failed to send email to:", to, "error:", error);
-    throw error; // Re-throw so Better Auth knows it failed
-  }
+  };
+
+  // Start email send but don't await - returns immediately
+  sendAsync();
 }
 
 export const auth = betterAuth({
@@ -208,9 +216,8 @@ export const auth = betterAuth({
       // Keep using scrypt for new passwords (don't change hash function)
       // Progressive migration: When users change password, they get scrypt hash
     },
-    // Password reset (only when email is configured)
-    ...(emailEnabled && {
-      sendResetPassword: async ({ user, url }) => {
+    // Password reset - always register handler (sendEmail handles disabled case gracefully)
+    sendResetPassword: async ({ user, url }) => {
         const appName = process.env.NEXT_PUBLIC_APP_NAME || "Taskflow SSO";
         const appDescription = process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Secure Single Sign-On";
         const orgName = process.env.NEXT_PUBLIC_ORG_NAME || "Taskflow";
@@ -298,8 +305,7 @@ export const auth = betterAuth({
             </html>
           `,
         });
-      },
-    }),
+    },
   },
 
   // Email verification configuration - always required for security
@@ -611,8 +617,8 @@ export const auth = betterAuth({
             );
 
           // Preserve order of organizationIds
-          organizationNames = organizationIds.map(id => {
-            const org = orgs.find(o => o.id === id);
+          organizationNames = organizationIds.map((id: string) => {
+            const org = orgs.find((o: { id: string; name: string }) => o.id === id);
             return org?.name || id.slice(0, 12); // Fallback to short ID
           });
 
