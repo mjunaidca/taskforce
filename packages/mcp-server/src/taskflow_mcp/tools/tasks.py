@@ -72,14 +72,17 @@ async def taskflow_add_task(params: AddTaskInput, ctx: Context) -> str:
     """Create a new task in a project.
 
     Args:
-        params: AddTaskInput with user_id, project_id, title, and optional description
+        params: AddTaskInput with user_id, project_id, title, description, and recurring options:
+            - is_recurring: Whether task repeats when completed
+            - recurrence_pattern: "1m", "5m", "10m", "15m", "30m", "1h", "daily", "weekly", "monthly"
+            - max_occurrences: Max recurrences (null=unlimited)
 
     Returns:
         JSON with task_id, status="created", and title
 
     Example:
-        Input: {"user_id": "user123", "project_id": 1, "title": "Implement feature"}
-        Output: {"task_id": 42, "status": "created", "title": "Implement feature"}
+        Input: {"user_id": "user123", "project_id": 1, "title": "Daily standup", "is_recurring": true, "recurrence_pattern": "daily"}
+        Output: {"task_id": 42, "status": "created", "title": "Daily standup"}
     """
     try:
         client = get_api_client()
@@ -88,6 +91,9 @@ async def taskflow_add_task(params: AddTaskInput, ctx: Context) -> str:
             project_id=params.project_id,
             title=params.title,
             description=params.description,
+            is_recurring=params.is_recurring,
+            recurrence_pattern=params.recurrence_pattern,
+            max_occurrences=params.max_occurrences,
             access_token=params.access_token,
         )
         return _format_task_result(result, "created")
@@ -150,6 +156,7 @@ async def taskflow_list_tasks(params: ListTasksInput, ctx: Context) -> str:
                 "assignee_handle": t.get("assignee_handle"),
                 "due_date": t.get("due_date"),
                 "tags": t.get("tags"),
+                "is_recurring": t.get("is_recurring", False),
             }
             for t in tasks
         ]

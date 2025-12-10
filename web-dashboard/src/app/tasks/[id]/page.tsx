@@ -56,6 +56,7 @@ import {
   Loader2,
   Pencil,
   Trash2,
+  Repeat,
 } from "lucide-react"
 
 export default function TaskDetailPage() {
@@ -327,6 +328,12 @@ export default function TaskDetailPage() {
                 {getStatusIcon(task.status)}
                 <span className="ml-1">{task.status.replace("_", " ")}</span>
               </Badge>
+              {task.is_recurring && (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  <Repeat className="h-3 w-3 mr-1" />
+                  Recurring
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground mt-1">
               Task #{task.id} · Created{" "}
@@ -849,6 +856,55 @@ export default function TaskDetailPage() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Recurring Task Details */}
+              {task.is_recurring && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Repeat className="h-4 w-4 text-primary" />
+                      <span>Recurring Task</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Pattern</span>
+                      <span className="font-medium">
+                        {task.recurrence_pattern === "1m" && "Every minute"}
+                        {task.recurrence_pattern === "5m" && "Every 5 minutes"}
+                        {task.recurrence_pattern === "10m" && "Every 10 minutes"}
+                        {task.recurrence_pattern === "15m" && "Every 15 minutes"}
+                        {task.recurrence_pattern === "30m" && "Every 30 minutes"}
+                        {task.recurrence_pattern === "1h" && "Every hour"}
+                        {task.recurrence_pattern === "daily" && "Daily"}
+                        {task.recurrence_pattern === "weekly" && "Weekly"}
+                        {task.recurrence_pattern === "monthly" && "Monthly"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Tasks spawned</span>
+                      <span>{task.spawn_count}</span>
+                    </div>
+                    {task.max_occurrences && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Max occurrences</span>
+                        <span>{task.max_occurrences}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Clone subtasks</span>
+                      <span>{task.clone_subtasks_on_recur ? "Yes" : "No"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Create next</span>
+                      <span>
+                        {task.recurrence_trigger === "on_complete" && "On completion"}
+                        {task.recurrence_trigger === "on_due_date" && "On due date"}
+                        {task.recurrence_trigger === "both" && "Both"}
+                      </span>
+                    </div>
+                  </div>
+                </>
               )}
 
               <Separator />

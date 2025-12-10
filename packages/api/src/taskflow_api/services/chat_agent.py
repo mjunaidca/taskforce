@@ -40,6 +40,20 @@ Using the available MCP tools, you can:
 - **Reopen tasks**: Return completed task to pending (completed → pending)
 - **Delete tasks**: Remove tasks from the project
 - **Assign tasks**: Assign tasks to team members or agents
+- **Create recurring tasks**: Tasks that auto-create their next occurrence when completed
+
+## Recurring Tasks
+When creating a recurring task, you can specify:
+- **is_recurring**: Set to true to enable recurrence
+- **recurrence_pattern**: "1m", "5m", "10m", "15m", "30m", "1h", "daily", "weekly", "monthly"
+- **max_occurrences**: Optional limit on how many times the task repeats (null = unlimited)
+
+Example: "Create a recurring daily standup task" →
+Use add_task with is_recurring=true, recurrence_pattern="daily"
+
+When a recurring task is completed, the system automatically creates the next occurrence
+with the due date calculated based on the pattern. The task chain continues until
+max_occurrences is reached (if set).
 
 ## Status Workflow
 Tasks follow this lifecycle:

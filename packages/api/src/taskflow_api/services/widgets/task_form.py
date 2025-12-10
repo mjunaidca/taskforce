@@ -110,6 +110,20 @@ def build_task_form_widget(
     ]
     default_priority = "medium"
 
+    # Recurrence pattern options
+    recurrence_options = [
+        {"value": "", "label": "Not recurring"},
+        {"value": "1m", "label": "Every minute"},
+        {"value": "5m", "label": "Every 5 minutes"},
+        {"value": "10m", "label": "Every 10 minutes"},
+        {"value": "15m", "label": "Every 15 minutes"},
+        {"value": "30m", "label": "Every 30 minutes"},
+        {"value": "1h", "label": "Every hour"},
+        {"value": "daily", "label": "Daily"},
+        {"value": "weekly", "label": "Weekly"},
+        {"value": "monthly", "label": "Monthly"},
+    ]
+
     # Assignee options
     assignee_options = [{"value": None, "label": "Unassigned"}]
     if members:
@@ -237,6 +251,48 @@ def build_task_form_widget(
                                         "type": "Input",
                                         "name": "task.dueDate",
                                         "placeholder": "YYYY-MM-DD",
+                                    },
+                                ],
+                            },
+                            # Recurring task section
+                            {
+                                "type": "Row",
+                                "gap": 3,
+                                "children": [
+                                    {
+                                        "type": "Col",
+                                        "flex": 1,
+                                        "gap": 1,
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "value": "Repeat",
+                                                "fieldName": "task.recurrencePattern",
+                                            },
+                                            {
+                                                "type": "Select",
+                                                "name": "task.recurrencePattern",
+                                                "options": recurrence_options,
+                                                "defaultValue": "",
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        "type": "Col",
+                                        "flex": 1,
+                                        "gap": 1,
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "value": "Max Repeats",
+                                                "fieldName": "task.maxOccurrences",
+                                            },
+                                            {
+                                                "type": "Input",
+                                                "name": "task.maxOccurrences",
+                                                "placeholder": "Unlimited",
+                                            },
+                                        ],
                                     },
                                 ],
                             },

@@ -1,10 +1,10 @@
 """Task endpoints - CRUD and workflow actions."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case
+from sqlalchemy import case, func
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -97,10 +97,238 @@ async def detect_cycle(session: AsyncSession, task_id: int, parent_task_id: int)
     return False
 
 
+def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
+    """Calculate next due date based on recurrence pattern.
+
+    Args:
+        pattern: Recurrence pattern (e.g., '5m', 'daily', 'weekly')
+        from_time: Base timestamp (original due_date or completion time)
+
+    Returns:
+        Next due datetime (naive UTC)
+
+    Note: Calculations use timedelta for time-based patterns:
+        - Monthly = 30 days (simplified, not calendar month)
+        - Falls back to daily for unknown patterns
+    """
+    if pattern == "1m":
+        return from_time + timedelta(minutes=1)
+    elif pattern == "5m":
+        return from_time + timedelta(minutes=5)
+    elif pattern == "10m":
+        return from_time + timedelta(minutes=10)
+    elif pattern == "15m":
+        return from_time + timedelta(minutes=15)
+    elif pattern == "30m":
+        return from_time + timedelta(minutes=30)
+    elif pattern == "1h":
+        return from_time + timedelta(hours=1)
+    elif pattern == "daily":
+        return from_time + timedelta(days=1)
+    elif pattern == "weekly":
+        return from_time + timedelta(weeks=1)
+    elif pattern == "monthly":
+        return from_time + timedelta(days=30)  # Simplified: 30 days, not calendar month
+    else:
+        # Fallback to daily for unknown patterns
+        return from_time + timedelta(days=1)
+
+
+async def get_spawn_count(session: AsyncSession, root_id: int) -> int:
+    """Count tasks spawned from a recurring root task."""
+    result = await session.exec(
+        select(func.count(Task.id)).where(Task.recurring_root_id == root_id)
+    )
+    return result.one() or 0
+
+
+async def clone_subtasks_recursive(
+    session: AsyncSession,
+    source_task: Task,
+    new_parent: Task,
+    creator_id: int,
+    creator_type: str,
+) -> int:
+    """Recursively clone subtasks from source_task to new_parent.
+
+    Returns:
+        Number of subtasks cloned (including nested)
+    """
+    # Load subtasks for source task
+    stmt = select(Task).where(Task.parent_task_id == source_task.id)
+    result = await session.exec(stmt)
+    source_subtasks = result.all()
+
+    cloned_count = 0
+    for subtask in source_subtasks:
+        # Clone the subtask
+        cloned = Task(
+            title=subtask.title,
+            description=subtask.description,
+            project_id=new_parent.project_id,
+            assignee_id=subtask.assignee_id,
+            parent_task_id=new_parent.id,  # Link to new parent
+            created_by_id=creator_id,
+            priority=subtask.priority,
+            tags=subtask.tags.copy() if subtask.tags else [],
+            due_date=subtask.due_date,  # Keep same due date for subtasks
+            # Subtasks don't inherit recurring settings
+            is_recurring=False,
+            recurrence_pattern=None,
+            max_occurrences=None,
+            recurring_root_id=None,
+            recurrence_trigger="on_complete",
+            clone_subtasks_on_recur=False,
+            # Reset state
+            status="pending",
+            progress_percent=0,
+            started_at=None,
+            completed_at=None,
+        )
+        session.add(cloned)
+        await session.flush()  # Get cloned.id
+        cloned_count += 1
+
+        # Audit log for cloned subtask
+        await log_action(
+            session,
+            entity_type="task",
+            entity_id=cloned.id,
+            action="cloned_subtask",
+            actor_id=creator_id,
+            actor_type=creator_type,
+            details={
+                "title": cloned.title,
+                "cloned_from": subtask.id,
+                "parent_task_id": new_parent.id,
+            },
+        )
+
+        # Recursively clone nested subtasks
+        nested_count = await clone_subtasks_recursive(
+            session, subtask, cloned, creator_id, creator_type
+        )
+        cloned_count += nested_count
+
+    return cloned_count
+
+
+async def create_next_occurrence(
+    session: AsyncSession,
+    completed_task: Task,
+    creator_id: int,
+    creator_type: str,
+) -> Task | None:
+    """Create next occurrence of a recurring task.
+
+    Args:
+        session: Database session (will NOT commit - caller owns transaction)
+        completed_task: The task that was just completed
+        creator_id: Worker ID triggering recurrence (human or agent)
+        creator_type: "human" or "agent"
+
+    Returns:
+        Newly created task, or None if max_occurrences reached or already spawned
+
+    Side Effects:
+        - Adds new task to session (flush not commit)
+        - Creates audit log entry
+        - Optionally clones subtasks if clone_subtasks_on_recur is True
+        - Sets has_spawned_next=True on completed_task
+    """
+    # Check if this task has already spawned (prevents duplicate on re-completion)
+    if completed_task.has_spawned_next:
+        return None
+
+    # Determine the root task ID (NULL means this task IS the root)
+    root_id = completed_task.recurring_root_id or completed_task.id
+
+    # Check max_occurrences limit by counting existing spawns
+    if completed_task.max_occurrences is not None:
+        spawn_count = await get_spawn_count(session, root_id)
+        if spawn_count >= completed_task.max_occurrences:
+            # Limit reached, do not create new occurrence
+            return None
+
+    # Calculate next due date
+    # Use original due_date as base (if exists), else use completion time
+    base_time = completed_task.due_date or datetime.utcnow()
+    next_due = calculate_next_due(completed_task.recurrence_pattern, base_time)
+
+    # Create new task (inherit key attributes)
+    new_task = Task(
+        title=completed_task.title,
+        description=completed_task.description,
+        project_id=completed_task.project_id,
+        assignee_id=completed_task.assignee_id,
+        parent_task_id=completed_task.parent_task_id,  # Preserve hierarchy
+        created_by_id=creator_id,
+        priority=completed_task.priority,
+        tags=completed_task.tags.copy() if completed_task.tags else [],
+        due_date=next_due,
+        # Recurring attributes - all point back to root
+        is_recurring=True,
+        recurrence_pattern=completed_task.recurrence_pattern,
+        max_occurrences=completed_task.max_occurrences,
+        recurring_root_id=root_id,  # Link to root task
+        recurrence_trigger=completed_task.recurrence_trigger,
+        clone_subtasks_on_recur=completed_task.clone_subtasks_on_recur,
+        # Reset state
+        status="pending",
+        progress_percent=0,
+        started_at=None,
+        completed_at=None,
+    )
+
+    session.add(new_task)
+    await session.flush()  # Get new_task.id
+
+    # Clone subtasks if enabled
+    cloned_subtasks_count = 0
+    if completed_task.clone_subtasks_on_recur:
+        cloned_subtasks_count = await clone_subtasks_recursive(
+            session, completed_task, new_task, creator_id, creator_type
+        )
+
+    # Mark source task as having spawned (prevents duplicate on re-completion)
+    completed_task.has_spawned_next = True
+    session.add(completed_task)
+
+    # Audit log for new task creation
+    await log_action(
+        session,
+        entity_type="task",
+        entity_id=new_task.id,
+        action="recurring_spawn",
+        actor_id=creator_id,
+        actor_type=creator_type,
+        details={
+            "title": new_task.title,
+            "recurring_from": completed_task.id,
+            "recurring_root": root_id,
+            "recurrence_pattern": completed_task.recurrence_pattern,
+            "next_due": next_due.isoformat(),
+            "cloned_subtasks": cloned_subtasks_count,
+        },
+    )
+
+    return new_task
+
+
 def task_to_read(
-    task: Task, assignee: Worker | None = None, subtasks: list[Task] | None = None
+    task: Task,
+    assignee: Worker | None = None,
+    subtasks: list[Task] | None = None,
+    spawn_count: int = 0,
 ) -> TaskRead:
-    """Convert Task model to TaskRead schema."""
+    """Convert Task model to TaskRead schema.
+
+    Args:
+        task: Task model instance
+        assignee: Optional Worker for assignee_handle
+        subtasks: Optional list of subtasks
+        spawn_count: Number of tasks spawned from this root (computed externally)
+    """
     return TaskRead(
         id=task.id,
         title=task.title,
@@ -110,6 +338,16 @@ def task_to_read(
         progress_percent=task.progress_percent,
         tags=task.tags,
         due_date=task.due_date,
+        # Recurring fields
+        is_recurring=task.is_recurring,
+        recurrence_pattern=task.recurrence_pattern,
+        max_occurrences=task.max_occurrences,
+        recurring_root_id=task.recurring_root_id,
+        recurrence_trigger=task.recurrence_trigger,
+        clone_subtasks_on_recur=task.clone_subtasks_on_recur,
+        has_spawned_next=task.has_spawned_next,
+        spawn_count=spawn_count,
+        # Foreign key references
         project_id=task.project_id,
         assignee_id=task.assignee_id,
         assignee_handle=assignee.handle if assignee else None,
@@ -176,6 +414,7 @@ async def list_recent_tasks(
             created_at=task.created_at,
             parent_task_id=task.parent_task_id,
             subtask_count=len(task.subtasks) if task.subtasks else 0,
+            is_recurring=task.is_recurring,
         )
         for task in tasks
     ]
@@ -294,6 +533,7 @@ async def list_tasks(
             created_at=task.created_at,
             parent_task_id=task.parent_task_id,
             subtask_count=len(task.subtasks) if task.subtasks else 0,
+            is_recurring=task.is_recurring,
         )
         for task in tasks
     ]
@@ -339,6 +579,10 @@ async def create_task(
         due_date=data.due_date,
         project_id=project_id,
         created_by_id=worker_id,
+        # Recurring fields
+        is_recurring=data.is_recurring,
+        recurrence_pattern=data.recurrence_pattern,
+        max_occurrences=data.max_occurrences,
     )
     session.add(task)
     await session.flush()  # Get task.id without committing
@@ -355,6 +599,8 @@ async def create_task(
             "title": task.title,
             "priority": task.priority,
             "assignee_id": task.assignee_id,
+            "is_recurring": task.is_recurring,
+            "recurrence_pattern": task.recurrence_pattern,
         },
     )
 
@@ -371,6 +617,16 @@ async def create_task(
         progress_percent=task.progress_percent,
         tags=task.tags,
         due_date=task.due_date,
+        # Recurring fields
+        is_recurring=task.is_recurring,
+        recurrence_pattern=task.recurrence_pattern,
+        max_occurrences=task.max_occurrences,
+        recurring_root_id=task.recurring_root_id,
+        recurrence_trigger=task.recurrence_trigger,
+        clone_subtasks_on_recur=task.clone_subtasks_on_recur,
+        has_spawned_next=task.has_spawned_next,
+        spawn_count=0,  # New task, no spawns yet
+        # Foreign key references
         project_id=task.project_id,
         assignee_id=task.assignee_id,
         assignee_handle=assignee_handle,
@@ -455,6 +711,23 @@ async def update_task(
             "after": data.due_date.isoformat() if data.due_date else None,
         }
         task.due_date = data.due_date
+
+    # Recurring field updates
+    if data.is_recurring is not None and data.is_recurring != task.is_recurring:
+        changes["is_recurring"] = {"before": task.is_recurring, "after": data.is_recurring}
+        task.is_recurring = data.is_recurring
+    if data.recurrence_pattern is not None and data.recurrence_pattern != task.recurrence_pattern:
+        changes["recurrence_pattern"] = {
+            "before": task.recurrence_pattern,
+            "after": data.recurrence_pattern,
+        }
+        task.recurrence_pattern = data.recurrence_pattern
+    if data.max_occurrences is not None and data.max_occurrences != task.max_occurrences:
+        changes["max_occurrences"] = {
+            "before": task.max_occurrences,
+            "after": data.max_occurrences,
+        }
+        task.max_occurrences = data.max_occurrences
 
     if changes:
         task.updated_at = datetime.utcnow()
@@ -574,6 +847,10 @@ async def update_status(
         task.completed_at = datetime.utcnow()
         task.progress_percent = 100
 
+        # Handle recurring task creation
+        if task.is_recurring and task.recurrence_pattern:
+            await create_next_occurrence(session, task, worker_id, worker_type)
+
     session.add(task)
 
     await log_action(
@@ -690,6 +967,12 @@ async def assign_task(
     await session.commit()
     await session.refresh(task)
 
+    # Compute spawn_count for recurring tasks
+    spawn_count = 0
+    if task.is_recurring:
+        root_id = task.recurring_root_id or task.id
+        spawn_count = await get_spawn_count(session, root_id)
+
     return TaskRead(
         id=task.id,
         title=task.title,
@@ -699,6 +982,16 @@ async def assign_task(
         progress_percent=task.progress_percent,
         tags=task.tags,
         due_date=task.due_date,
+        # Recurring fields
+        is_recurring=task.is_recurring,
+        recurrence_pattern=task.recurrence_pattern,
+        max_occurrences=task.max_occurrences,
+        recurring_root_id=task.recurring_root_id,
+        recurrence_trigger=task.recurrence_trigger,
+        clone_subtasks_on_recur=task.clone_subtasks_on_recur,
+        has_spawned_next=task.has_spawned_next,
+        spawn_count=spawn_count,
+        # Foreign key references
         project_id=task.project_id,
         assignee_id=task.assignee_id,
         assignee_handle=assignee_handle,
@@ -781,6 +1074,16 @@ async def create_subtask(
         progress_percent=subtask.progress_percent,
         tags=subtask.tags,
         due_date=subtask.due_date,
+        # Recurring fields
+        is_recurring=subtask.is_recurring,
+        recurrence_pattern=subtask.recurrence_pattern,
+        max_occurrences=subtask.max_occurrences,
+        recurring_root_id=subtask.recurring_root_id,
+        recurrence_trigger=subtask.recurrence_trigger,
+        clone_subtasks_on_recur=subtask.clone_subtasks_on_recur,
+        has_spawned_next=subtask.has_spawned_next,
+        spawn_count=0,  # New subtask, no spawns yet
+        # Foreign key references
         project_id=subtask.project_id,
         assignee_id=subtask.assignee_id,
         assignee_handle=assignee_handle,
@@ -831,6 +1134,13 @@ async def approve_task(
         details={"from_status": "review", "to_status": "completed"},
     )
 
+    # Handle recurring task - create next occurrence
+    new_task = None
+    if task.is_recurring and task.recurrence_pattern:
+        new_task = await create_next_occurrence(
+            session, task, worker_id, worker_type
+        )
+
     await session.commit()
     await session.refresh(task)
 
@@ -838,7 +1148,11 @@ async def approve_task(
     if task.assignee_id:
         assignee = await session.get(Worker, task.assignee_id)
 
-    return task_to_read(task, assignee)
+    # Compute spawn count for response
+    root_id = task.recurring_root_id or task.id
+    spawn_count = await get_spawn_count(session, root_id) if task.is_recurring else 0
+
+    return task_to_read(task, assignee, spawn_count=spawn_count)
 
 
 @router.post("/api/tasks/{task_id}/reject", response_model=TaskRead)

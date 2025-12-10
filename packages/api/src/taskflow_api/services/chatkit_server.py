@@ -799,11 +799,23 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             title = payload.get("task", {}).get("title") or payload.get("title", "")
             description = payload.get("task", {}).get("description") or payload.get("description")
             priority = payload.get("task", {}).get("priority") or payload.get("priority", "medium")
+            recurrence_pattern = (
+                payload.get("task", {}).get("recurrencePattern")
+                or payload.get("recurrence_pattern")
+            )
+            max_occurrences = (
+                payload.get("task", {}).get("maxOccurrences")
+                or payload.get("max_occurrences")
+            )
 
             message = f"Create a new task: {title}"
             if description:
                 message += f" - {description}"
             message += f" with priority {priority}"
+            if recurrence_pattern:
+                message += f", recurring {recurrence_pattern}"
+                if max_occurrences:
+                    message += f" (max {max_occurrences} times)"
             if project_id:
                 message += f" in project {project_id}"
             return message
@@ -1118,33 +1130,55 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         description = payload.get("task.description") or payload.get("description")
         priority = payload.get("task.priority") or payload.get("priority", "medium")
         assignee_id = payload.get("task.assigneeId") or payload.get("assigned_to")
+        recurrence_pattern = (
+            payload.get("task.recurrencePattern") or payload.get("recurrence_pattern")
+        )
+        max_occurrences_str = (
+            payload.get("task.maxOccurrences") or payload.get("max_occurrences")
+        )
 
         if not title:
             raise ValueError("title required")
 
-        # Note: priority and assignee_id are collected but may not be fully
-        # supported by all MCP versions. The MCP tool taskflow_add_task accepts
-        # title, description, priority, and assigned_to
+        # Parse max_occurrences as integer if provided
+        max_occurrences = None
+        if max_occurrences_str:
+            try:
+                max_occurrences = int(max_occurrences_str)
+            except (ValueError, TypeError):
+                pass
+
+        # Build MCP tool arguments
+        mcp_args: dict[str, Any] = {
+            "title": title,
+            "description": description,
+            "priority": priority,
+            "assigned_to": assignee_id,
+            "project_id": payload.get("project_id") or context.metadata.get("project_id"),
+            "user_id": context.user_id,
+            "access_token": context.metadata.get("access_token", ""),
+        }
+
+        # Add recurring fields if pattern is set
+        if recurrence_pattern:
+            mcp_args["is_recurring"] = True
+            mcp_args["recurrence_pattern"] = recurrence_pattern
+            if max_occurrences:
+                mcp_args["max_occurrences"] = max_occurrences
 
         # Call MCP tool to create task
-        result = await mcp_server.call_tool(
-            "taskflow_add_task",
-            {
-                "title": title,
-                "description": description,
-                "priority": priority,
-                "assigned_to": assignee_id,
-                "project_id": payload.get("project_id") or context.metadata.get("project_id"),
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-            },
-        )
+        result = await mcp_server.call_tool("taskflow_add_task", mcp_args)
         data = _parse_mcp_result(result)
         task_id = data.get("task_id") if isinstance(data, dict) else None
         project_name = context.metadata.get("project_name")
 
+        # Build confirmation message
+        message = f"Task '{title}' created successfully!"
+        if recurrence_pattern:
+            message = f"Recurring task '{title}' created! It will repeat {recurrence_pattern}."
+
         return {
-            "message": f"Task '{title}' created successfully!",
+            "message": message,
             "confirmation": build_task_created_confirmation(
                 task_id=task_id or 0,
                 title=title,

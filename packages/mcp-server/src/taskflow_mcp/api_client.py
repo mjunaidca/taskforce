@@ -192,6 +192,9 @@ class TaskFlowAPIClient:
         project_id: int,
         title: str,
         description: str | None = None,
+        is_recurring: bool = False,
+        recurrence_pattern: str | None = None,
+        max_occurrences: int | None = None,
         access_token: str | None = None,
     ) -> dict[str, Any]:
         """Create a new task.
@@ -201,15 +204,24 @@ class TaskFlowAPIClient:
             project_id: Project ID to create task in
             title: Task title
             description: Optional task description
+            is_recurring: Whether task repeats when completed
+            recurrence_pattern: Recurrence pattern (1m, 5m, etc.)
+            max_occurrences: Max recurrences (null=unlimited)
             access_token: JWT from Chat Server (required in production)
 
         Returns:
             Created task object
         """
         client = await self._get_client()
-        data = {"title": title}
+        data: dict[str, Any] = {"title": title}
         if description:
             data["description"] = description
+        if is_recurring:
+            data["is_recurring"] = True
+            if recurrence_pattern:
+                data["recurrence_pattern"] = recurrence_pattern
+            if max_occurrences:
+                data["max_occurrences"] = max_occurrences
 
         response = await client.post(
             f"/api/projects/{project_id}/tasks",

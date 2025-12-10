@@ -90,6 +90,28 @@ export interface AgentUpdate {
 // Task Types
 export type TaskStatus = "pending" | "in_progress" | "review" | "completed" | "blocked" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "critical";
+export type RecurrencePattern = "1m" | "5m" | "10m" | "15m" | "30m" | "1h" | "daily" | "weekly" | "monthly";
+export type RecurrenceTrigger = "on_complete" | "on_due_date" | "both";
+
+// Recurrence pattern options for UI dropdowns
+export const RECURRENCE_PATTERNS: { value: RecurrencePattern; label: string }[] = [
+  { value: "1m", label: "Every minute" },
+  { value: "5m", label: "Every 5 minutes" },
+  { value: "10m", label: "Every 10 minutes" },
+  { value: "15m", label: "Every 15 minutes" },
+  { value: "30m", label: "Every 30 minutes" },
+  { value: "1h", label: "Every hour" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
+// Recurrence trigger options for UI dropdowns
+export const RECURRENCE_TRIGGERS: { value: RecurrenceTrigger; label: string; description: string; comingSoon?: boolean }[] = [
+  { value: "on_complete", label: "On Completion", description: "Create next occurrence when task is completed" },
+  { value: "on_due_date", label: "On Due Date", description: "Create next occurrence when due date passes", comingSoon: true },
+  { value: "both", label: "Both", description: "Create on completion or due date, whichever comes first", comingSoon: true },
+];
 
 export interface TaskListItem {
   id: number;
@@ -103,6 +125,8 @@ export interface TaskListItem {
   created_at: string;
   parent_task_id: number | null;
   subtask_count: number;
+  // Recurring indicator
+  is_recurring: boolean;
 }
 
 export interface TaskRead {
@@ -114,6 +138,16 @@ export interface TaskRead {
   progress_percent: number;
   tags: string[];
   due_date: string | null;
+  // Recurring fields
+  is_recurring: boolean;
+  recurrence_pattern: string | null;
+  max_occurrences: number | null;
+  recurring_root_id: number | null;
+  recurrence_trigger: RecurrenceTrigger;
+  clone_subtasks_on_recur: boolean;
+  has_spawned_next: boolean;
+  spawn_count: number;
+  // Foreign key references
   project_id: number;
   assignee_id: number | null;
   assignee_handle: string | null;
@@ -134,6 +168,12 @@ export interface TaskCreate {
   parent_task_id?: number;
   tags?: string[];
   due_date?: string;
+  // Recurring fields
+  is_recurring?: boolean;
+  recurrence_pattern?: RecurrencePattern;
+  max_occurrences?: number;
+  recurrence_trigger?: RecurrenceTrigger;
+  clone_subtasks_on_recur?: boolean;
 }
 
 export interface TaskUpdate {
@@ -142,6 +182,12 @@ export interface TaskUpdate {
   priority?: TaskPriority;
   tags?: string[];
   due_date?: string;
+  // Recurring fields
+  is_recurring?: boolean;
+  recurrence_pattern?: RecurrencePattern;
+  max_occurrences?: number;
+  recurrence_trigger?: RecurrenceTrigger;
+  clone_subtasks_on_recur?: boolean;
 }
 
 export interface TaskStatusUpdate {

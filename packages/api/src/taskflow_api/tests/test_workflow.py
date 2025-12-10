@@ -61,8 +61,8 @@ async def test_status_transition_review_to_completed(client: AsyncClient) -> Non
 
 
 @pytest.mark.asyncio
-async def test_invalid_status_transition(client: AsyncClient) -> None:
-    """Test invalid transition: pending -> completed (should fail)."""
+async def test_direct_completion_allowed(client: AsyncClient) -> None:
+    """Test direct completion: pending -> completed (now allowed)."""
     project = await create_test_project(client)
     task = await create_test_task(client, project["id"])
 
@@ -70,8 +70,10 @@ async def test_invalid_status_transition(client: AsyncClient) -> None:
         f"/api/tasks/{task['id']}/status",
         json={"status": "completed"},
     )
-    assert response.status_code == 400
-    assert "invalid" in response.json()["error"].lower()
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "completed"
+    assert data["completed_at"] is not None
 
 
 @pytest.mark.asyncio
