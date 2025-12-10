@@ -799,13 +799,11 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             title = payload.get("task", {}).get("title") or payload.get("title", "")
             description = payload.get("task", {}).get("description") or payload.get("description")
             priority = payload.get("task", {}).get("priority") or payload.get("priority", "medium")
-            recurrence_pattern = (
-                payload.get("task", {}).get("recurrencePattern")
-                or payload.get("recurrence_pattern")
+            recurrence_pattern = payload.get("task", {}).get("recurrencePattern") or payload.get(
+                "recurrence_pattern"
             )
-            max_occurrences = (
-                payload.get("task", {}).get("maxOccurrences")
-                or payload.get("max_occurrences")
+            max_occurrences = payload.get("task", {}).get("maxOccurrences") or payload.get(
+                "max_occurrences"
             )
 
             message = f"Create a new task: {title}"
@@ -1130,12 +1128,10 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         description = payload.get("task.description") or payload.get("description")
         priority = payload.get("task.priority") or payload.get("priority", "medium")
         assignee_id = payload.get("task.assigneeId") or payload.get("assigned_to")
-        recurrence_pattern = (
-            payload.get("task.recurrencePattern") or payload.get("recurrence_pattern")
+        recurrence_pattern = payload.get("task.recurrencePattern") or payload.get(
+            "recurrence_pattern"
         )
-        max_occurrences_str = (
-            payload.get("task.maxOccurrences") or payload.get("max_occurrences")
-        )
+        max_occurrences_str = payload.get("task.maxOccurrences") or payload.get("max_occurrences")
 
         if not title:
             raise ValueError("title required")
