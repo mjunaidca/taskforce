@@ -16,12 +16,17 @@ class Project(SQLModel, table=True):
     __tablename__ = "project"
 
     id: int | None = Field(default=None, primary_key=True)
+    tenant_id: str = Field(
+        default="taskflow",
+        max_length=100,
+        index=True,
+        description="Organization/tenant identifier from SSO",
+    )
     slug: str = Field(
-        unique=True,
         index=True,
         max_length=100,
         regex=r"^[a-z0-9-]+$",
-        description="Unique project identifier (lowercase, numbers, hyphens)",
+        description="Unique project identifier within tenant (lowercase, numbers, hyphens)",
     )
     name: str = Field(max_length=200, description="Human-readable project name")
     description: str | None = Field(default=None, description="Optional project description")

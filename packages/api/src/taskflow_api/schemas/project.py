@@ -34,6 +34,7 @@ class ProjectRead(BaseModel):
     description: str | None
     owner_id: str
     is_default: bool
+    tenant_id: str
     member_count: int = 0
     task_count: int = 0
     created_at: datetime
