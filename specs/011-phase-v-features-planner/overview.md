@@ -16,7 +16,8 @@ Phase V implements **Intermediate** and **Advanced** level features, then deploy
 | Agent | Domain | Time | Spec |
 |-------|--------|------|------|
 | **Agent 1** | Feature Fields (Search/Filter/Sort) + N+1 Fix | 45-60 min | [PRD](./agent-1-feature-fields-prd.md), [Instructions](./AGENT-1-INSTRUCTIONS.md) |
-| **Agent 2** | Dapr + Events (Pub/Sub, Recurring Tasks) | 90 min | TBD |
+| **Agent 2A** | Recurring Tasks (model + logic + UI) | 45 min | [PRD](./agent-2a-recurring-tasks-prd.md) |
+| **Agent 2B** | Notifications & Dapr (events + service + bell) | 60 min | [PRD](./agent-2b-notifications-dapr-prd.md) |
 | **Agent 3** | CI/CD (GitHub Actions) | 30 min | TBD |
 | **Agent 4** | Docs + Monitoring | 30 min | TBD |
 
