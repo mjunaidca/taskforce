@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/providers/auth-provider"
 import { organization } from "@/lib/auth-client"
-import { useRouter } from "next/navigation"
+import { initiateLogin } from "@/lib/auth"
 import { useState } from "react"
 import {
   DropdownMenu,
@@ -24,17 +24,18 @@ import { Building2, Check, Loader2 } from "lucide-react"
  * How it works:
  * 1. User clicks organization → calls organization.setActive()
  * 2. SSO updates session.activeOrganizationId in database
- * 3. router.refresh() triggers Next.js to re-fetch server components
- * 4. SSO generates NEW JWT with updated tenant_id
+ * 3. Redirect to SSO login with prompt=none for silent re-auth
+ * 4. SSO issues NEW JWT with updated tenant_id from session
  * 5. All subsequent requests use new JWT with new tenant_id
  *
- * Performance: ~200-500ms total (includes page refresh)
- * - API call: ~20-40ms
- * - Page refresh: ~200-500ms
+ * Why redirect instead of refresh?
+ * - The JWT (taskflow_id_token cookie) is issued at login time
+ * - router.refresh() only re-renders React components, doesn't replace JWT
+ * - Need full OAuth flow to get new JWT with updated tenant_id claim
+ * - prompt=none enables silent re-auth (no login screen shown)
  */
 export function OrgSwitcher() {
   const { user } = useAuth()
-  const router = useRouter()
   const [isSwitching, setIsSwitching] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -62,17 +63,15 @@ export function OrgSwitcher() {
     setError(null)
 
     try {
-      // Call Better Auth to update session's active organization
+      // Step 1: Update SSO session's active organization
       await organization.setActive({ organizationId: orgId })
 
-      // Refresh page to get new JWT with updated tenant_id
-      // This triggers Next.js to:
-      // 1. Re-run server components
-      // 2. Fetch new session from SSO
-      // 3. SSO reads updated session.activeOrganizationId
-      // 4. SSO generates new JWT with tenant_id = new org
-      // 5. Browser receives new JWT in httpOnly cookie
-      router.refresh()
+      // Step 2: Re-authenticate to get new JWT with updated tenant_id
+      // The SSO will read the updated activeOrganizationId from session
+      // and include it as tenant_id in the new JWT
+      // Using initiateLogin triggers full OAuth flow to get fresh tokens
+      // Note: initiateLogin sets window.location.href which triggers navigation
+      initiateLogin()
     } catch (err) {
       console.error("Failed to switch organization:", err)
       setError(err instanceof Error ? err.message : "Failed to switch organization")

@@ -2,12 +2,12 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..auth import CurrentUser, get_current_user
+from ..auth import CurrentUser, get_current_user, get_tenant_id
 from ..database import get_session
 from ..models.project import Project, ProjectMember
 from ..models.task import Task
@@ -20,17 +20,28 @@ router = APIRouter(tags=["Projects"])
 
 @router.get("", response_model=list[ProjectRead])
 async def list_projects(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> list[ProjectRead]:
-    """List projects where user is a member."""
-    worker = await ensure_user_setup(session, user)
+    """List projects where user is a member, scoped by tenant."""
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
 
-    # Get project IDs where user is a member
-    member_stmt = select(ProjectMember.project_id).where(ProjectMember.worker_id == worker_id)
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Get project IDs where user is a member AND project is in tenant
+    member_stmt = (
+        select(ProjectMember.project_id)
+        .join(Project, ProjectMember.project_id == Project.id)
+        .where(
+            ProjectMember.worker_id == worker_id,
+            Project.tenant_id == tenant_id,
+        )
+    )
     member_result = await session.exec(member_stmt)
     project_ids = list(member_result.all())
 
@@ -63,6 +74,7 @@ async def list_projects(
                 description=project.description,
                 owner_id=project.owner_id,
                 is_default=project.is_default,
+                tenant_id=project.tenant_id,
                 member_count=member_count,
                 task_count=task_count,
                 created_at=project.created_at,
@@ -76,23 +88,34 @@ async def list_projects(
 @router.post("", response_model=ProjectRead, status_code=201)
 async def create_project(
     data: ProjectCreate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
-    """Create a new project."""
-    worker = await ensure_user_setup(session, user)
+    """Create a new project in current tenant."""
+    worker = await ensure_user_setup(session, user, request)
     # Extract primitive values before any commits
     worker_id = worker.id
     worker_type = worker.type
 
-    # Check slug uniqueness
-    stmt = select(Project).where(Project.slug == data.slug)
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Check slug uniqueness WITHIN TENANT (not global)
+    stmt = select(Project).where(
+        Project.tenant_id == tenant_id,
+        Project.slug == data.slug,
+    )
     result = await session.exec(stmt)
     if result.first():
-        raise HTTPException(status_code=400, detail=f"Project slug '{data.slug}' already exists")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Project slug '{data.slug}' already exists in your organization",
+        )
 
-    # Create project
+    # Create project with tenant
     project = Project(
+        tenant_id=tenant_id,
         slug=data.slug,
         name=data.name,
         description=data.description,
@@ -119,7 +142,7 @@ async def create_project(
         action="created",
         actor_id=worker_id,
         actor_type=worker_type,
-        details={"slug": data.slug, "name": data.name},
+        details={"slug": data.slug, "name": data.name, "tenant_id": tenant_id},
     )
 
     # Single commit for all changes
@@ -133,6 +156,7 @@ async def create_project(
         description=project.description,
         owner_id=project.owner_id,
         is_default=project.is_default,
+        tenant_id=project.tenant_id,
         member_count=1,
         task_count=0,
         created_at=project.created_at,
@@ -143,24 +167,36 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectRead)
 async def get_project(
     project_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
-    """Get project details."""
-    worker = await ensure_user_setup(session, user)
+    """Get project details (tenant-scoped, returns 404 for cross-tenant)."""
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
 
-    project = await session.get(Project, project_id)
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Fetch project with tenant check
+    stmt = select(Project).where(
+        Project.id == project_id,
+        Project.tenant_id == tenant_id,
+    )
+    result = await session.exec(stmt)
+    project = result.first()
+
     if not project:
+        # Returns 404 for both "doesn't exist" and "wrong tenant"
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check membership
-    stmt = select(ProjectMember).where(
+    # Check membership (within tenant)
+    membership_stmt = select(ProjectMember).where(
         ProjectMember.project_id == project_id,
         ProjectMember.worker_id == worker_id,
     )
-    result = await session.exec(stmt)
-    if not result.first():
+    membership_result = await session.exec(membership_stmt)
+    if not membership_result.first():
         raise HTTPException(status_code=403, detail="Not a member of this project")
 
     # Count members and tasks
@@ -179,6 +215,7 @@ async def get_project(
         description=project.description,
         owner_id=project.owner_id,
         is_default=project.is_default,
+        tenant_id=project.tenant_id,
         member_count=member_count,
         task_count=task_count,
         created_at=project.created_at,
@@ -190,15 +227,26 @@ async def get_project(
 async def update_project(
     project_id: int,
     data: ProjectUpdate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
-    """Update project (owner only)."""
-    worker = await ensure_user_setup(session, user)
+    """Update project (owner only, tenant-scoped)."""
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
     worker_type = worker.type
 
-    project = await session.get(Project, project_id)
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Fetch project with tenant check
+    stmt = select(Project).where(
+        Project.id == project_id,
+        Project.tenant_id == tenant_id,
+    )
+    result = await session.exec(stmt)
+    project = result.first()
+
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -227,7 +275,7 @@ async def update_project(
             action="updated",
             actor_id=worker_id,
             actor_type=worker_type,
-            details=changes,
+            details={**changes, "tenant_id": tenant_id},
         )
 
         await session.commit()
@@ -249,6 +297,7 @@ async def update_project(
         description=project.description,
         owner_id=project.owner_id,
         is_default=project.is_default,
+        tenant_id=project.tenant_id,
         member_count=member_count,
         task_count=task_count,
         created_at=project.created_at,
@@ -259,16 +308,27 @@ async def update_project(
 @router.delete("/{project_id}")
 async def delete_project(
     project_id: int,
+    request: Request,
     force: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
-    """Delete project (owner only)."""
-    worker = await ensure_user_setup(session, user)
+    """Delete project (owner only, tenant-scoped)."""
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
     worker_type = worker.type
 
-    project = await session.get(Project, project_id)
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Fetch project with tenant check
+    stmt = select(Project).where(
+        Project.id == project_id,
+        Project.tenant_id == tenant_id,
+    )
+    result = await session.exec(stmt)
+    project = result.first()
+
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -314,7 +374,12 @@ async def delete_project(
         action="deleted",
         actor_id=worker_id,
         actor_type=worker_type,
-        details={"slug": project_slug, "force": force, "task_count": task_count},
+        details={
+            "slug": project_slug,
+            "force": force,
+            "task_count": task_count,
+            "tenant_id": tenant_id,
+        },
     )
 
     await session.delete(project)

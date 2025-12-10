@@ -12,7 +12,7 @@ import { genericOAuth } from "better-auth/plugins"; // 008-social-login-provider
 import { db } from "./db";
 import * as schema from "../../auth-schema"; // Use Better Auth generated schema
 import { member } from "../../auth-schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { Resend } from "resend";
 import * as nodemailer from "nodemailer";
 import { TRUSTED_CLIENTS, DEFAULT_ORG_ID } from "./trusted-clients";
@@ -625,8 +625,28 @@ export const auth = betterAuth({
           console.log("[JWT] Organization Names:", organizationNames);
         }
 
-        // Primary tenant is the first organization (can be extended to support active org)
-        const primaryTenantId = organizationIds[0] || null;
+        // Get active organization from user's most recent session
+        // This allows org switcher to update tenant_id in JWT
+        let activeOrgId: string | null = null;
+        const userSessions = await db
+          .select({ activeOrganizationId: schema.session.activeOrganizationId })
+          .from(schema.session)
+          .where(eq(schema.session.userId, user.id))
+          .orderBy(desc(schema.session.updatedAt))
+          .limit(1);
+
+        if (userSessions.length > 0 && userSessions[0].activeOrganizationId) {
+          // Verify the active org is one the user actually belongs to
+          if (organizationIds.includes(userSessions[0].activeOrganizationId)) {
+            activeOrgId = userSessions[0].activeOrganizationId;
+            console.log("[JWT] Using activeOrganizationId from session:", activeOrgId);
+          } else {
+            console.log("[JWT] Session activeOrganizationId not in user's orgs, falling back");
+          }
+        }
+
+        // Use active org if set, otherwise fall back to first org
+        const primaryTenantId = activeOrgId || organizationIds[0] || null;
 
         console.log("[JWT] Primary tenant_id:", primaryTenantId);
 

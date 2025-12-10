@@ -1,9 +1,10 @@
 """User setup service - handles first login initialization."""
 
+from fastapi import Request
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..auth import CurrentUser
+from ..auth import CurrentUser, get_tenant_id
 from ..models.project import Project, ProjectMember
 from ..models.worker import Worker
 
@@ -52,7 +53,7 @@ async def get_or_create_worker(session: AsyncSession, user: CurrentUser) -> Work
 
 
 async def ensure_default_project(
-    session: AsyncSession, user: CurrentUser, worker_id: int
+    session: AsyncSession, user: CurrentUser, worker_id: int, request: Request | None = None
 ) -> Project:
     """Ensure user has a Default project.
 
@@ -62,8 +63,12 @@ async def ensure_default_project(
         session: Database session
         user: Current user from auth
         worker_id: Worker ID (passed as int to avoid detached object issues)
+        request: FastAPI request (for tenant context extraction)
     """
-    # Check if default project exists
+    # Get tenant context
+    tenant_id = get_tenant_id(user, request)
+
+    # Check if default project exists for this user
     stmt = select(Project).where(Project.owner_id == user.id, Project.is_default.is_(True))
     result = await session.exec(stmt)
     project = result.first()
@@ -74,11 +79,14 @@ async def ensure_default_project(
     # Create default project
     slug = f"default-{user.id[:8].lower()}"
 
-    # Handle slug collision
+    # Handle slug collision within tenant (not global)
     base_slug = slug
     suffix = 1
     while True:
-        stmt = select(Project).where(Project.slug == slug)
+        stmt = select(Project).where(
+            Project.tenant_id == tenant_id,
+            Project.slug == slug,
+        )
         result = await session.exec(stmt)
         if not result.first():
             break
@@ -86,6 +94,7 @@ async def ensure_default_project(
         suffix += 1
 
     project = Project(
+        tenant_id=tenant_id,
         slug=slug,
         name="Default",
         description="Your personal task workspace",
@@ -108,20 +117,27 @@ async def ensure_default_project(
     return project
 
 
-async def ensure_user_setup(session: AsyncSession, user: CurrentUser) -> Worker:
+async def ensure_user_setup(
+    session: AsyncSession, user: CurrentUser, request: Request | None = None
+) -> Worker:
     """Ensure user is fully set up on first API call.
 
     Creates:
     1. Worker record from SSO profile
-    2. Default project
+    2. Default project (in user's tenant)
     3. User as owner of default project
+
+    Args:
+        session: Database session
+        user: Current user from auth
+        request: FastAPI request (for tenant context extraction)
 
     Returns the user's Worker record.
     """
     worker = await get_or_create_worker(session, user)
     # Store worker.id before any further commits to avoid detached object issues
     worker_id = worker.id
-    await ensure_default_project(session, user, worker_id)
+    await ensure_default_project(session, user, worker_id, request)
     # Refresh worker before returning to ensure it's attached to session
     await session.refresh(worker)
     return worker

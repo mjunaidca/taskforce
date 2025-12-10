@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Loader2, CheckSquare, Bot, User } from "lucide-react"
+import { ArrowLeft, Loader2, CheckSquare, Bot, User, FolderOpen } from "lucide-react"
 
 export default function NewTaskPage() {
   const router = useRouter()
@@ -26,10 +26,12 @@ export default function NewTaskPage() {
   const projectId = Number(params.id)
 
   const [project, setProject] = useState<ProjectRead | null>(null)
+  const [allProjects, setAllProjects] = useState<ProjectRead[]>([])
   const [members, setMembers] = useState<MemberRead[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedProjectId, setSelectedProjectId] = useState<number>(projectId)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -42,12 +44,14 @@ export default function NewTaskPage() {
     async function fetchData() {
       try {
         setLoading(true)
-        const [projectData, membersData] = await Promise.all([
-          api.getProject(projectId),
-          api.getProjectMembers(projectId),
+        const [projectData, membersData, projectsData] = await Promise.all([
+          api.getProject(selectedProjectId),
+          api.getProjectMembers(selectedProjectId),
+          api.getProjects(),
         ])
         setProject(projectData)
         setMembers(membersData)
+        setAllProjects(projectsData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load project")
       } finally {
@@ -56,7 +60,14 @@ export default function NewTaskPage() {
     }
 
     fetchData()
-  }, [projectId])
+  }, [selectedProjectId])
+
+  const handleProjectChange = (newProjectId: string) => {
+    const id = Number(newProjectId)
+    setSelectedProjectId(id)
+    // Reset assignee when switching projects (members differ per project)
+    setAssigneeId("")
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,7 +80,7 @@ export default function NewTaskPage() {
 
     try {
       setSubmitting(true)
-      const task = await api.createTask(projectId, {
+      const task = await api.createTask(selectedProjectId, {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
@@ -118,7 +129,7 @@ export default function NewTaskPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild>
-        <Link href={`/projects/${projectId}`}>
+        <Link href={`/projects/${selectedProjectId}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {project.name}
         </Link>
@@ -134,7 +145,7 @@ export default function NewTaskPage() {
             <div>
               <CardTitle>Create New Task</CardTitle>
               <CardDescription>
-                Add a new task to <span className="text-primary">{project.name}</span>
+                Add a new task to your project
               </CardDescription>
             </div>
           </div>
@@ -146,6 +157,33 @@ export default function NewTaskPage() {
                 {error}
               </div>
             )}
+
+            {/* Project Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="project">Project</Label>
+              <Select
+                value={selectedProjectId.toString()}
+                onValueChange={handleProjectChange}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allProjects.map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        <span>{p.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select which project this task belongs to
+              </p>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
@@ -250,7 +288,7 @@ export default function NewTaskPage() {
                 Create Task
               </Button>
               <Button type="button" variant="outline" asChild disabled={submitting}>
-                <Link href={`/projects/${projectId}`}>Cancel</Link>
+                <Link href={`/projects/${selectedProjectId}`}>Cancel</Link>
               </Button>
             </div>
           </form>
