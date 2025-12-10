@@ -54,7 +54,7 @@ function OrchestratorDemo() {
             <div className="h-6 w-6 rounded bg-ifk-cyan-500/20 text-ifk-cyan-400 flex items-center justify-center">
               <Sparkles className="h-3 w-3" />
             </div>
-            <span className="text-xs font-bold text-ifk-gray-300 uppercase tracking-widest">Generative Planning</span>
+            <span className="text-xs font-bold text-ifk-gray-300 uppercase tracking-widest">Conversational Gen UI (Planning)</span>
           </div>
 
           <div className="space-y-6 flex-1">
@@ -98,7 +98,7 @@ function OrchestratorDemo() {
               <div className="h-6 w-6 rounded bg-ifk-gray-800 text-ifk-gray-400 flex items-center justify-center">
                 <Terminal className="h-3 w-3" />
               </div>
-              <span className="text-xs font-bold text-ifk-gray-300 uppercase tracking-widest">Active Workers</span>
+              <span className="text-xs font-bold text-ifk-gray-300 uppercase tracking-widest">Coding Agent Execution (Working)</span>
             </div>
             <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px]">MCP Connected</Badge>
           </div>
@@ -423,8 +423,8 @@ export default function Home() {
               <Button size="lg" onClick={handleGetStarted} className="h-14 px-8 text-lg bg-ifk-cyan-600 hover:bg-ifk-cyan-500 shadow-cyan-lg hover:shadow-cyan-xl transition-all">
                 Start Managing
               </Button>
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-ifk-gray-800 hover:bg-ifk-gray-900 text-ifk-gray-300">
-                Read Documentation
+              <Button size="lg" variant="outline" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="h-14 px-8 text-lg border-ifk-gray-800 hover:bg-ifk-gray-900 text-ifk-gray-300">
+                Experience Live Demo
               </Button>
             </div>
           </div>
@@ -438,7 +438,7 @@ export default function Home() {
       </section>
 
       {/* 2. Live Execution (Orchestrator Demo) */}
-      <section className="py-24 border-y border-ifk-gray-900 bg-ifk-gray-950/30">
+      <section id="demo" className="py-24 border-y border-ifk-gray-900 bg-ifk-gray-950/30">
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold mb-4">Unified Planning & Execution</h2>
