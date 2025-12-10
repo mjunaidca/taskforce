@@ -1,0 +1,88 @@
+---
+# SSO Platform ConfigMap
+{{- if .Values.sso.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.sso.name }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "sso") | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.sso.env.NODE_ENV | quote }}
+  BETTER_AUTH_URL: {{ .Values.sso.env.BETTER_AUTH_URL | quote }}
+  ALLOWED_ORIGINS: {{ .Values.sso.env.ALLOWED_ORIGINS | default "http://localhost:3000,http://localhost:3001" | quote }}
+  DATABASE_HOST: {{ .Values.sso.database.host | quote }}
+  DATABASE_PORT: {{ .Values.sso.database.port | quote }}
+  DATABASE_NAME: {{ .Values.sso.database.name | quote }}
+  DATABASE_USER: {{ .Values.sso.database.user | quote }}
+  {{- if .Values.sso.smtp.enabled }}
+  SMTP_HOST: {{ .Values.sso.smtp.host | quote }}
+  SMTP_PORT: {{ .Values.sso.smtp.port | quote }}
+  SMTP_USER: {{ .Values.sso.smtp.user | quote }}
+  SMTP_SECURE: {{ .Values.sso.smtp.secure | quote }}
+  EMAIL_FROM: {{ .Values.sso.smtp.emailFrom | quote }}
+  {{- end }}
+{{- end }}
+
+---
+# API ConfigMap
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.api.name }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "api") | nindent 4 }}
+data:
+  ENV: {{ .Values.api.env.ENV | quote }}
+  SSO_URL: {{ .Values.api.env.SSO_URL | quote }}
+  CORS_ORIGINS: {{ .Values.api.env.CORS_ORIGINS | quote }}
+  MCP_SERVER_URL: {{ .Values.api.env.MCP_SERVER_URL | default "http://mcp-server:8001/mcp" | quote }}
+  DATABASE_HOST: {{ .Values.api.database.host | quote }}
+  DATABASE_PORT: {{ .Values.api.database.port | quote }}
+  DATABASE_NAME: {{ .Values.api.database.name | quote }}
+  DATABASE_USER: {{ .Values.api.database.user | quote }}
+{{- end }}
+
+---
+# MCP Server ConfigMap
+{{- if .Values.mcpServer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.mcpServer.name }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "mcp") | nindent 4 }}
+data:
+  ENV: {{ .Values.mcpServer.env.ENV | quote }}
+  SSO_URL: {{ .Values.mcpServer.env.SSO_URL | quote }}
+  TASKFLOW_API_URL: {{ .Values.mcpServer.env.TASKFLOW_API_URL | quote }}
+  DATABASE_HOST: {{ .Values.mcpServer.database.host | quote }}
+  DATABASE_PORT: {{ .Values.mcpServer.database.port | quote }}
+  DATABASE_NAME: {{ .Values.mcpServer.database.name | quote }}
+  DATABASE_USER: {{ .Values.mcpServer.database.user | quote }}
+{{- end }}
+
+---
+# Web Dashboard ConfigMap
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.web.name }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "web") | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.web.env.NODE_ENV | quote }}
+  # Client-side (browser) - uses localhost for port-forward access
+  NEXT_PUBLIC_API_URL: {{ .Values.web.env.NEXT_PUBLIC_API_URL | quote }}
+  NEXT_PUBLIC_SSO_URL: {{ .Values.web.env.NEXT_PUBLIC_SSO_URL | quote }}
+  NEXT_PUBLIC_APP_URL: {{ .Values.web.env.NEXT_PUBLIC_APP_URL | default "http://localhost:3000" | quote }}
+  # Server-side (Next.js API routes) - uses internal K8s service names
+  SERVER_API_URL: "http://{{ .Values.api.name }}:{{ .Values.api.service.port }}"
+  SERVER_SSO_URL: "http://{{ .Values.sso.name }}:{{ .Values.sso.service.port }}"
+{{- end }}

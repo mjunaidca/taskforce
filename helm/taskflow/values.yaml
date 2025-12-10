@@ -1,0 +1,255 @@
+# TaskFlow Platform - Helm Values
+# Multi-Service Architecture with Better Auth SSO
+
+global:
+  domain: taskflow.local
+  namespace: taskflow
+  imagePullPolicy: IfNotPresent
+
+# SSO Platform (Better Auth + PostgreSQL)
+sso:
+  enabled: true
+  name: sso-platform
+  replicaCount: 1
+
+  image:
+    repository: taskflow/sso-platform
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  # Separate migrations image (builder stage with full dependencies)
+  migrationsImage:
+    repository: taskflow/sso-platform-migrations
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3001
+    targetPort: 3001
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: sso.taskflow.local
+    tls:
+      enabled: false
+
+  database:
+    host: sso-postgres
+    port: 5432
+    name: sso_db
+    user: sso_user
+    # Password stored in secret
+
+  env:
+    NODE_ENV: development
+    BETTER_AUTH_URL: http://localhost:3001
+    ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001"
+    BETTER_AUTH_SECRET: changeme-generate-secure-secure
+
+  # SMTP Configuration (for email verification)
+  smtp:
+    enabled: true
+    host: smtp.gmail.com
+    port: "587"
+    user: mr.junaid.ca@gmail.com
+    password: ""  # Set via: --set-file or values-secrets.yaml (gitignored)
+    secure: "false"
+    emailFrom: no-reply@taskflow.org
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # PostgreSQL for SSO
+  postgresql:
+    enabled: true
+    name: sso-postgres
+    # SINGLE SOURCE OF TRUTH for SSO DB password
+    password: "changeme-sso-db"
+    image:
+      repository: postgres
+      tag: "16-alpine"
+
+    service:
+      port: 5432
+
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClass: standard
+
+    env:
+      POSTGRES_DB: sso_db
+      POSTGRES_USER: sso_user
+
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# API Service (FastAPI + PostgreSQL)
+api:
+  enabled: true
+  name: taskflow-api
+  replicaCount: 1
+
+  image:
+    repository: taskflow/api
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: api.taskflow.local
+    tls:
+      enabled: false
+
+  database:
+    host: api-postgres
+    port: 5432
+    name: taskflow_db
+    user: taskflow_user
+
+  env:
+    ENV: production
+    SSO_URL: http://sso-platform:3001
+    CORS_ORIGINS: "http://localhost:3000,http://localhost:3001,http://taskflow.local,http://sso.taskflow.local"
+    MCP_SERVER_URL: http://mcp-server:8001/mcp
+
+  # OpenAI config for ChatKit AI responses
+  openai:
+    apiKey: ""  # Set via: --set api.openai.apiKey or values-secrets.yaml
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # PostgreSQL for API (also used by ChatKit)
+  postgresql:
+    enabled: true
+    name: api-postgres
+    # SINGLE SOURCE OF TRUTH for API DB password
+    password: "changeme-api-db"
+    image:
+      repository: postgres
+      tag: "16-alpine"
+
+    service:
+      port: 5432
+
+    persistence:
+      enabled: true
+      size: 2Gi
+      storageClass: standard
+
+    env:
+      POSTGRES_DB: taskflow_db
+      POSTGRES_USER: taskflow_user
+
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# MCP Server (Python + Shared PostgreSQL)
+mcpServer:
+  enabled: true
+  name: mcp-server
+  replicaCount: 1
+
+  image:
+    repository: taskflow/mcp-server
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+
+  # MCP shares API's PostgreSQL
+  database:
+    host: api-postgres
+    port: 5432
+    name: taskflow_db
+    user: taskflow_user
+
+  env:
+    ENV: production
+    SSO_URL: http://sso-platform:3001
+    # MCP uses TASKFLOW_ prefix for env vars (see config.py env_prefix)
+    TASKFLOW_API_URL: http://taskflow-api:8000
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Web Dashboard (Next.js)
+web:
+  enabled: true
+  name: web-dashboard
+  replicaCount: 1
+
+  image:
+    repository: taskflow/web-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: taskflow.local
+    tls:
+      enabled: false
+
+  env:
+    NODE_ENV: production
+    # For port-forward mode, use localhost URLs
+    NEXT_PUBLIC_API_URL: http://localhost:8000
+    NEXT_PUBLIC_SSO_URL: http://localhost:3001
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Ingress Controller (NGINX)
+ingress-nginx:
+  enabled: true
+  controller:
+    service:
+      type: NodePort

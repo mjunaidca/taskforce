@@ -1,0 +1,82 @@
+{{- if and .Values.api.enabled .Values.api.postgresql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.api.postgresql.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "api-db") | nindent 4 }}
+spec:
+  serviceName: {{ .Values.api.postgresql.name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "api-db") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "api-db") | nindent 8 }}
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.api.postgresql.image.repository }}:{{ .Values.api.postgresql.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: postgres
+          containerPort: {{ .Values.api.postgresql.service.port }}
+          protocol: TCP
+        env:
+        - name: POSTGRES_DB
+          value: {{ .Values.api.postgresql.env.POSTGRES_DB | quote }}
+        - name: POSTGRES_USER
+          value: {{ .Values.api.postgresql.env.POSTGRES_USER | quote }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.api.postgresql.name }}-secret
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          {{- toYaml .Values.api.postgresql.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U {{ .Values.api.postgresql.env.POSTGRES_USER }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U {{ .Values.api.postgresql.env.POSTGRES_USER }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+  {{- if .Values.api.postgresql.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      {{- if .Values.api.postgresql.persistence.storageClass }}
+      storageClassName: {{ .Values.api.postgresql.persistence.storageClass | quote }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.api.postgresql.persistence.size }}
+  {{- else }}
+      volumes:
+      - name: postgres-data
+        emptyDir: {}
+  {{- end }}
+{{- end }}

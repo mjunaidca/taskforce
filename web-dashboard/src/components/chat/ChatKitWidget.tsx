@@ -343,7 +343,10 @@ export function ChatKitWidget({
       placeholder: "Ask about your tasks...",
     },
     widgets: {
-      onAction: async (action: { type: string; payload: any }) => {
+      onAction: async (
+        action: { type: string; payload?: Record<string, unknown> | undefined },
+        widgetItem: { id: string; widget: any }
+      ) => {
         console.log("[ChatKit] Action received:", action.type, action.payload);
 
         switch (action.type) {

@@ -1,0 +1,18 @@
+{{- if .Values.sso.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.sso.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "sso") | nindent 4 }}
+spec:
+  type: {{ .Values.sso.service.type }}
+  ports:
+  - port: {{ .Values.sso.service.port }}
+    targetPort: {{ .Values.sso.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "sso") | nindent 4 }}
+{{- end }}

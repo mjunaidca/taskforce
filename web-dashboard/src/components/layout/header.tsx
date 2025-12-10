@@ -9,12 +9,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { OrgSwitcher } from "@/components/OrgSwitcher";
-import { LogOut, User, Settings, Moon, Sun } from "lucide-react";
-import { useState, useEffect } from "react";
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { OrgSwitcher } from "@/components/OrgSwitcher"
+import { LogOut, User, Settings, Moon, Sun } from "lucide-react"
+import { useState, useEffect } from "react"
 
 export function Header() {
   const { user, logout } = useAuth();

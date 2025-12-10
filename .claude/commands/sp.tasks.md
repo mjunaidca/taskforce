@@ -8,13 +8,43 @@ description: Generate an actionable, dependency-ordered tasks.md for the feature
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+You **MUST** consider the user input before proceeding (if not empty). Include **explicit skill references** in tasks so each task can be efficiently implemented. 
 
 ## Core Directive
 
 **Default to Action**: Generate the complete tasks.md immediately from available design artifacts. Extract tasks systematically from spec user stories, plan structure, and data model. Only flag issues that genuinely block task generation.
 
 **WHY**: Task generation is mechanical extraction from spec/plan. The artifacts contain all necessary information. Generate the task list and let implementation surface any gaps—don't over-analyze before producing output.
+
+## Anti-Pattern Prevention
+
+**CRITICAL**: Most workflows fail at task breakdown. Specs and plans look perfect, then "tasks break everything cause buggy." Apply these preventions:
+
+### Common Anti-Patterns and Solutions
+
+| Anti-Pattern | Prevention | Example |
+|--------------|------------|---------|
+| **Vague tasks** | Include exact file paths | ✅ `helm/taskflow/templates/api/deployment.yaml` ❌ "Create API deployment" |
+| **Wrong granularity** | 1-2 hour sweet spot per task | ✅ 80 tasks @ 2.7 min avg ❌ "Create Helm chart" = 8 hours |
+| **Wrong order** | Explicit dependency graph | ✅ postgres → sso → api (with initContainers) |
+| **Untestable** | Per-phase acceptance criteria with commands | ✅ `helm template --dry-run` ❌ "Should work" |
+| **Spec drift** | FR mapping + US labels trace back to spec | ✅ `[US1] FR-014: Create sso deployment` |
+| **No done condition** | Checkboxes with expected outputs | ✅ "Renders valid YAML" ❌ No criteria |
+| **Guessing syntax** | Documentation-first with Context7 queries | ✅ Query Helm docs before implementation |
+
+### Granularity Rules (MANDATORY)
+
+**Sweet Spot**: 1-2 hours per task for human implementation
+- **Too Big**: "Create complete Helm chart" (8+ hours) → leads to mid-task blocking
+- **Too Small**: "Add one line to values.yaml" (30 seconds) → creates hundreds of tasks
+- **Just Right**: "Create deployment.yaml with initContainer" (1-2 hours) → atomic, testable, clear done condition
+
+**Target Metrics**:
+- 60-100 tasks for 3-hour implementation
+- Average ~2-3 minutes per task
+- 40-60% parallelizable (mark with [P])
+
+**Test**: If task takes >2 hours, split it. If <30 minutes, merge with related task.
 
 ## Outline
 
@@ -61,6 +91,120 @@ You **MUST** consider the user input before proceeding (if not empty).
 Context for task generation: $ARGUMENTS
 
 The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
+
+## Documentation-First Pattern (MANDATORY)
+
+**CRITICAL**: NEVER guess syntax or API patterns. Query official documentation BEFORE task implementation.
+
+### Integration with Context7 MCP
+
+Each tasks.md MUST include an "AI-Native Execution Guide" section mapping phases to documentation queries:
+
+```markdown
+## AI-Native Execution Guide
+
+### Official Documentation (Query via Context7 MCP)
+
+**Phase X: [Phase Name]**
+  mcp__context7__resolve-library-id --libraryName "[library]"
+  mcp__context7__get-library-docs --context7CompatibleLibraryID "/org/project" --topic "[topic]"
+
+**Examples**:
+- Helm Charts: `/helm/helm` topics: "chart structure", "deployment spec", "values schema"
+- Kubernetes: `/kubernetes/kubernetes` topics: "initContainers", "probes", "services"
+- Docker: `/docker/docs` topics: "docker build", "multi-stage", "compose"
+- Next.js: `/vercel/next.js` topics: "app router", "server actions", "middleware"
+- FastAPI: `/tiangolo/fastapi` topics: "async routes", "dependencies", "middleware"
+
+### Implementation Pattern (For Each Task)
+1. Query relevant official docs via Context7 ← NEVER SKIP
+2. Review plan.md for architecture decisions
+3. Check spec.md for functional requirements
+4. Implement using official patterns (not guessing)
+5. Verify with acceptance criteria commands
+6. Mark task complete with checkbox
+```
+
+### Skills Mapping
+
+**CRITICAL**: Check for existing skills BEFORE assuming they don't exist.
+
+```bash
+# Discover available skills
+ls -1 .claude/skills/engineering/
+```
+
+Map task phases to available skills in `.claude/skills/engineering/`:
+
+```markdown
+### Skills to Use (from `.claude/skills/engineering/`)
+
+**Required Skills for This Feature:**
+- **`[skill-name]`** - [description from SKILL.md]
+  (Verify skill exists by reading `.claude/skills/engineering/[skill-name]/SKILL.md`)
+
+**Optional Skills (for troubleshooting):**
+- **`[skill-name]`** - [when to use]
+  - Use for: [specific use cases]
+  - NOT for: [what to avoid]
+
+**If skill doesn't exist**: Recommend creating it for future reuse
+```
+
+**Common Skills by Technology** (check if they exist first):
+- Helm/K8s/Minikube → `helm-charts`, `kubernetes-essentials`, `minikube`, `kubectl-ai`
+- FastAPI/SQLModel → `fastapi-backend`, `sqlmodel-database`
+- Auth → `better-auth-sso`, `better-auth-setup`
+- Frontend → `nextjs-16`, `shadcn-ui`, `chatkit-integration`, `frontend-design`
+- Infrastructure → `containerize-apps`, `mcp-builder`
+
+## Acceptance Criteria Format (MANDATORY)
+
+**CRITICAL**: Each phase MUST have testable acceptance criteria with verification commands.
+
+### Per-Phase Structure
+
+```markdown
+### Phase N: [Phase Name] (X tasks, Y minutes)
+
+**Acceptance Criteria**:
+- [ ] [Measurable outcome 1]
+  ```bash
+  # Verification command
+  [command that proves criterion is met]
+  ```
+- [ ] [Measurable outcome 2]
+  ```bash
+  [verification command]
+  ```
+
+**Expected Output**: [Exact output that proves phase completion]
+
+**Tasks**:
+- [ ] T0XX [P] [Story] Task description with file path
+```
+
+### Example Acceptance Criteria
+
+**Good** (testable with command):
+```markdown
+**Acceptance Criteria**:
+- [ ] All 20 templates created, helm template renders valid YAML
+  ```bash
+  helm template taskflow ./helm/taskflow --dry-run
+  # Expected: No errors, 20 resource definitions output
+  ```
+- [ ] All 4 Docker images built successfully
+  ```bash
+  docker images | grep -E '(sso|api|mcp|web).*:dev'
+  # Expected: 4 images with 'dev' tag
+  ```
+```
+
+**Bad** (not testable):
+- ❌ "Helm chart should work"
+- ❌ "Code looks good"
+- ❌ "Everything is ready"
 
 ## Task Generation Rules
 
@@ -111,6 +255,17 @@ Every task MUST strictly follow this format:
      - If tests requested: Tests specific to that story
    - Mark story dependencies (most stories should be independent)
 
+2. **Traceability Mapping** (MANDATORY):
+   - **Triple Mapping**: Task → User Story → Functional Requirement → File Path
+   - **Task Format**: `- [ ] T0XX [P] [US#] FR-XXX: Description with path/to/file.ext`
+   - **Example**: `- [ ] T014 [P] [US1] FR-014: Create sso-platform deployment.yaml with initContainer`
+   - **Why**: Enables validation that every FR is implemented and every task traces to requirements
+   - **Phase Header**: Include FR mapping per phase
+     ```markdown
+     ### Phase 3: US1 - Service Deployment (22 tasks, 115 min)
+     **FRs**: FR-014, FR-015, FR-016, FR-017, FR-018
+     ```
+
 2. **Cross-Reference Verification Tasks** (For educational content):
    - If lessons teach patterns (skills, subagents, ADRs, PHRs), add verification task
    - Example: `- [ ] T0XX [P] [US1] Verify skill format matches Chapter N Lesson 7 canonical source`
@@ -135,6 +290,59 @@ Every task MUST strictly follow this format:
    - Foundational/blocking tasks → Foundational phase (Phase 2)
    - Story-specific setup → within that story's phase
 
+### Dependency Graph & Parallel Execution (MANDATORY)
+
+**CRITICAL**: Include explicit dependency graph and parallel opportunities to prevent wrong ordering and enable fast execution.
+
+**Required Sections in tasks.md**:
+
+```markdown
+## Dependencies
+
+### User Story Completion Order
+Setup → Foundation → US1 → US2 → US4 → Deployment
+                            ↘ US3 ↗
+                            (parallel with US2)
+
+### Critical Path (minimum time to completion)
+- Setup: 15 min
+- Foundation: 45 min
+- US1: 115 min
+- US2: 20 min
+- US4: 20 min
+- Deployment: 30 min
+**Total Critical Path**: 3h 5min (65 tasks)
+
+### Parallel Opportunities
+- Phase 3A-3D: 4 services can be templated simultaneously (different files)
+- Phase 4: 4 image builds can run concurrently
+- US3 + US4: Configuration review and dependency implementation can overlap
+**Parallelizable**: 40 tasks (50% of total)
+
+## Implementation Strategy
+
+### MVP Scope
+**Critical Path Only** (3h 5min):
+- Setup + Foundation + US1 + US2 + US4 + Deployment
+**Skip for MVP**: US3 validation (nice-to-have), US5 documentation (post-launch)
+
+### Fast Feedback Loop
+1. Complete Setup + Foundation (1h) → Validate structure
+2. Complete US1 (2h) → Validate core functionality
+3. Complete US2 + US4 (40m) → Validate dependencies
+4. Complete Deployment (30m) → End-to-end validation
+```
+
+**Parallel Task Identification Rules**:
+- Mark task [P] if:
+  - ✅ Operates on different files than all in-progress tasks
+  - ✅ Has no dependencies on incomplete tasks
+  - ✅ Can be executed by different developers simultaneously
+- Do NOT mark [P] if:
+  - ❌ Depends on previous task's output
+  - ❌ Modifies same file as another task
+  - ❌ Requires previous task's validation to pass
+
 ### Phase Structure
 
 - **Phase 1**: Setup (project initialization)
@@ -143,6 +351,54 @@ Every task MUST strictly follow this format:
   - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns
+
+### Quality Checklist (Validate Before Completion)
+
+Before finalizing tasks.md, verify ALL of these conditions:
+
+**Format Validation**:
+- [ ] Every task has checkbox `- [ ]`
+- [ ] Every task has sequential ID (T001, T002, T003...)
+- [ ] Parallelizable tasks marked with [P]
+- [ ] User story tasks labeled with [US#]
+- [ ] Every task includes exact file path
+- [ ] No task >2 hours (split if needed)
+- [ ] No task <30 minutes (merge if needed)
+- [ ] 60-100 tasks for 3-hour implementation
+
+**Traceability Validation**:
+- [ ] Every task maps to User Story (or Setup/Foundation/Polish)
+- [ ] Every User Story from spec.md has tasks
+- [ ] Every Functional Requirement referenced in tasks
+- [ ] Phase headers include FR mapping
+
+**Documentation Validation**:
+- [ ] AI-Native Execution Guide section present
+- [ ] Context7 MCP queries mapped per phase
+- [ ] Skills mapping section present
+- [ ] Implementation pattern (5-step) documented
+
+**Acceptance Criteria Validation**:
+- [ ] Every phase has testable acceptance criteria
+- [ ] Every criterion has verification command
+- [ ] Expected outputs specified
+- [ ] No vague criteria ("should work", "looks good")
+
+**Dependency Validation**:
+- [ ] Dependency graph with completion order
+- [ ] Critical path calculated with time estimates
+- [ ] Parallel opportunities identified (40-60% target)
+- [ ] MVP scope defined
+
+**Anti-Pattern Check**:
+- [ ] No vague tasks without file paths
+- [ ] No "Create entire X" tasks (wrong granularity)
+- [ ] No missing dependencies (wrong order)
+- [ ] No untestable phases (missing acceptance criteria)
+- [ ] No spec drift (all FRs covered)
+- [ ] No "guess the syntax" tasks (docs referenced)
+
+**Pass Criteria**: All checkboxes must be checked. If ANY fails, fix before completion.
 
 ---
 
