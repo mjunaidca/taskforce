@@ -120,7 +120,7 @@ async def test_default_tenant_fallback(client: AsyncClient, session: AsyncSessio
     )
     assert response.status_code == 201
     project_data = response.json()
-    assert project_data["tenant_id"] == "taskflow"
+    assert project_data["tenant_id"] == "taskflow-default-org-id"
 
     # List projects without tenant header - should see default tenant projects
     list_response = await client.get("/api/projects")

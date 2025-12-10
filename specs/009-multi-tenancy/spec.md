@@ -33,9 +33,9 @@ As an existing TaskFlow user without a tenant assignment, I want my projects to 
 
 **Acceptance Scenarios**:
 
-1. **Given** a user's JWT has no tenant_id claim, **When** they create a project, **Then** the project is created with tenant_id "taskflow"
-2. **Given** an existing project was created before multi-tenancy, **When** a user queries for it, **Then** it is accessible under the default "taskflow" tenant
-3. **Given** a user's JWT has no tenant_id claim, **When** they list projects, **Then** they see only projects with tenant_id "taskflow"
+1. **Given** a user's JWT has no tenant_id claim, **When** they create a project, **Then** the project is created with tenant_id "taskflow-default-org-id"
+2. **Given** an existing project was created before multi-tenancy, **When** a user queries for it, **Then** it is accessible under the default "taskflow-default-org-id" tenant
+3. **Given** a user's JWT has no tenant_id claim, **When** they list projects, **Then** they see only projects with tenant_id "taskflow-default-org-id"
 
 ---
 
@@ -162,21 +162,21 @@ New User Joins Organization:
 
 ### Functional Requirements
 
-- **FR-001**: System MUST add a `tenant_id` field to the Project model with default value "taskflow"
+- **FR-001**: System MUST add a `tenant_id` field to the Project model with default value "taskflow-default-org-id"
 - **FR-002**: System MUST create a database index on `tenant_id` for efficient filtering
 - **FR-003**: System MUST filter all project queries by the current user's tenant context
-- **FR-004**: System MUST extract tenant context in this priority order: (1) JWT claim `tenant_id` or `organization_id`, (2) X-Tenant-ID header in dev mode only, (3) default "taskflow"
+- **FR-004**: System MUST extract tenant context in this priority order: (1) JWT claim `tenant_id` or `organization_id`, (2) X-Tenant-ID header in dev mode only, (3) default "taskflow-default-org-id"
 - **FR-005**: System MUST return 404 (not 403) when a user attempts to access a project belonging to another tenant
 - **FR-006**: System MUST enforce project slug uniqueness within a tenant, not globally
 - **FR-007**: System MUST set tenant_id when creating new projects from the current user's tenant context
 - **FR-008**: System MUST include tenant_id in the project read response for transparency
-- **FR-009**: System MUST validate tenant_id is never empty or null - always fallback to "taskflow"
+- **FR-009**: System MUST validate tenant_id is never empty or null - always fallback to "taskflow-default-org-id"
 - **FR-010**: System MUST create audit log entries that include tenant context for all project operations
 
 ### Key Entities
 
-- **Project**: Extended with `tenant_id` field (string, indexed, default "taskflow"). Represents the organizational boundary for data isolation. Slug uniqueness constraint changes from global to per-tenant.
-- **Tenant**: Implicit entity represented by string identifier. No separate tenant table required - tenant_id comes from JWT claims. Default tenant "taskflow" exists for backward compatibility.
+- **Project**: Extended with `tenant_id` field (string, indexed, default "taskflow-default-org-id"). Represents the organizational boundary for data isolation. Slug uniqueness constraint changes from global to per-tenant.
+- **Tenant**: Implicit entity represented by string identifier. No separate tenant table required - tenant_id comes from JWT claims. Default tenant "taskflow-default-org-id" exists for backward compatibility.
 
 ## Success Criteria *(mandatory)*
 
@@ -208,4 +208,4 @@ New User Joins Organization:
 - **A-001**: Better Auth JWT can be extended to include tenant_id claim when organizations are configured
 - **A-002**: Single-tenant deployments are the majority use case; multi-tenant is opt-in via JWT claims
 - **A-003**: Tenant IDs are stable identifiers that do not change after project creation
-- **A-004**: The "taskflow" default tenant is reserved and cannot be used as a custom organization identifier
+- **A-004**: The "taskflow-default-org-id" default tenant is reserved and cannot be used as a custom organization identifier

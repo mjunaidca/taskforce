@@ -219,5 +219,5 @@ def get_tenant_id(user: CurrentUser, request: Request | None = None) -> str:
             return header_tenant
 
     # Priority 3: Default tenant
-    logger.debug("[TENANT] Using default tenant: taskflow")
-    return "taskflow"
+    logger.debug("[TENANT] Using default tenant: taskflow-default-org-id")
+    return "taskflow-default-org-id"

@@ -17,7 +17,7 @@ class Project(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     tenant_id: str = Field(
-        default="taskflow",
+        default="taskflow-default-org-id",
         max_length=100,
         index=True,
         description="Organization/tenant identifier from SSO",

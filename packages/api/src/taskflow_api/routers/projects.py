@@ -27,7 +27,7 @@ async def list_projects(
     offset: int = Query(default=0, ge=0),
 ) -> list[ProjectRead]:
     """List projects where user is a member, scoped by tenant."""
-    worker = await ensure_user_setup(session, user)
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
 
     # Get tenant context
@@ -93,7 +93,7 @@ async def create_project(
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
     """Create a new project in current tenant."""
-    worker = await ensure_user_setup(session, user)
+    worker = await ensure_user_setup(session, user, request)
     # Extract primitive values before any commits
     worker_id = worker.id
     worker_type = worker.type
@@ -172,7 +172,7 @@ async def get_project(
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
     """Get project details (tenant-scoped, returns 404 for cross-tenant)."""
-    worker = await ensure_user_setup(session, user)
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
 
     # Get tenant context
@@ -232,7 +232,7 @@ async def update_project(
     user: CurrentUser = Depends(get_current_user),
 ) -> ProjectRead:
     """Update project (owner only, tenant-scoped)."""
-    worker = await ensure_user_setup(session, user)
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
     worker_type = worker.type
 
@@ -314,7 +314,7 @@ async def delete_project(
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Delete project (owner only, tenant-scoped)."""
-    worker = await ensure_user_setup(session, user)
+    worker = await ensure_user_setup(session, user, request)
     worker_id = worker.id
     worker_type = worker.type
 
