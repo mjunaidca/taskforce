@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useDeferredValue } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { api } from "@/lib/api"
@@ -66,6 +66,13 @@ function TasksContent() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
+  // NEW: Sort state
+  const [sortBy, setSortBy] = useState<"created_at" | "due_date" | "priority" | "title">("created_at")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+
+  // Debounce search query by ~300ms using useDeferredValue
+  const deferredSearch = useDeferredValue(searchQuery)
+
   // Delete state
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null)
   const [deleteTaskTitle, setDeleteTaskTitle] = useState<string>("")
@@ -97,6 +104,10 @@ function TasksContent() {
           const projectTasks = await api.getProjectTasks(project.id, {
             status: statusFilter !== "all" ? (statusFilter as TaskStatus) : undefined,
             priority: priorityFilter !== "all" ? (priorityFilter as TaskPriority) : undefined,
+            // NEW: Pass search and sort parameters to API (server-side filtering)
+            search: deferredSearch || undefined,
+            sort_by: sortBy,
+            sort_order: sortOrder,
           })
           allTasks.push(...projectTasks)
         }
@@ -116,11 +127,10 @@ function TasksContent() {
         setLoading(false)
       }
     })
-  }, [selectedProject, statusFilter, priorityFilter])
+  }, [selectedProject, statusFilter, priorityFilter, deferredSearch, sortBy, sortOrder])
 
-  const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // REMOVED: Client-side filtering - now done server-side via API
+  // const filteredTasks = tasks.filter(...)
 
   const handleDeleteTask = async () => {
     if (!deleteTaskId) return
@@ -252,6 +262,30 @@ function TasksContent() {
             <SelectItem value="low">Low</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* NEW: Sort By Dropdown */}
+        <Select value={sortBy} onValueChange={(val) => setSortBy(val as typeof sortBy)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Created</SelectItem>
+            <SelectItem value="due_date">Due Date</SelectItem>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* NEW: Sort Order Toggle */}
+        <Select value={sortOrder} onValueChange={(val) => setSortOrder(val as typeof sortOrder)}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Order" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="desc">Descending</SelectItem>
+            <SelectItem value="asc">Ascending</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tasks Table */}
@@ -270,7 +304,7 @@ function TasksContent() {
                 Try Again
               </Button>
             </div>
-          ) : filteredTasks.length === 0 ? (
+          ) : tasks.length === 0 ? (
             <div className="p-12 text-center">
               <CheckSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium">No tasks found</h3>
@@ -294,7 +328,7 @@ function TasksContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTasks.map((task) => (
+                {tasks.map((task) => (
                   <TableRow key={task.id} className="group">
                     <TableCell>
                       <Link

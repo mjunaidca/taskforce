@@ -190,4 +190,10 @@ export interface TaskFilterParams extends PaginationParams {
   status?: TaskStatus;
   assignee_id?: number;
   priority?: TaskPriority;
+  // NEW: Search, filter, and sort parameters
+  search?: string;
+  tags?: string;  // comma-separated, AND logic
+  has_due_date?: boolean;
+  sort_by?: "created_at" | "due_date" | "priority" | "title";
+  sort_order?: "asc" | "desc";
 }
