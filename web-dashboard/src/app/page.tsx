@@ -43,7 +43,8 @@ function OrchestratorDemo() {
   }, [])
 
   return (
-    <div className="relative bg-ifk-gray-950 border border-ifk-gray-800 rounded-xl overflow-hidden shadow-2xl max-w-6xl mx-auto flex flex-col h-[600px]">
+    <div className="relative bg-black/80 backdrop-blur-2xl border border-ifk-gray-800 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5),inset_0_0_20px_rgba(6,182,212,0.05)] max-w-6xl mx-auto flex flex-col h-[600px] group">
+      <div className="absolute inset-0 pointer-events-none border border-ifk-cyan-500/10 rounded-2xl z-20"></div>
 
       {/* Top Section: Split Planning vs Execution */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
@@ -370,19 +371,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-ifk-cyan-500/30 selection:text-ifk-cyan-500 overflow-hidden font-sans">
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-25%] left-[-25%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(6,182,212,0.08)_0%,rgba(0,0,0,0)_60%)] animate-pulse-soft" />
-        <div className="absolute bottom-[-25%] right-[-25%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(245,158,11,0.05)_0%,rgba(0,0,0,0)_60%)] animate-pulse-soft" style={{ animationDelay: "-2s" }} />
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white_10%,transparent_70%)] opacity-10" />
+        <div className="absolute top-[-25%] left-[-25%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(6,182,212,0.05)_0%,rgba(0,0,0,0)_60%)] animate-float" style={{ animationDuration: '15s' }} />
+        <div className="absolute bottom-[-25%] right-[-25%] w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(4,13,33,0.8)_0%,rgba(0,0,0,0)_60%)] animate-float" style={{ animationDelay: "-5s", animationDuration: '20s' }} />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white_10%,transparent_70%)] opacity-20" />
       </div>
 
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-ifk-gray-900 bg-black/90 backdrop-blur-xl">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-ifk-gray-900 bg-black/80 backdrop-blur-xl supports-[backdrop-filter]:bg-black/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-ifk-cyan-600 to-ifk-cyan-800 flex items-center justify-center shadow-lg shadow-ifk-cyan-900/20">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-ifk-cyan-600 to-ifk-cyan-900 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
               <Zap className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold tracking-tight text-xl text-white">TaskFlow</span>
-            <Badge variant="outline" className="hidden md:flex bg-ifk-gray-900 text-ifk-gray-400 border-ifk-gray-800 gap-1 ml-2">
+            <span className="font-bold tracking-tight text-xl text-white font-mono">TASKFLOW</span>
+            <Badge variant="outline" className="hidden md:flex bg-ifk-gray-900/50 text-ifk-gray-400 border-ifk-gray-800 gap-1 ml-2 backdrop-blur-sm">
               <ShieldCheck className="h-3 w-3" />
               Multi-Tenant
             </Badge>
@@ -392,25 +393,25 @@ export default function Home() {
               <Link href="#" className="hover:text-white transition-colors">Manifesto</Link>
               <Link href="#" className="hover:text-white transition-colors">Agents</Link>
             </div>
-            <Button onClick={handleGetStarted} className="bg-white text-black hover:bg-ifk-cyan-500 hover:text-white transition-all font-semibold rounded-lg px-5">
+            <Button onClick={handleGetStarted} className="bg-white text-black hover:bg-ifk-cyan-400 hover:text-black transition-all font-bold rounded-lg px-5 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]">
               Launch Workspace
             </Button>
           </div>
         </div>
       </nav>
 
-      <section className="relative z-10 pt-36 pb-24 px-4 overflow-hidden">
+      <section className="relative z-10 pt-28 pb-20 px-4 overflow-hidden">
         <div className="container mx-auto max-w-7xl">
 
-          <div className="text-center mb-16 space-y-6 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-ifk-cyan-500/20 bg-ifk-cyan-950/30 text-ifk-cyan-400 text-xs font-mono uppercase tracking-wider mb-2">
+          <div className="text-center mb-12 space-y-6 animate-fade-in-up">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-ifk-cyan-500/20 bg-ifk-cyan-950/20 text-ifk-cyan-400 text-[10px] font-mono uppercase tracking-[0.2em] mb-2 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.1)]">
               <Layers className="h-3 w-3" />
-              The Missing Projects Layer
+              Missing Project Management Layer
             </div>
 
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[1.1]">
-              The Operating System for <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-ifk-cyan-300 via-white to-ifk-cyan-300">your AI Workforce.</span>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.9] text-white">
+              AI Workforce <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ifk-cyan-500">Orchestration Platform.</span>
             </h1>
 
             <p className="text-lg md:text-xl text-ifk-gray-400 max-w-3xl mx-auto leading-relaxed">
@@ -419,7 +420,7 @@ export default function Home() {
               The only project management platform designed for the Agent Era.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button size="lg" onClick={handleGetStarted} className="h-14 px-8 text-lg bg-ifk-cyan-600 hover:bg-ifk-cyan-500 shadow-cyan-lg hover:shadow-cyan-xl transition-all">
                 Start Managing
               </Button>
@@ -454,42 +455,42 @@ export default function Home() {
       {/* 3. The Feature Grid */}
       <section className="py-24 bg-black relative">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-ifk-gray-950/50 backdrop-blur border-ifk-gray-800 hover:border-ifk-cyan-500/50 transition-all group overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-ifk-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="grid md:grid-cols-3 gap-8 [perspective:1000px]">
+            <Card className="bg-ifk-gray-950/40 backdrop-blur-md border-ifk-gray-800 hover:border-ifk-cyan-500/50 transition-all duration-500 group overflow-hidden relative hover:[transform:rotateX(5deg)_translateY(-10px)] hover:shadow-cyan-lg">
+              <div className="absolute inset-0 bg-gradient-to-b from-ifk-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardContent className="p-8 space-y-4 relative z-10">
-                <div className="h-12 w-12 rounded-lg bg-ifk-cyan-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                  <Cpu className="h-6 w-6 text-ifk-cyan-400" />
+                <div className="h-12 w-12 rounded-lg bg-ifk-cyan-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border border-ifk-cyan-500/20">
+                  <Users className="h-6 w-6 text-ifk-cyan-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white">AI Coding Agents</h3>
-                <p className="text-ifk-gray-400 leading-relaxed">
-                  Don&apos;t just chat. Connect specialized agents like Claude Code & Qwen directly via native MCP integration.
+                <h3 className="text-xl font-bold text-white tracking-tight">Agent Parity</h3>
+                <p className="text-ifk-gray-400 leading-relaxed text-sm">
+                  Humans and AI agents appear side-by-side in assignment dropdowns. No second-class citizens.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-ifk-gray-900/50 backdrop-blur border-ifk-gray-800 hover:border-ifk-amber-500/50 transition-all group overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-ifk-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <Card className="bg-ifk-gray-950/40 backdrop-blur-md border-ifk-gray-800 hover:border-ifk-amber-500/50 transition-all duration-500 group overflow-hidden relative hover:[transform:rotateX(5deg)_translateY(-10px)] hover:shadow-amber-lg" style={{ transitionDelay: '100ms' }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-ifk-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardContent className="p-8 space-y-4 relative z-10">
-                <div className="h-12 w-12 rounded-lg bg-ifk-amber-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                  <ShieldCheck className="h-6 w-6 text-ifk-amber-500" />
+                <div className="h-12 w-12 rounded-lg bg-ifk-amber-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border border-ifk-amber-500/20">
+                  <GitBranch className="h-6 w-6 text-ifk-amber-500" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Secure Workspaces</h3>
-                <p className="text-ifk-gray-400 leading-relaxed">
-                  Data isolation built-in. Your team&apos;s data is cryptographically scoped. Hidden complexity, maximum security.
+                <h3 className="text-xl font-bold text-white tracking-tight">Recursive Tasks</h3>
+                <p className="text-ifk-gray-400 leading-relaxed text-sm">
+                  Tasks can spawn subtasks to any depth. Perfect for agents that decompose complex work.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-ifk-gray-950/50 backdrop-blur border-ifk-gray-800 hover:border-ifk-pink-500/30 transition-all group overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-ifk-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <Card className="bg-ifk-gray-950/40 backdrop-blur-md border-ifk-gray-800 hover:border-ifk-pink-500/30 transition-all duration-500 group overflow-hidden relative hover:[transform:rotateX(5deg)_translateY(-10px)] hover:shadow-[0_0_40px_rgba(236,72,153,0.3)]" style={{ transitionDelay: '200ms' }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-ifk-pink-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardContent className="p-8 space-y-4 relative z-10">
-                <div className="h-12 w-12 rounded-lg bg-ifk-pink-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                  <Users className="h-6 w-6 text-ifk-pink-400" />
+                <div className="h-12 w-12 rounded-lg bg-ifk-pink-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border border-ifk-pink-500/20">
+                  <ShieldCheck className="h-6 w-6 text-ifk-pink-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Hybrid Workflow</h3>
-                <p className="text-ifk-gray-400 leading-relaxed">
-                  Agents handle the code. Humans handle the goals. Orchestrate both in a single, unified interface.
+                <h3 className="text-xl font-bold text-white tracking-tight">Full Audit Trail</h3>
+                <p className="text-ifk-gray-400 leading-relaxed text-sm">
+                  Every action creates an audit entry. Know who did what, when, and why - human or agent.
                 </p>
               </CardContent>
             </Card>
