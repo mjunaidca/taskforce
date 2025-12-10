@@ -190,7 +190,7 @@ async def test_list_tasks_search_empty_results(client: AsyncClient) -> None:
 # These tests are skipped when running with SQLite in-memory database
 
 
-@pytest.mark.skip(reason="Tags filter uses PostgreSQL JSONB contains operator, not supported in SQLite")
+@pytest.mark.skip(reason="Requires PostgreSQL JSONB (not SQLite)")
 @pytest.mark.asyncio
 async def test_list_tasks_filter_by_tags_single(client: AsyncClient) -> None:
     """Test filtering tasks by a single tag. Requires PostgreSQL."""
@@ -208,7 +208,7 @@ async def test_list_tasks_filter_by_tags_single(client: AsyncClient) -> None:
     assert data[0]["title"] == "Work Task"
 
 
-@pytest.mark.skip(reason="Tags filter uses PostgreSQL JSONB contains operator, not supported in SQLite")
+@pytest.mark.skip(reason="Requires PostgreSQL JSONB (not SQLite)")
 @pytest.mark.asyncio
 async def test_list_tasks_filter_by_tags_and_logic(client: AsyncClient) -> None:
     """Test filtering by multiple tags uses AND logic. Requires PostgreSQL."""
@@ -393,7 +393,7 @@ async def test_list_tasks_combined_search_and_sort(client: AsyncClient) -> None:
     assert data[1]["title"] == "Report Draft"
 
 
-@pytest.mark.skip(reason="Tags filter uses PostgreSQL JSONB contains operator, not supported in SQLite")
+@pytest.mark.skip(reason="Requires PostgreSQL JSONB (not SQLite)")
 @pytest.mark.asyncio
 async def test_list_tasks_combined_filters_and_sort(client: AsyncClient) -> None:
     """Test combining multiple filters with sorting. Requires PostgreSQL."""
