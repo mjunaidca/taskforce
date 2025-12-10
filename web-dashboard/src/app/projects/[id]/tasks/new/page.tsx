@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
-import { ProjectRead, MemberRead, TaskPriority } from "@/types"
+import { ProjectRead, MemberRead, TaskPriority, RecurrencePattern, RecurrenceTrigger, RECURRENCE_PATTERNS, RECURRENCE_TRIGGERS } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Loader2, CheckSquare, Bot, User, FolderOpen } from "lucide-react"
+import { ArrowLeft, Loader2, CheckSquare, Bot, User, FolderOpen, Repeat } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function NewTaskPage() {
   const router = useRouter()
@@ -39,6 +40,13 @@ export default function NewTaskPage() {
   const [priority, setPriority] = useState<TaskPriority>("medium")
   const [assigneeId, setAssigneeId] = useState<string>("")
   const [dueDate, setDueDate] = useState("")
+
+  // Recurring task state
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | "">("")
+  const [maxOccurrences, setMaxOccurrences] = useState<string>("")
+  const [recurrenceTrigger, setRecurrenceTrigger] = useState<RecurrenceTrigger>("on_complete")
+  const [cloneSubtasks, setCloneSubtasks] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -78,6 +86,12 @@ export default function NewTaskPage() {
       return
     }
 
+    // Validate recurring task settings
+    if (isRecurring && !recurrencePattern) {
+      setError("Please select a recurrence pattern")
+      return
+    }
+
     try {
       setSubmitting(true)
       const task = await api.createTask(selectedProjectId, {
@@ -86,6 +100,12 @@ export default function NewTaskPage() {
         priority,
         assignee_id: assigneeId && assigneeId !== "unassigned" ? Number(assigneeId) : undefined,
         due_date: dueDate || undefined,
+        // Recurring fields
+        is_recurring: isRecurring,
+        recurrence_pattern: isRecurring && recurrencePattern ? recurrencePattern : undefined,
+        max_occurrences: isRecurring && maxOccurrences ? Number(maxOccurrences) : undefined,
+        recurrence_trigger: isRecurring ? recurrenceTrigger : undefined,
+        clone_subtasks_on_recur: isRecurring ? cloneSubtasks : undefined,
       })
       router.push(`/tasks/${task.id}`)
     } catch (err) {
@@ -280,6 +300,126 @@ export default function NewTaskPage() {
               <p className="text-xs text-muted-foreground">
                 Assign to a human or AI agent from this project
               </p>
+            </div>
+
+            {/* Recurring Task Section */}
+            <div className="space-y-4 rounded-lg border border-border p-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="isRecurring"
+                  checked={isRecurring}
+                  onCheckedChange={(checked) => {
+                    setIsRecurring(checked === true)
+                    if (!checked) {
+                      setRecurrencePattern("")
+                      setMaxOccurrences("")
+                    }
+                  }}
+                  disabled={submitting}
+                />
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="isRecurring" className="font-medium cursor-pointer">
+                    Make this a recurring task
+                  </Label>
+                </div>
+              </div>
+
+              {isRecurring && (
+                <div className="space-y-4 pt-2 pl-6 border-l-2 border-primary/20">
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrencePattern">Repeat Pattern *</Label>
+                    <Select
+                      value={recurrencePattern}
+                      onValueChange={(v) => setRecurrencePattern(v as RecurrencePattern)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select how often to repeat" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RECURRENCE_PATTERNS.map((pattern) => (
+                          <SelectItem key={pattern.value} value={pattern.value}>
+                            {pattern.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      When completed, a new task will be created with the next due date
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="maxOccurrences">Maximum Occurrences</Label>
+                    <Input
+                      id="maxOccurrences"
+                      type="number"
+                      min="1"
+                      placeholder="Unlimited"
+                      value={maxOccurrences}
+                      onChange={(e) => setMaxOccurrences(e.target.value)}
+                      disabled={submitting}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty for unlimited recurrences
+                    </p>
+                  </div>
+
+                  {/* Clone Subtasks Option */}
+                  <div className="flex items-center space-x-3 pt-2">
+                    <Checkbox
+                      id="cloneSubtasks"
+                      checked={cloneSubtasks}
+                      onCheckedChange={(checked) => setCloneSubtasks(checked === true)}
+                      disabled={submitting}
+                    />
+                    <div>
+                      <Label htmlFor="cloneSubtasks" className="cursor-pointer">
+                        Clone subtasks when recurring
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, subtasks will be copied to each new occurrence
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Recurrence Trigger - Coming Soon */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="recurrenceTrigger">When to Create Next</Label>
+                    </div>
+                    <Select
+                      value={recurrenceTrigger}
+                      onValueChange={(v) => setRecurrenceTrigger(v as RecurrenceTrigger)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RECURRENCE_TRIGGERS.map((trigger) => (
+                          <SelectItem
+                            key={trigger.value}
+                            value={trigger.value}
+                            disabled={trigger.comingSoon}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{trigger.label}</span>
+                              {trigger.comingSoon && (
+                                <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {RECURRENCE_TRIGGERS.find(t => t.value === recurrenceTrigger)?.description}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4 pt-4">

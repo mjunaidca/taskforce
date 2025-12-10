@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def strip_timezone(dt: datetime | None) -> datetime | None:
@@ -19,6 +19,13 @@ def strip_timezone(dt: datetime | None) -> datetime | None:
 
         dt = dt.astimezone(UTC).replace(tzinfo=None)
     return dt
+
+
+# Valid recurrence patterns
+RECURRENCE_PATTERNS = Literal["1m", "5m", "10m", "15m", "30m", "1h", "daily", "weekly", "monthly"]
+
+# Valid recurrence triggers
+RECURRENCE_TRIGGERS = Literal["on_complete", "on_due_date", "both"]
 
 
 class TaskCreate(BaseModel):
@@ -38,6 +45,15 @@ class TaskCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     due_date: datetime | None = None
 
+    # Recurring task fields
+    is_recurring: bool = False
+    recurrence_pattern: RECURRENCE_PATTERNS | None = None
+    max_occurrences: int | None = Field(
+        default=None, gt=0, description="Maximum recurrences (null = unlimited)"
+    )
+    recurrence_trigger: RECURRENCE_TRIGGERS = "on_complete"
+    clone_subtasks_on_recur: bool = False
+
     @field_validator("assignee_id", "parent_task_id", mode="after")
     @classmethod
     def zero_to_none(cls, v: int | None) -> int | None:
@@ -52,6 +68,19 @@ class TaskCreate(BaseModel):
         """Strip timezone from due_date for database compatibility."""
         return strip_timezone(v)
 
+    @model_validator(mode="after")
+    def validate_recurring(self) -> "TaskCreate":
+        """Validate recurring task constraints."""
+        # If recurring is enabled, pattern is required
+        if self.is_recurring and not self.recurrence_pattern:
+            raise ValueError("recurrence_pattern required when is_recurring is True")
+
+        # Auto-enable recurring if pattern is provided
+        if not self.is_recurring and self.recurrence_pattern:
+            self.is_recurring = True
+
+        return self
+
 
 class TaskUpdate(BaseModel):
     """Schema for updating a task."""
@@ -61,6 +90,13 @@ class TaskUpdate(BaseModel):
     priority: Literal["low", "medium", "high", "critical"] | None = None
     tags: list[str] | None = None
     due_date: datetime | None = None
+
+    # Recurring task fields
+    is_recurring: bool | None = None
+    recurrence_pattern: RECURRENCE_PATTERNS | None = None
+    max_occurrences: int | None = Field(default=None, gt=0)
+    recurrence_trigger: RECURRENCE_TRIGGERS | None = None
+    clone_subtasks_on_recur: bool | None = None
 
     @field_validator("due_date", mode="after")
     @classmethod
@@ -106,6 +142,16 @@ class TaskRead(BaseModel):
     tags: list[str]
     due_date: datetime | None
 
+    # Recurring task fields
+    is_recurring: bool
+    recurrence_pattern: str | None
+    max_occurrences: int | None
+    recurring_root_id: int | None
+    recurrence_trigger: str = "on_complete"
+    clone_subtasks_on_recur: bool = False
+    has_spawned_next: bool = False  # Whether this task already spawned its next occurrence
+    spawn_count: int = 0  # Computed: number of tasks spawned from root
+
     project_id: int
     assignee_id: int | None
     assignee_handle: str | None = None
@@ -134,3 +180,6 @@ class TaskListItem(BaseModel):
     created_at: datetime
     parent_task_id: int | None = None
     subtask_count: int = 0
+
+    # Recurring indicator (minimal data for list badge)
+    is_recurring: bool = False

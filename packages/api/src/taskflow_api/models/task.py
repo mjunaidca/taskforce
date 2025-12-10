@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # Valid status transitions (from Phase 1)
 VALID_TRANSITIONS: dict[str, list[str]] = {
-    "pending": ["in_progress", "blocked"],
+    "pending": ["in_progress", "blocked", "completed"],  # Allow direct completion
     "in_progress": ["review", "completed", "blocked"],
     "review": ["in_progress", "completed"],
     "completed": ["review"],  # Can reopen for corrections
@@ -60,6 +60,38 @@ class Task(SQLModel, table=True):
     )
     due_date: datetime | None = Field(default=None, description="Task deadline")
 
+    # Recurring task fields
+    is_recurring: bool = Field(
+        default=False,
+        description="Whether this task repeats when completed",
+    )
+    recurrence_pattern: str | None = Field(
+        default=None,
+        description="Interval: 1m, 5m, 10m, 15m, 30m, 1h, daily, weekly, monthly",
+    )
+    max_occurrences: int | None = Field(
+        default=None,
+        description="Maximum number of times to recur (null = unlimited)",
+    )
+    recurring_root_id: int | None = Field(
+        default=None,
+        foreign_key="task.id",
+        index=True,
+        description="Root task ID for recurring chain (NULL = this is the root)",
+    )
+    recurrence_trigger: str = Field(
+        default="on_complete",
+        description="When to spawn next: 'on_complete', 'on_due_date', 'both'",
+    )
+    clone_subtasks_on_recur: bool = Field(
+        default=False,
+        description="Whether to clone subtasks when spawning next occurrence",
+    )
+    has_spawned_next: bool = Field(
+        default=False,
+        description="Whether this task has already spawned its next occurrence",
+    )
+
     # Foreign keys
     project_id: int = Field(foreign_key="project.id", index=True)
     assignee_id: int | None = Field(
@@ -94,9 +126,15 @@ class Task(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Task.created_by_id]"},
     )
 
-    # Self-referential for subtasks
+    # Self-referential for subtasks (foreign_keys needed for recurring_root_id)
     parent: "Task" = Relationship(
         back_populates="subtasks",
-        sa_relationship_kwargs={"remote_side": "Task.id"},
+        sa_relationship_kwargs={
+            "remote_side": "Task.id",
+            "foreign_keys": "[Task.parent_task_id]",
+        },
     )
-    subtasks: list["Task"] = Relationship(back_populates="parent")
+    subtasks: list["Task"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={"foreign_keys": "[Task.parent_task_id]"},
+    )

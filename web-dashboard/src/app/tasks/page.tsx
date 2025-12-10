@@ -35,6 +35,7 @@ import {
   FolderOpen,
   GitBranch,
   CornerDownRight,
+  Repeat,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -346,6 +347,11 @@ function TasksContent() {
                           <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             <GitBranch className="h-3 w-3" />
                             {task.subtask_count}
+                          </span>
+                        )}
+                        {task.is_recurring && (
+                          <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded" title="Recurring task">
+                            <Repeat className="h-3 w-3" />
                           </span>
                         )}
                       </div>
