@@ -90,6 +90,8 @@ export default function TaskDetailPage() {
   const [subtaskDescription, setSubtaskDescription] = useState("")
   const [subtaskPriority, setSubtaskPriority] = useState<TaskPriority>("medium")
   const [subtaskAssigneeId, setSubtaskAssigneeId] = useState<string>("")
+  const [subtaskDueDate, setSubtaskDueDate] = useState("")
+  const [subtaskTags, setSubtaskTags] = useState("")
   const [addingSubtask, setAddingSubtask] = useState(false)
   const [subtaskError, setSubtaskError] = useState<string | null>(null)
 
@@ -182,12 +184,16 @@ export default function TaskDetailPage() {
         description: subtaskDescription.trim() || undefined,
         priority: subtaskPriority,
         assignee_id: subtaskAssigneeId ? Number(subtaskAssigneeId) : undefined,
+        due_date: subtaskDueDate || undefined,
+        tags: subtaskTags ? subtaskTags.split(",").map(t => t.trim()).filter(Boolean) : undefined,
       })
       setSubtaskDialogOpen(false)
       setSubtaskTitle("")
       setSubtaskDescription("")
       setSubtaskPriority("medium")
       setSubtaskAssigneeId("")
+      setSubtaskDueDate("")
+      setSubtaskTags("")
       // Refresh task to get updated subtasks
       const updatedTask = await api.getTask(taskId)
       setTask(updatedTask)
@@ -570,28 +576,51 @@ export default function TaskDetailPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="subtaskAssignee">Assignee</Label>
-                        <Select value={subtaskAssigneeId || "unassigned"} onValueChange={(v) => setSubtaskAssigneeId(v === "unassigned" ? "" : v)} disabled={addingSubtask}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Unassigned" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {members.map((member) => (
-                              <SelectItem key={member.worker_id} value={member.worker_id.toString()}>
-                                <div className="flex items-center gap-2">
-                                  {member.type === "agent" ? (
-                                    <Bot className="h-4 w-4 text-primary" />
-                                  ) : (
-                                    <User className="h-4 w-4" />
-                                  )}
-                                  <span>{member.name}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="subtaskDueDate">Due Date</Label>
+                        <Input
+                          id="subtaskDueDate"
+                          type="date"
+                          value={subtaskDueDate}
+                          onChange={(e) => setSubtaskDueDate(e.target.value)}
+                          disabled={addingSubtask}
+                        />
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subtaskAssignee">Assignee</Label>
+                      <Select value={subtaskAssigneeId || "unassigned"} onValueChange={(v) => setSubtaskAssigneeId(v === "unassigned" ? "" : v)} disabled={addingSubtask}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {members.map((member) => (
+                            <SelectItem key={member.worker_id} value={member.worker_id.toString()}>
+                              <div className="flex items-center gap-2">
+                                {member.type === "agent" ? (
+                                  <Bot className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <User className="h-4 w-4" />
+                                )}
+                                <span>{member.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subtaskTags">Tags</Label>
+                      <Input
+                        id="subtaskTags"
+                        placeholder="Comma-separated tags (e.g., bug, frontend)"
+                        value={subtaskTags}
+                        onChange={(e) => setSubtaskTags(e.target.value)}
+                        disabled={addingSubtask}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Separate multiple tags with commas
+                      </p>
                     </div>
                   </div>
                   <DialogFooter>
