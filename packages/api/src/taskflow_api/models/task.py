@@ -67,7 +67,7 @@ class Task(SQLModel, table=True):
     )
     recurrence_pattern: str | None = Field(
         default=None,
-        description="Interval pattern: '1m', '5m', '10m', '15m', '30m', '1h', 'daily', 'weekly', 'monthly'",
+        description="Interval: 1m, 5m, 10m, 15m, 30m, 1h, daily, weekly, monthly",
     )
     max_occurrences: int | None = Field(
         default=None,
@@ -76,6 +76,7 @@ class Task(SQLModel, table=True):
     recurring_root_id: int | None = Field(
         default=None,
         foreign_key="task.id",
+        index=True,
         description="Root task ID for recurring chain (NULL = this is the root)",
     )
     recurrence_trigger: str = Field(
@@ -88,7 +89,7 @@ class Task(SQLModel, table=True):
     )
     has_spawned_next: bool = Field(
         default=False,
-        description="Whether this task has already spawned its next occurrence (prevents duplicates)",
+        description="Whether this task has already spawned its next occurrence",
     )
 
     # Foreign keys
@@ -125,7 +126,7 @@ class Task(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Task.created_by_id]"},
     )
 
-    # Self-referential for subtasks (explicit foreign_keys needed due to recurring_root_id also being self-ref)
+    # Self-referential for subtasks (foreign_keys needed for recurring_root_id)
     parent: "Task" = Relationship(
         back_populates="subtasks",
         sa_relationship_kwargs={

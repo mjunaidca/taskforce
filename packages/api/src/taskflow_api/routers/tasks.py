@@ -1135,11 +1135,8 @@ async def approve_task(
     )
 
     # Handle recurring task - create next occurrence
-    new_task = None
     if task.is_recurring and task.recurrence_pattern:
-        new_task = await create_next_occurrence(
-            session, task, worker_id, worker_type
-        )
+        await create_next_occurrence(session, task, worker_id, worker_type)
 
     await session.commit()
     await session.refresh(task)
