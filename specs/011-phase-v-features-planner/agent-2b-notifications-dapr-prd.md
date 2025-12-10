@@ -12,21 +12,31 @@
 
 Agent 2B implements the **Event-Driven Architecture layer** on top of Agent 2A's recurring tasks:
 
-1. **On Due Date Trigger** - Spawn next recurring task when due date passes (enables the "Coming Soon" UI option)
+1. **On Due Date Trigger** - Spawn next recurring task when due date passes (fixes silent failure bug!)
 2. **Reminders** - Notify users when tasks are due soon
-3. **Activity Notifications** - Notify on task assignment, completion
+3. **Activity Notifications** - Notify on task assignment, completion, spawn
 4. **Dapr Integration** - Event publishing via pub/sub
 
-### What Agent 2A Already Built
+### What Agent 2A Built (7 Database Fields)
 
-From Agent 2A's completion report:
-- ✅ 9 recurrence patterns: `1m`, `5m`, `10m`, `15m`, `30m`, `1h`, `daily`, `weekly`, `monthly`
-- ✅ Spawn on completion trigger
-- ✅ `recurring_root_id` - chain tracking to original task
-- ✅ `max_occurrences` - spawn limits
-- ✅ `clone_subtasks` - option to clone subtasks to new occurrences
-- ✅ Full audit trail
-- ⏳ "On due date" trigger - **UI shows "Coming Soon" → Agent 2B implements this**
+| Field | Type | Status |
+|-------|------|--------|
+| `is_recurring` | bool | ✅ Works |
+| `recurrence_pattern` | str | ✅ 9 patterns (1m, 5m, 10m, 15m, 30m, 1h, daily, weekly, monthly) |
+| `max_occurrences` | int | ✅ Spawn limits via COUNT query |
+| `recurring_root_id` | FK | ✅ Chain tracking (⚠️ needs index!) |
+| `recurrence_trigger` | str | ⚠️ **PARTIAL** - only `on_complete` works |
+| `clone_subtasks_on_recur` | bool | ✅ Optional subtask cloning |
+| `has_spawned_next` | bool | ✅ Duplicate prevention |
+
+### Critical Bug to Fix
+
+**`recurrence_trigger` accepts values that don't work:**
+- `on_complete` ✅ Implemented by Agent 2A
+- `on_due_date` ❌ **Silently fails - Agent 2B must implement**
+- `both` ❌ **Silently fails - Agent 2B must implement**
+
+Users can currently set `on_due_date` and nothing happens!
 
 ### Success Criteria
 
@@ -145,9 +155,7 @@ Agent 2A added a `spawn_trigger` field with options:
 
 ## 3. Model Additions
 
-### 3.1 Add `reminder_sent` Field
-
-Agent 2A may have added this, but verify it exists:
+### 3.1 Add `reminder_sent` Field (If Not Present)
 
 **File**: `packages/api/src/taskflow_api/models/task.py`
 
@@ -159,18 +167,29 @@ reminder_sent: bool = Field(
 )
 ```
 
-### 3.2 Verify Spawn Trigger Field
-
-Agent 2A should have added:
+### 3.2 Fields Agent 2A Created (Verify These Exist)
 
 ```python
-spawn_trigger: str = Field(
-    default="on_completion",
-    description="When to spawn next: on_completion, on_due_date, both",
-)
+# These should already exist from Agent 2A:
+is_recurring: bool = Field(default=False)
+recurrence_pattern: str | None = Field(default=None)  # 1m, 5m, 10m, 15m, 30m, 1h, daily, weekly, monthly
+max_occurrences: int | None = Field(default=None)
+recurring_root_id: int | None = Field(default=None, foreign_key="task.id")  # ⚠️ Add index=True!
+recurrence_trigger: str = Field(default="on_complete")  # on_complete, on_due_date, both
+clone_subtasks_on_recur: bool = Field(default=False)
+has_spawned_next: bool = Field(default=False)
 ```
 
-If using `on_due_date` or `both`, we need to track if we've already spawned for this due date to avoid duplicates.
+### 3.3 Add Missing Index (P0 Fix)
+
+```python
+# FIX: Add index for performance
+recurring_root_id: int | None = Field(
+    default=None,
+    foreign_key="task.id",
+    index=True,  # ← ADD THIS
+)
+```
 
 ---
 
@@ -251,25 +270,36 @@ async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
     # 1. ON DUE DATE RECURRING SPAWN
     # ========================================
     # Find recurring tasks where:
-    # - spawn_trigger is 'on_due_date' or 'both'
+    # - recurrence_trigger is 'on_due_date' or 'both'
     # - due_date has passed
-    # - not yet spawned for this due date
+    # - not yet spawned (has_spawned_next = False)
+    # - not completed (on_complete handles those)
     
     spawn_stmt = select(Task).where(
         Task.is_recurring == True,
-        Task.spawn_trigger.in_(["on_due_date", "both"]),
+        Task.recurrence_trigger.in_(["on_due_date", "both"]),
         Task.due_date.isnot(None),
         Task.due_date <= now,
-        Task.status != "completed",  # Completion spawn handled separately
-        Task.due_date_spawn_done == False,  # Haven't spawned for this due date yet
+        Task.status != "completed",  # Completion spawn handled by Agent 2A
+        Task.has_spawned_next == False,  # Haven't spawned yet
     )
     
     spawn_result = await session.exec(spawn_stmt)
     for task in spawn_result.all():
         try:
-            # Spawn next occurrence (reuse Agent 2A's logic if available)
+            # Check max_occurrences limit (reuse Agent 2A's get_spawn_count logic)
+            if task.max_occurrences:
+                root_id = task.recurring_root_id or task.id
+                count_stmt = select(func.count(Task.id)).where(Task.recurring_root_id == root_id)
+                count_result = await session.exec(count_stmt)
+                spawn_count = count_result.one()
+                if spawn_count >= task.max_occurrences:
+                    continue  # Limit reached, don't spawn
+            
+            # Calculate next due date
             next_due = calculate_next_due(task.recurrence_pattern, task.due_date)
             
+            # Create next occurrence (mirrors Agent 2A's create_next_occurrence)
             new_task = Task(
                 title=task.title,
                 description=task.description,
@@ -281,15 +311,22 @@ async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
                 due_date=next_due,
                 is_recurring=True,
                 recurrence_pattern=task.recurrence_pattern,
-                spawn_trigger=task.spawn_trigger,
+                recurrence_trigger=task.recurrence_trigger,
+                max_occurrences=task.max_occurrences,
                 recurring_root_id=task.recurring_root_id or task.id,
-                clone_subtasks=task.clone_subtasks,
+                clone_subtasks_on_recur=task.clone_subtasks_on_recur,
+                has_spawned_next=False,
             )
             session.add(new_task)
+            await session.flush()  # Get new_task.id
             
             # Mark original so we don't spawn again
-            task.due_date_spawn_done = True
+            task.has_spawned_next = True
             session.add(task)
+            
+            # Clone subtasks if enabled (reuse Agent 2A's logic)
+            if task.clone_subtasks_on_recur:
+                await clone_subtasks_recursive(session, task.id, new_task.id, task.created_by_id)
             
             # Audit log
             await log_action(
@@ -299,10 +336,10 @@ async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
                 action="spawned_on_due_date",
                 actor_id=task.created_by_id,
                 actor_type="system",
-                details={"from_task": task.id, "pattern": task.recurrence_pattern},
+                details={"from_task": task.id, "pattern": task.recurrence_pattern, "trigger": "on_due_date"},
             )
             
-            # Publish event
+            # Publish notification event
             if task.assignee_id:
                 assignee = await session.get(Worker, task.assignee_id)
                 if assignee and assignee.user_id:
@@ -368,7 +405,10 @@ async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
 
 
 def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
-    """Calculate next due date from recurrence pattern."""
+    """Calculate next due date from recurrence pattern.
+    
+    Note: 'monthly' is 30 days, not calendar-accurate (documented behavior).
+    """
     patterns = {
         "1m": timedelta(minutes=1),
         "5m": timedelta(minutes=5),
@@ -378,9 +418,43 @@ def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
         "1h": timedelta(hours=1),
         "daily": timedelta(days=1),
         "weekly": timedelta(weeks=1),
-        "monthly": timedelta(days=30),
+        "monthly": timedelta(days=30),  # Simplified: 30 days, not calendar month
     }
     return from_time + patterns.get(pattern, timedelta(days=1))
+
+
+async def clone_subtasks_recursive(
+    session: AsyncSession,
+    source_task_id: int,
+    target_task_id: int,
+    creator_id: int,
+) -> None:
+    """Clone subtasks from source task to target task.
+    
+    This should reuse Agent 2A's existing clone logic if available.
+    Otherwise implement recursive cloning here.
+    """
+    # Check if Agent 2A exposed this as a reusable function
+    # If not, implement:
+    stmt = select(Task).where(Task.parent_task_id == source_task_id)
+    result = await session.exec(stmt)
+    for subtask in result.all():
+        cloned = Task(
+            title=subtask.title,
+            description=subtask.description,
+            project_id=subtask.project_id,
+            parent_task_id=target_task_id,
+            assignee_id=subtask.assignee_id,
+            created_by_id=creator_id,
+            priority=subtask.priority,
+            tags=subtask.tags.copy() if subtask.tags else [],
+            # Note: due_date kept as-is (documented behavior from Agent 2A)
+            due_date=subtask.due_date,
+        )
+        session.add(cloned)
+        await session.flush()
+        # Recurse for nested subtasks
+        await clone_subtasks_recursive(session, subtask.id, cloned.id, creator_id)
 ```
 
 ### 4.3 Wire Events to Task CRUD
@@ -685,10 +759,10 @@ export function NotificationBell({ userId }: { userId: string }) {
 
 ## 5. Implementation Checklist
 
-### Phase 1: Model Updates (5 min)
+### Phase 0: P0 Fixes (5 min)
+- [ ] **Add index to `recurring_root_id`** - Performance critical!
 - [ ] Add `reminder_sent` field to Task model (if not present)
-- [ ] Add `due_date_spawn_done` field for on_due_date tracking
-- [ ] Run migration
+- [ ] Run migration: `alembic revision --autogenerate -m "add recurring index and reminder_sent"`
 
 ### Phase 2: Event Service (10 min)
 - [ ] Create `services/events.py`
@@ -749,12 +823,26 @@ kubectl get pods  # 2/2 containers
 
 ## 7. Definition of Done
 
-- [ ] `on_due_date` spawn trigger works (removes "Coming Soon" status)
+### P0 Fixes (Critical)
+- [ ] Index added to `recurring_root_id` (performance)
+- [ ] `reminder_sent` field exists on Task model
+- [ ] `on_due_date` and `both` triggers now work (fixes silent failure bug)
+
+### Core Features
+- [ ] `on_due_date` spawn trigger works via cron
+- [ ] `both` trigger works (on_complete OR on_due_date, whichever first)
 - [ ] Reminders sent for tasks due within 24h
+- [ ] `task.spawned` event published when cron creates new occurrence
 - [ ] Notifications stored in notification service
 - [ ] Frontend bell shows unread count
-- [ ] Dapr sidecars running (2/2)
-- [ ] API continues if notification service down
-- [ ] Demo: On due date → Next task spawns → Notification appears
-- [ ] Demo: Task assigned → Notification appears
-- [ ] Demo: Task due soon → Reminder notification
+
+### Infrastructure
+- [ ] Dapr sidecars running (2/2 containers)
+- [ ] API continues if notification service down (non-blocking)
+- [ ] Cron runs every 1 minute (for 1m pattern support)
+
+### Demo Scenarios
+- [ ] Create task with `recurrence_trigger=on_due_date` → Due date passes → New task spawns
+- [ ] Task assigned → Assignee sees notification in bell
+- [ ] Task due in 24h → Reminder notification appears
+- [ ] Recurring task spawns → Assignee notified of new occurrence
