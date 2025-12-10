@@ -57,7 +57,9 @@ async def test_list_projects_tenant_isolation(client: AsyncClient, session: Asyn
 
 
 @pytest.mark.asyncio
-async def test_get_project_wrong_tenant_returns_404(client: AsyncClient, session: AsyncSession) -> None:
+async def test_get_project_wrong_tenant_returns_404(
+    client: AsyncClient, session: AsyncSession
+) -> None:
     """Test that accessing a project from wrong tenant returns 404 (not 403)."""
     # Create project in tenant A
     response = await client.post(
