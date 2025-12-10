@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 import httpx
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
@@ -141,6 +141,7 @@ class CurrentUser:
     - name: Display name
     - role: "user" | "admin"
     - tenant_id: Primary organization (optional)
+    - organization_id: Alternative tenant claim (optional)
     """
 
     def __init__(self, payload: dict[str, Any]) -> None:
@@ -148,7 +149,10 @@ class CurrentUser:
         self.email: str = payload.get("email", "")
         self.name: str = payload.get("name", "")
         self.role: str = payload.get("role", "user")
-        self.tenant_id: str | None = payload.get("tenant_id")
+        # Extract tenant from multiple possible JWT claims
+        self.tenant_id: str | None = (
+            payload.get("tenant_id") or payload.get("organization_id") or None
+        )
 
     def __repr__(self) -> str:
         return f"CurrentUser(id={self.id!r}, email={self.email!r})"
@@ -183,3 +187,37 @@ async def get_current_user(
     user = CurrentUser(payload)
     logger.info("[AUTH] Authenticated user: %s", user)
     return user
+
+
+def get_tenant_id(user: CurrentUser, request: Request | None = None) -> str:
+    """Extract tenant context from JWT or request headers.
+
+    Priority:
+    1. JWT claim: tenant_id or organization_id
+    2. X-Tenant-ID header (dev mode only)
+    3. Default: "taskflow"
+
+    Args:
+        user: Authenticated user from JWT
+        request: FastAPI request (for header access in dev mode)
+
+    Returns:
+        Tenant identifier string (never empty)
+    """
+    # Priority 1: JWT claim
+    if user.tenant_id:
+        tenant = user.tenant_id.strip()
+        if tenant:
+            logger.debug("[TENANT] Using JWT tenant_id: %s", tenant)
+            return tenant
+
+    # Priority 2: Dev mode header override
+    if request and settings.dev_mode:
+        header_tenant = request.headers.get("X-Tenant-ID", "").strip()
+        if header_tenant:
+            logger.debug("[TENANT] Using dev mode header: %s", header_tenant)
+            return header_tenant
+
+    # Priority 3: Default tenant
+    logger.debug("[TENANT] Using default tenant: taskflow-default-org-id")
+    return "taskflow-default-org-id"

@@ -32,6 +32,7 @@ import {
   Bot,
   User,
   MoreHorizontal,
+  FolderOpen,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -175,12 +176,27 @@ function TasksContent() {
           </p>
         </div>
         {projects.length > 0 && (
-          <Button asChild className="btn-glow">
-            <Link href={`/projects/${projects[0].id}/tasks/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Task
-            </Link>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="btn-glow">
+                <Plus className="mr-2 h-4 w-4" />
+                New Task
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                Select Project
+              </div>
+              {projects.map((project) => (
+                <DropdownMenuItem key={project.id} asChild>
+                  <Link href={`/projects/${project.id}/tasks/new`} className="cursor-pointer">
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    {project.name}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
