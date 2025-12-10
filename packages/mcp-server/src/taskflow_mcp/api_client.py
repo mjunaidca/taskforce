@@ -141,14 +141,24 @@ class TaskFlowAPIClient:
         user_id: str,
         project_id: int,
         status: str | None = None,
+        search: str | None = None,
+        tags: str | None = None,
+        has_due_date: bool | None = None,
+        sort_by: str | None = None,
+        sort_order: str | None = None,
         access_token: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List tasks in a project.
+        """List tasks in a project with search, filter, and sort capabilities.
 
         Args:
             user_id: User ID performing the action
             project_id: Project ID to list tasks from
             status: Optional status filter
+            search: Search tasks by title (case-insensitive ILIKE)
+            tags: Comma-separated tags to filter by (AND logic)
+            has_due_date: Filter by due date existence
+            sort_by: Sort field (created_at, due_date, priority, title)
+            sort_order: Sort order (asc, desc)
             access_token: JWT from Chat Server (required in production)
 
         Returns:
@@ -158,6 +168,16 @@ class TaskFlowAPIClient:
         params = {}
         if status and status != "all":
             params["status"] = status
+        if search:
+            params["search"] = search
+        if tags:
+            params["tags"] = tags
+        if has_due_date is not None:
+            params["has_due_date"] = str(has_due_date).lower()
+        if sort_by:
+            params["sort_by"] = sort_by
+        if sort_order:
+            params["sort_order"] = sort_order
 
         response = await client.get(
             f"/api/projects/{project_id}/tasks",

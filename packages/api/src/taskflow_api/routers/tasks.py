@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -121,6 +123,64 @@ def task_to_read(
     )
 
 
+# User-scoped task endpoints (across all projects)
+
+
+@router.get("/api/tasks/recent", response_model=list[TaskListItem])
+async def list_recent_tasks(
+    session: AsyncSession = Depends(get_session),
+    user: CurrentUser = Depends(get_current_user),
+    limit: int = Query(default=10, le=50),
+) -> list[TaskListItem]:
+    """List recent tasks across all projects the user is a member of.
+
+    Returns tasks sorted by created_at descending (most recent first).
+    Optimized single query for dashboard use.
+    """
+    worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+
+    # Get all project IDs where user is a member
+    membership_stmt = select(ProjectMember.project_id).where(ProjectMember.worker_id == worker_id)
+    membership_result = await session.exec(membership_stmt)
+    project_ids = list(membership_result.all())
+
+    if not project_ids:
+        return []
+
+    # Fetch recent tasks from all user's projects in ONE query
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignee),
+            selectinload(Task.subtasks),
+        )
+        .where(Task.project_id.in_(project_ids))
+        .order_by(Task.created_at.desc())
+        .limit(limit)
+    )
+
+    result = await session.exec(stmt)
+    tasks = result.unique().all()
+
+    return [
+        TaskListItem(
+            id=task.id,
+            title=task.title,
+            status=task.status,
+            priority=task.priority,
+            progress_percent=task.progress_percent,
+            assignee_id=task.assignee_id,
+            assignee_handle=task.assignee.handle if task.assignee else None,
+            due_date=task.due_date,
+            created_at=task.created_at,
+            parent_task_id=task.parent_task_id,
+            subtask_count=len(task.subtasks) if task.subtasks else 0,
+        )
+        for task in tasks
+    ]
+
+
 # Project-scoped task endpoints
 
 
@@ -129,13 +189,21 @@ async def list_tasks(
     project_id: int,
     session: AsyncSession = Depends(get_session),
     user: CurrentUser = Depends(get_current_user),
+    # Existing filters
     status: Literal["pending", "in_progress", "review", "completed", "blocked"] | None = None,
     assignee_id: int | None = None,
     priority: Literal["low", "medium", "high", "critical"] | None = None,
+    # NEW: Search, filter, and sort parameters
+    search: str | None = Query(None, max_length=200),
+    tags: str | None = None,  # comma-separated, AND logic
+    has_due_date: bool | None = None,
+    sort_by: Literal["created_at", "due_date", "priority", "title"] = "created_at",
+    sort_order: Literal["asc", "desc"] = "desc",
+    # Pagination
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> list[TaskListItem]:
-    """List tasks in a project with optional filters."""
+    """List tasks in a project with search, filter, and sort capabilities."""
     worker = await ensure_user_setup(session, user)
     worker_id = worker.id
 
@@ -145,9 +213,17 @@ async def list_tasks(
         raise HTTPException(status_code=404, detail="Project not found")
     await check_project_membership(session, project_id, worker_id)
 
-    # Build query
-    stmt = select(Task).where(Task.project_id == project_id)
+    # Build query with EAGER LOADING (N+1 fix)
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignee),
+            selectinload(Task.subtasks),  # Load subtasks for count
+        )
+        .where(Task.project_id == project_id)
+    )
 
+    # Apply existing filters
     if status:
         stmt = stmt.where(Task.status == status)
     if assignee_id:
@@ -155,34 +231,72 @@ async def list_tasks(
     if priority:
         stmt = stmt.where(Task.priority == priority)
 
-    stmt = stmt.order_by(Task.created_at.desc()).offset(offset).limit(limit)
+    # Apply NEW filters
+    if search:
+        stmt = stmt.where(Task.title.ilike(f"%{search}%"))
+    if tags:
+        tag_list = [t.strip() for t in tags.split(",")]
+        for tag in tag_list:
+            stmt = stmt.where(Task.tags.contains([tag]))
+    if has_due_date is not None:
+        if has_due_date:
+            stmt = stmt.where(Task.due_date.is_not(None))
+        else:
+            stmt = stmt.where(Task.due_date.is_(None))
 
-    result = await session.exec(stmt)
-    tasks = result.all()
-
-    # Get assignee handles
-    task_list = []
-    for task in tasks:
-        assignee_handle = None
-        if task.assignee_id:
-            assignee = await session.get(Worker, task.assignee_id)
-            assignee_handle = assignee.handle if assignee else None
-
-        task_list.append(
-            TaskListItem(
-                id=task.id,
-                title=task.title,
-                status=task.status,
-                priority=task.priority,
-                progress_percent=task.progress_percent,
-                assignee_id=task.assignee_id,
-                assignee_handle=assignee_handle,
-                due_date=task.due_date,
-                created_at=task.created_at,
-            )
+    # Apply sorting
+    if sort_by == "priority":
+        priority_order = case(
+            (Task.priority == "critical", 0),
+            (Task.priority == "high", 1),
+            (Task.priority == "medium", 2),
+            (Task.priority == "low", 3),
+            else_=4,
         )
+        if sort_order == "desc":
+            stmt = stmt.order_by(priority_order.asc())  # Critical first for desc
+        else:
+            stmt = stmt.order_by(priority_order.desc())  # Low first for asc
+    elif sort_by == "due_date":
+        if sort_order == "asc":
+            stmt = stmt.order_by(Task.due_date.asc().nullslast())
+        else:
+            stmt = stmt.order_by(Task.due_date.desc().nullsfirst())
+    elif sort_by == "title":
+        if sort_order == "desc":
+            stmt = stmt.order_by(Task.title.desc())
+        else:
+            stmt = stmt.order_by(Task.title.asc())
+    else:  # created_at (default)
+        if sort_order == "desc":
+            stmt = stmt.order_by(Task.created_at.desc())
+        else:
+            stmt = stmt.order_by(Task.created_at.asc())
 
-    return task_list
+    # Apply pagination
+    stmt = stmt.offset(offset).limit(limit)
+
+    # Execute query (single DB call, assignees preloaded via selectinload)
+    result = await session.exec(stmt)
+    tasks = result.unique().all()  # unique() needed for selectinload
+
+    # Map to response (assignee already loaded - no N+1!)
+    return [
+        TaskListItem(
+            id=task.id,
+            title=task.title,
+            status=task.status,
+            priority=task.priority,
+            progress_percent=task.progress_percent,
+            assignee_id=task.assignee_id,
+            assignee_handle=task.assignee.handle if task.assignee else None,
+            due_date=task.due_date,
+            created_at=task.created_at,
+            parent_task_id=task.parent_task_id,
+            subtask_count=len(task.subtasks) if task.subtasks else 0,
+        )
+        for task in tasks
+    ]
 
 
 @router.post("/api/projects/{project_id}/tasks", response_model=TaskRead, status_code=201)
@@ -387,11 +501,20 @@ async def delete_task(
     task_title = task.title
     task_status = task.status
 
-    # Check for subtasks
-    stmt = select(Task).where(Task.parent_task_id == task_id)
-    result = await session.exec(stmt)
-    if result.first():
-        raise HTTPException(status_code=400, detail="Cannot delete task with subtasks")
+    # Cascade delete subtasks recursively
+    async def delete_subtasks(parent_id: int) -> int:
+        """Recursively delete all subtasks and return count."""
+        stmt = select(Task).where(Task.parent_task_id == parent_id)
+        result = await session.exec(stmt)
+        subtasks = result.all()
+        count = 0
+        for subtask in subtasks:
+            count += await delete_subtasks(subtask.id)  # Recurse first
+            await session.delete(subtask)
+            count += 1
+        return count
+
+    subtask_count = await delete_subtasks(task_id)
 
     # Audit before deletion
     await log_action(
@@ -401,7 +524,7 @@ async def delete_task(
         action="deleted",
         actor_id=worker_id,
         actor_type=worker_type,
-        details={"title": task_title, "status": task_status},
+        details={"title": task_title, "status": task_status, "subtasks_deleted": subtask_count},
     )
 
     await session.delete(task)

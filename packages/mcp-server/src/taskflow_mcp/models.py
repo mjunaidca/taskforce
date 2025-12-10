@@ -48,6 +48,14 @@ class ListTasksInput(AuthenticatedInput):
     status: Literal["all", "pending", "in_progress", "review", "completed", "blocked"] | None = (
         Field("all", description="Filter by status")
     )
+    # Search, filter, and sort parameters (optional, backward compatible)
+    search: str | None = Field(None, max_length=200, description="Search tasks by title (case-insensitive)")
+    tags: str | None = Field(None, description="Comma-separated tags to filter by (AND logic)")
+    has_due_date: bool | None = Field(None, description="Filter by due date existence (true/false)")
+    sort_by: Literal["created_at", "due_date", "priority", "title"] | None = Field(
+        None, description="Sort field (default: created_at)"
+    )
+    sort_order: Literal["asc", "desc"] | None = Field(None, description="Sort order (default: desc)")
 
 
 class TaskIdInput(AuthenticatedInput):

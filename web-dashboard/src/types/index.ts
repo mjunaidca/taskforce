@@ -101,6 +101,8 @@ export interface TaskListItem {
   assignee_handle: string | null;
   due_date: string | null;
   created_at: string;
+  parent_task_id: number | null;
+  subtask_count: number;
 }
 
 export interface TaskRead {
@@ -190,4 +192,10 @@ export interface TaskFilterParams extends PaginationParams {
   status?: TaskStatus;
   assignee_id?: number;
   priority?: TaskPriority;
+  // NEW: Search, filter, and sort parameters
+  search?: string;
+  tags?: string;  // comma-separated, AND logic
+  has_due_date?: boolean;
+  sort_by?: "created_at" | "due_date" | "priority" | "title";
+  sort_order?: "asc" | "desc";
 }

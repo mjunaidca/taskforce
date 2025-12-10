@@ -30,14 +30,13 @@ export default function DashboardPage() {
     async function fetchData() {
       try {
         setLoading(true)
-        const projectsData = await api.getProjects({ limit: 5 })
+        // Fetch projects and recent tasks in parallel
+        const [projectsData, tasksData] = await Promise.all([
+          api.getProjects({ limit: 5 }),
+          api.getRecentTasks(10), // Recent tasks from ALL projects (optimized single query)
+        ])
         setProjects(projectsData)
-
-        // Get tasks from first project if available
-        if (projectsData.length > 0) {
-          const tasksData = await api.getProjectTasks(projectsData[0].id, { limit: 5 })
-          setRecentTasks(tasksData)
-        }
+        setRecentTasks(tasksData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data")
       } finally {

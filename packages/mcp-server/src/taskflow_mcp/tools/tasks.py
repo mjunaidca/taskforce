@@ -108,17 +108,23 @@ async def taskflow_add_task(params: AddTaskInput, ctx: Context) -> str:
     },
 )
 async def taskflow_list_tasks(params: ListTasksInput, ctx: Context) -> str:
-    """List tasks in a project with optional status filter.
+    """List tasks in a project with search, filter, and sort capabilities.
 
     Args:
-        params: ListTasksInput with user_id, project_id, and optional status filter
+        params: ListTasksInput with user_id, project_id, and optional filters:
+            - status: Filter by status (pending, in_progress, review, completed, blocked)
+            - search: Search by title (case-insensitive)
+            - tags: Comma-separated tags (AND logic, e.g., "work,urgent")
+            - has_due_date: Filter by due date existence (true/false)
+            - sort_by: Sort field (created_at, due_date, priority, title)
+            - sort_order: Sort order (asc, desc)
 
     Returns:
-        JSON array of tasks with id, title, status, priority, assignee_handle
+        JSON array of tasks with id, title, status, priority, assignee_handle, due_date
 
     Example:
-        Input: {"user_id": "user123", "project_id": 1, "status": "pending"}
-        Output: [{"id": 1, "title": "Task 1", "status": "pending", ...}, ...]
+        Input: {"user_id": "user123", "project_id": 1, "search": "meeting", "sort_by": "priority"}
+        Output: [{"id": 1, "title": "Team Meeting", "status": "pending", ...}, ...]
     """
     try:
         client = get_api_client()
@@ -126,6 +132,11 @@ async def taskflow_list_tasks(params: ListTasksInput, ctx: Context) -> str:
             user_id=params.user_id,
             project_id=params.project_id,
             status=params.status,
+            search=params.search,
+            tags=params.tags,
+            has_due_date=params.has_due_date,
+            sort_by=params.sort_by,
+            sort_order=params.sort_order,
             access_token=params.access_token,
         )
         # Return simplified task list
@@ -138,6 +149,7 @@ async def taskflow_list_tasks(params: ListTasksInput, ctx: Context) -> str:
                 "progress_percent": t.get("progress_percent"),
                 "assignee_handle": t.get("assignee_handle"),
                 "due_date": t.get("due_date"),
+                "tags": t.get("tags"),
             }
             for t in tasks
         ]

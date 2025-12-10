@@ -161,13 +161,25 @@ class ApiClient {
   // Tasks API
   async getProjectTasks(projectId: number, params?: TaskFilterParams): Promise<TaskListItem[]> {
     const searchParams = new URLSearchParams();
+    // Existing filters
     if (params?.status) searchParams.set("status", params.status);
     if (params?.assignee_id) searchParams.set("assignee_id", params.assignee_id.toString());
     if (params?.priority) searchParams.set("priority", params.priority);
+    // NEW: Search, filter, and sort parameters
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.tags) searchParams.set("tags", params.tags);
+    if (params?.has_due_date !== undefined) searchParams.set("has_due_date", params.has_due_date.toString());
+    if (params?.sort_by) searchParams.set("sort_by", params.sort_by);
+    if (params?.sort_order) searchParams.set("sort_order", params.sort_order);
+    // Pagination
     if (params?.limit) searchParams.set("limit", params.limit.toString());
     if (params?.offset) searchParams.set("offset", params.offset.toString());
     const query = searchParams.toString();
     return this.request<TaskListItem[]>(`/projects/${projectId}/tasks${query ? `?${query}` : ""}`);
+  }
+
+  async getRecentTasks(limit: number = 10): Promise<TaskListItem[]> {
+    return this.request<TaskListItem[]>(`/tasks/recent?limit=${limit}`);
   }
 
   async getTask(taskId: number): Promise<TaskRead> {
