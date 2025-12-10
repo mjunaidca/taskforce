@@ -20,6 +20,7 @@ Phase V implements **Intermediate** and **Advanced** level features, then deploy
 | **Agent 2B** | Notifications & Dapr (events + service + bell) | 60 min | [PRD](./agent-2b-notifications-dapr-prd.md) |
 | **Agent 3** | CI/CD (GitHub Actions) | 30 min | TBD |
 | **Agent 4** | Docs + Monitoring | 30 min | TBD |
+| **Agent 5** | MCP OAuth Standardization | 90-120 min | [PRD](../014-mcp-oauth-standardization/prd.md), [Instructions](../014-mcp-oauth-standardization/AGENT-INSTRUCTIONS.md) |
 
 ---
 
@@ -41,16 +42,19 @@ Phase V implements **Intermediate** and **Advanced** level features, then deploy
 | Due Dates | ✅ Exists | Model ready |
 | Reminders | ⏳ Pending | Agent 2 |
 
-### Infrastructure (Agent 2-4)
+### Infrastructure (Agent 2-5)
 | Feature | Status | Owner |
 |---------|--------|-------|
-| Dapr Pub/Sub | ⏳ Pending | Agent 2 |
-| Dapr State | ⏳ Pending | Agent 2 |
-| Dapr Bindings (cron) | ⏳ Pending | Agent 2 |
-| Kafka/Redpanda | ⏳ Pending | Agent 2 |
+| Dapr Pub/Sub | ⏳ Pending | Agent 2B |
+| Dapr State | ⏳ Pending | Agent 2B |
+| Dapr Bindings (cron) | ⏳ Pending | Agent 2B |
+| Kafka/Redpanda | ⏳ Pending | Agent 2B |
 | GitHub Actions CI/CD | ⏳ Pending | Agent 3 |
 | Monitoring/Logging | ⏳ Pending | Agent 4 |
 | README Update | ⏳ Pending | Agent 4 |
+| **MCP OAuth/Device Flow** | ⏳ Pending | Agent 5 |
+| **MCP Standard Auth** | ⏳ Pending | Agent 5 |
+| **CLI Agent Support** | ⏳ Pending | Agent 5 |
 
 ---
 
@@ -67,10 +71,12 @@ Phase V implements **Intermediate** and **Advanced** level features, then deploy
 
 ```
 1. Agent Work (Parallel) ─────────────────────────────────────────
-   ├── Agent 1: Feature Fields + N+1 Fix (45 min)
-   ├── Agent 2: Dapr + Events (90 min)
-   ├── Agent 3: CI/CD (30 min)
-   └── Agent 4: Docs + Monitoring (30 min)
+   ├── Agent 1: Feature Fields + N+1 Fix (45 min) ✅ DONE
+   ├── Agent 2A: Recurring Tasks (45 min) ✅ DONE
+   ├── Agent 2B: Dapr + Events (60 min) 🟡 IN PROGRESS
+   ├── Agent 3: CI/CD (30 min) ⏳ Can Start
+   ├── Agent 4: Docs + Monitoring (30 min) ⏳ Can Start
+   └── Agent 5: MCP OAuth (90-120 min) ⏳ Can Start (No Dependencies)
 
 2. Integration (30 min) ──────────────────────────────────────────
    └── Merge all branches, resolve conflicts
@@ -117,6 +123,18 @@ README.md                                          # Phase V section
 helm/taskflow/templates/monitoring/                # Optional
 ```
 
+### Agent 5 (MCP OAuth)
+```
+sso-platform/src/lib/auth.ts                       # Device Flow plugin
+sso-platform/src/lib/trusted-clients.ts            # MCP client registration
+sso-platform/src/app/auth/device/page.tsx          # Device approval UI
+packages/mcp-server/src/taskflow_mcp/auth.py       # JWT/API key validation
+packages/mcp-server/src/taskflow_mcp/server.py     # Auth middleware
+packages/mcp-server/src/taskflow_mcp/config.py     # SSO URL config
+packages/mcp-server/src/taskflow_mcp/tools/*.py    # Simplified tool signatures
+packages/mcp-server/src/taskflow_mcp/models.py     # Remove auth params
+```
+
 ---
 
 ## Non-Goals (Out of Scope)
@@ -138,5 +156,7 @@ helm/taskflow/templates/monitoring/                # Optional
 | Filter accuracy | 100% | Test cases |
 | Sort correctness | Priority order correct | Manual test |
 | Dapr sidecars | All pods 2/2 ready | `kubectl get pods` |
+| MCP OAuth | Claude Code connects | Manual test |
+| Device Flow | Code → Approval → Token | E2E test |
 | Demo video | < 90 seconds | Video length |
 
