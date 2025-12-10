@@ -141,9 +141,7 @@ async def list_recent_tasks(
     worker_id = worker.id
 
     # Get all project IDs where user is a member
-    membership_stmt = select(ProjectMember.project_id).where(
-        ProjectMember.worker_id == worker_id
-    )
+    membership_stmt = select(ProjectMember.project_id).where(ProjectMember.worker_id == worker_id)
     membership_result = await session.exec(membership_stmt)
     project_ids = list(membership_result.all())
 
@@ -216,10 +214,14 @@ async def list_tasks(
     await check_project_membership(session, project_id, worker_id)
 
     # Build query with EAGER LOADING (N+1 fix)
-    stmt = select(Task).options(
-        selectinload(Task.assignee),
-        selectinload(Task.subtasks),  # Load subtasks for count
-    ).where(Task.project_id == project_id)
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignee),
+            selectinload(Task.subtasks),  # Load subtasks for count
+        )
+        .where(Task.project_id == project_id)
+    )
 
     # Apply existing filters
     if status:

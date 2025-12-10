@@ -208,9 +208,7 @@ async def test_list_tasks_filter_by_tags_single(client: AsyncClient) -> None:
     await create_test_task(client, project["id"], "Personal Task", tags=["personal"])
     await create_test_task(client, project["id"], "No Tags Task")
 
-    response = await client.get(
-        f"/api/projects/{project['id']}/tasks", params={"tags": "work"}
-    )
+    response = await client.get(f"/api/projects/{project['id']}/tasks", params={"tags": "work"})
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -408,16 +406,23 @@ async def test_list_tasks_combined_filters_and_sort(client: AsyncClient) -> None
     """Test combining multiple filters with sorting. Requires PostgreSQL."""
     project = await create_test_project(client)
     await create_test_task(
-        client, project["id"], "Urgent Work Report",
-        tags=["work"], due_date="2025-12-31", priority="high"
+        client,
+        project["id"],
+        "Urgent Work Report",
+        tags=["work"],
+        due_date="2025-12-31",
+        priority="high",
     )
     await create_test_task(
-        client, project["id"], "Work Task No Date",
-        tags=["work"], priority="low"
+        client, project["id"], "Work Task No Date", tags=["work"], priority="low"
     )
     await create_test_task(
-        client, project["id"], "Personal Task",
-        tags=["personal"], due_date="2025-06-15", priority="medium"
+        client,
+        project["id"],
+        "Personal Task",
+        tags=["personal"],
+        due_date="2025-06-15",
+        priority="medium",
     )
 
     # Filter: work tag + has due date, sort by title
