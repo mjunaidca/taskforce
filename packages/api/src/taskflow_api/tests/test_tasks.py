@@ -113,18 +113,27 @@ async def test_delete_task(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_task_with_subtasks_fails(client: AsyncClient) -> None:
-    """Test deleting task with subtasks fails."""
+async def test_delete_task_cascades_subtasks(client: AsyncClient) -> None:
+    """Test deleting task also deletes all subtasks."""
     project = await create_test_project(client)
     parent = await create_test_task(client, project["id"], "Parent Task")
-    await client.post(
+    subtask_resp = await client.post(
         f"/api/tasks/{parent['id']}/subtasks",
         json={"title": "Subtask"},
     )
+    subtask = subtask_resp.json()
 
+    # Delete parent - should cascade to subtask
     response = await client.delete(f"/api/tasks/{parent['id']}")
-    assert response.status_code == 400
-    assert "subtasks" in response.json()["error"].lower()
+    assert response.status_code == 200
+
+    # Verify parent is gone
+    parent_check = await client.get(f"/api/tasks/{parent['id']}")
+    assert parent_check.status_code == 404
+
+    # Verify subtask is also gone
+    subtask_check = await client.get(f"/api/tasks/{subtask['id']}")
+    assert subtask_check.status_code == 404
 
 
 @pytest.mark.asyncio

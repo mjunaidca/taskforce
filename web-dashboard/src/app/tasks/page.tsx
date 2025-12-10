@@ -33,6 +33,8 @@ import {
   User,
   MoreHorizontal,
   FolderOpen,
+  GitBranch,
+  CornerDownRight,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -66,7 +68,7 @@ function TasksContent() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // NEW: Sort state
+  // Sort state
   const [sortBy, setSortBy] = useState<"created_at" | "due_date" | "priority" | "title">("created_at")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
@@ -104,7 +106,6 @@ function TasksContent() {
           const projectTasks = await api.getProjectTasks(project.id, {
             status: statusFilter !== "all" ? (statusFilter as TaskStatus) : undefined,
             priority: priorityFilter !== "all" ? (priorityFilter as TaskPriority) : undefined,
-            // NEW: Pass search and sort parameters to API (server-side filtering)
             search: deferredSearch || undefined,
             sort_by: sortBy,
             sort_order: sortOrder,
@@ -263,7 +264,7 @@ function TasksContent() {
           </SelectContent>
         </Select>
 
-        {/* NEW: Sort By Dropdown */}
+        {/* Sort By Dropdown */}
         <Select value={sortBy} onValueChange={(val) => setSortBy(val as typeof sortBy)}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Sort by" />
@@ -331,12 +332,23 @@ function TasksContent() {
                 {tasks.map((task) => (
                   <TableRow key={task.id} className="group">
                     <TableCell>
-                      <Link
-                        href={`/tasks/${task.id}`}
-                        className="font-medium hover:text-primary transition-colors"
-                      >
-                        {task.title}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {task.parent_task_id && (
+                          <CornerDownRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <Link
+                          href={`/tasks/${task.id}`}
+                          className="font-medium hover:text-primary transition-colors"
+                        >
+                          {task.title}
+                        </Link>
+                        {task.subtask_count > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            <GitBranch className="h-3 w-3" />
+                            {task.subtask_count}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getStatusColor(task.status)}>

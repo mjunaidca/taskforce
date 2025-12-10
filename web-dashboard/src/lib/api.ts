@@ -178,6 +178,10 @@ class ApiClient {
     return this.request<TaskListItem[]>(`/projects/${projectId}/tasks${query ? `?${query}` : ""}`);
   }
 
+  async getRecentTasks(limit: number = 10): Promise<TaskListItem[]> {
+    return this.request<TaskListItem[]>(`/tasks/recent?limit=${limit}`);
+  }
+
   async getTask(taskId: number): Promise<TaskRead> {
     return this.request<TaskRead>(`/tasks/${taskId}`);
   }

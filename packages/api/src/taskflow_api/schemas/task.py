@@ -132,3 +132,5 @@ class TaskListItem(BaseModel):
     assignee_handle: str | None = None
     due_date: datetime | None
     created_at: datetime
+    parent_task_id: int | None = None
+    subtask_count: int = 0

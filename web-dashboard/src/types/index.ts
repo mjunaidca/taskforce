@@ -101,6 +101,8 @@ export interface TaskListItem {
   assignee_handle: string | null;
   due_date: string | null;
   created_at: string;
+  parent_task_id: number | null;
+  subtask_count: number;
 }
 
 export interface TaskRead {

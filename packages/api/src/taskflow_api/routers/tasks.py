@@ -123,6 +123,66 @@ def task_to_read(
     )
 
 
+# User-scoped task endpoints (across all projects)
+
+
+@router.get("/api/tasks/recent", response_model=list[TaskListItem])
+async def list_recent_tasks(
+    session: AsyncSession = Depends(get_session),
+    user: CurrentUser = Depends(get_current_user),
+    limit: int = Query(default=10, le=50),
+) -> list[TaskListItem]:
+    """List recent tasks across all projects the user is a member of.
+
+    Returns tasks sorted by created_at descending (most recent first).
+    Optimized single query for dashboard use.
+    """
+    worker = await ensure_user_setup(session, user)
+    worker_id = worker.id
+
+    # Get all project IDs where user is a member
+    membership_stmt = select(ProjectMember.project_id).where(
+        ProjectMember.worker_id == worker_id
+    )
+    membership_result = await session.exec(membership_stmt)
+    project_ids = list(membership_result.all())
+
+    if not project_ids:
+        return []
+
+    # Fetch recent tasks from all user's projects in ONE query
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignee),
+            selectinload(Task.subtasks),
+        )
+        .where(Task.project_id.in_(project_ids))
+        .order_by(Task.created_at.desc())
+        .limit(limit)
+    )
+
+    result = await session.exec(stmt)
+    tasks = result.unique().all()
+
+    return [
+        TaskListItem(
+            id=task.id,
+            title=task.title,
+            status=task.status,
+            priority=task.priority,
+            progress_percent=task.progress_percent,
+            assignee_id=task.assignee_id,
+            assignee_handle=task.assignee.handle if task.assignee else None,
+            due_date=task.due_date,
+            created_at=task.created_at,
+            parent_task_id=task.parent_task_id,
+            subtask_count=len(task.subtasks) if task.subtasks else 0,
+        )
+        for task in tasks
+    ]
+
+
 # Project-scoped task endpoints
 
 
@@ -156,7 +216,10 @@ async def list_tasks(
     await check_project_membership(session, project_id, worker_id)
 
     # Build query with EAGER LOADING (N+1 fix)
-    stmt = select(Task).options(selectinload(Task.assignee)).where(Task.project_id == project_id)
+    stmt = select(Task).options(
+        selectinload(Task.assignee),
+        selectinload(Task.subtasks),  # Load subtasks for count
+    ).where(Task.project_id == project_id)
 
     # Apply existing filters
     if status:
@@ -227,6 +290,8 @@ async def list_tasks(
             assignee_handle=task.assignee.handle if task.assignee else None,
             due_date=task.due_date,
             created_at=task.created_at,
+            parent_task_id=task.parent_task_id,
+            subtask_count=len(task.subtasks) if task.subtasks else 0,
         )
         for task in tasks
     ]
@@ -434,11 +499,20 @@ async def delete_task(
     task_title = task.title
     task_status = task.status
 
-    # Check for subtasks
-    stmt = select(Task).where(Task.parent_task_id == task_id)
-    result = await session.exec(stmt)
-    if result.first():
-        raise HTTPException(status_code=400, detail="Cannot delete task with subtasks")
+    # Cascade delete subtasks recursively
+    async def delete_subtasks(parent_id: int) -> int:
+        """Recursively delete all subtasks and return count."""
+        stmt = select(Task).where(Task.parent_task_id == parent_id)
+        result = await session.exec(stmt)
+        subtasks = result.all()
+        count = 0
+        for subtask in subtasks:
+            count += await delete_subtasks(subtask.id)  # Recurse first
+            await session.delete(subtask)
+            count += 1
+        return count
+
+    subtask_count = await delete_subtasks(task_id)
 
     # Audit before deletion
     await log_action(
@@ -448,7 +522,7 @@ async def delete_task(
         action="deleted",
         actor_id=worker_id,
         actor_type=worker_type,
-        details={"title": task_title, "status": task_status},
+        details={"title": task_title, "status": task_status, "subtasks_deleted": subtask_count},
     )
 
     await session.delete(task)
