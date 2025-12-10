@@ -78,6 +78,86 @@ As a developer testing the multi-tenancy feature locally, I want to override my 
 - What if X-Tenant-ID header is set in production? → Ignored; only JWT claim is authoritative in production
 - What if tenant_id is an empty string in JWT? → Treated as missing; falls back to "taskflow"
 
+---
+
+## Access Model: Tenant vs Project Membership
+
+### Two-Level Access Control (Principle of Least Privilege)
+
+This implementation uses a **two-level access model**:
+
+```
+Level 1: TENANT (Namespace)
+    └── Defines which projects EXIST in your organizational boundary
+    └── Users only see projects within their tenant
+
+Level 2: PROJECT MEMBERSHIP (Access)
+    └── Defines which projects you can actually ACCESS
+    └── Must be explicitly added to a project by its owner
+```
+
+### How It Works
+
+**Scenario: 3 users in the same organization "acme-corp"**
+
+```
+Organization: acme-corp (tenant_id = "acme-corp")
+Users: Alice, Bob, Charlie (all have JWT with tenant_id = "acme-corp")
+
+1. Alice signs up and creates "Project Alpha"
+   → Project Alpha: tenant_id="acme-corp", owner_id=Alice
+   → Alice is automatically a member (role: owner)
+
+2. Bob signs up (same org) and calls GET /api/projects
+   → Query filters: tenant_id="acme-corp" AND user is member
+   → Result: [] empty - Bob is in the org but NOT a member of any project
+
+3. Bob creates "Project Beta"
+   → Project Beta: tenant_id="acme-corp", owner_id=Bob
+   → Bob is automatically a member (role: owner)
+
+4. Alice invites Bob to Project Alpha
+   → POST /api/projects/{alpha_id}/members with user_id=Bob
+   → Bob is now a member of Project Alpha
+
+5. Bob calls GET /api/projects
+   → Result: [Project Alpha, Project Beta] - Bob can see both now
+```
+
+### Access Matrix
+
+| Action | Same Tenant, Not Member | Same Tenant, Member | Different Tenant |
+|--------|------------------------|---------------------|------------------|
+| List projects | Not visible | ✅ Visible | Not visible |
+| View project | 404 | ✅ Allowed | 404 |
+| Create project | ✅ Creates in own tenant | ✅ Creates in own tenant | N/A |
+| Add members | 403 (not owner) | ✅ If owner | 404 |
+| View tasks | 403 | ✅ Allowed | 404 |
+
+### Why This Model?
+
+1. **Least Privilege**: Being in an org doesn't auto-grant access to all org projects
+2. **Flexibility**: Teams within an org can have separate projects
+3. **Security**: Sensitive projects stay private even within org
+4. **Collaboration**: Owners explicitly invite collaborators
+
+### User Workflow
+
+```
+New User Joins Organization:
+1. User signs up / gets added to org in SSO
+2. User's JWT includes tenant_id = "org-id"
+3. User can create their OWN projects (becomes owner)
+4. User sees ONLY projects they own or were invited to
+5. Project owners invite them to collaborate on existing projects
+```
+
+### Future Considerations (Not In Scope)
+
+- **Org-wide visibility**: Auto-share all projects with org members
+- **Role-based access**: Admin role sees all org projects
+- **Project templates**: Pre-configured membership for new projects
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
