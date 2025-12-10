@@ -71,6 +71,7 @@ export interface WorkerRead {
   type: "human" | "agent";
   agent_type: "claude" | "qwen" | "gemini" | "custom" | null;
   capabilities: string[];
+  status?: "online" | "offline" | "working"; // Added for Workspace V2
   created_at: string;
 }
 
