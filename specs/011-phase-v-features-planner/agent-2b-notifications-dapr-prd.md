@@ -1,30 +1,42 @@
-# PRD: Agent 2B - Notifications & Dapr Integration
+# PRD: Agent 2B - Notifications, Reminders & Dapr Integration
 
 **Phase**: V (Advanced Cloud Deployment)  
 **Owner**: Agent 2B  
-**Estimated Time**: 60 minutes  
+**Estimated Time**: 60-75 minutes  
 **Priority**: HIGH (Hackathon requirement)  
-**Dependency**: Agent 2A completed (recurring task fields exist)
+**Dependency**: Agent 2A completed (recurring task fields and spawn-on-completion logic exist)
 
 ---
 
 ## Executive Summary
 
-Agent 2B implements **Event-Driven Notifications** using Dapr:
-- Event publishing from API when tasks change
-- Notification service that stores and serves notifications
-- Reminder system via Dapr cron
-- Frontend notification bell
+Agent 2B implements the **Event-Driven Architecture layer** on top of Agent 2A's recurring tasks:
+
+1. **On Due Date Trigger** - Spawn next recurring task when due date passes (enables the "Coming Soon" UI option)
+2. **Reminders** - Notify users when tasks are due soon
+3. **Activity Notifications** - Notify on task assignment, completion
+4. **Dapr Integration** - Event publishing via pub/sub
+
+### What Agent 2A Already Built
+
+From Agent 2A's completion report:
+- ✅ 9 recurrence patterns: `1m`, `5m`, `10m`, `15m`, `30m`, `1h`, `daily`, `weekly`, `monthly`
+- ✅ Spawn on completion trigger
+- ✅ `recurring_root_id` - chain tracking to original task
+- ✅ `max_occurrences` - spawn limits
+- ✅ `clone_subtasks` - option to clone subtasks to new occurrences
+- ✅ Full audit trail
+- ⏳ "On due date" trigger - **UI shows "Coming Soon" → Agent 2B implements this**
 
 ### Success Criteria
 
-- [ ] Events published via Dapr on task CRUD
-- [ ] Notification service receives and stores events
-- [ ] Cron triggers reminder checks every 5 minutes
+- [ ] `on_due_date` trigger works (cron spawns next occurrence when due date passes)
 - [ ] Tasks due within 24h trigger reminder notifications
-- [ ] Frontend bell shows unread count
-- [ ] Dapr sidecars running (2/2 containers)
-- [ ] If notification service fails, API continues working
+- [ ] Task assignment triggers notification to assignee
+- [ ] Notification bell shows unread count in frontend
+- [ ] Events publish via Dapr (Redis pub/sub)
+- [ ] Dapr sidecars running (2/2 containers per pod)
+- [ ] API continues if notification service down (non-blocking)
 
 ---
 
@@ -40,6 +52,8 @@ Agent 2B implements **Event-Driven Notifications** using Dapr:
 │  │  │ TaskFlow  │  │   Dapr     │  │    │  │ Notif     │  │   Dapr     │ ││
 │  │  │   API     │◀─┼─▶ Sidecar  │──┼────┼─▶│  Service  │◀─┼─▶ Sidecar  │ ││
 │  │  │           │  │   :3500    │  │    │  │           │  │   :3500    │ ││
+│  │  │ - CRUD    │  │            │  │    │  │ - Store   │  │            │ ││
+│  │  │ - Cron    │  │            │  │    │  │ - API     │  │            │ ││
 │  │  └───────────┘  └────────────┘  │    │  └───────────┘  └────────────┘ ││
 │  └─────────────────────────────────┘    └─────────────────────────────────┘│
 │                         │                              ▲                    │
@@ -50,54 +64,128 @@ Agent 2B implements **Event-Driven Notifications** using Dapr:
 │                                         ▲                                   │
 │                         ┌───────────────┴───────────────┐                  │
 │                         │        Dapr Cron Binding      │                  │
-│                         │     (triggers every 5 min)    │                  │
+│                         │     (triggers every 1 min)    │                  │
 │                         └───────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Event Types
+## 2. What Agent 2B Builds
 
-| Event | Trigger | Recipient | Purpose |
-|-------|---------|-----------|---------|
-| `task.assigned` | Task assigned | Assignee | "You have new work" |
-| `task.completed` | Task completed | Creator | "Task is done" |
-| `task.reminder` | Cron (due soon) | Assignee | "Due in X hours" |
+### 2.1 On Due Date Spawn Trigger (Cron)
 
-### Event Payload
+Agent 2A added a `spawn_trigger` field with options:
+- `on_completion` ← Already works (Agent 2A)
+- `on_due_date` ← **Agent 2B implements via cron**
+- `both` ← Works when either trigger fires
+
+**Cron Logic**:
+```python
+# Every 1 minute, check for recurring tasks where:
+# - spawn_trigger IN ('on_due_date', 'both')
+# - due_date has passed
+# - status != 'completed' (not already handled by completion trigger)
+# - hasn't already spawned for this due date
+
+# For each matching task:
+# 1. Create next occurrence (same as completion spawn logic)
+# 2. Optionally clone subtasks
+# 3. Mark original as "spawned" or update tracking field
+```
+
+### 2.2 Reminder Notifications
+
+**When**: Task due within 24 hours (configurable)  
+**Who**: Task assignee  
+**What**: Notification saying "Task X due in Y hours"
+
+**Cron Logic**:
+```python
+# Every 5 minutes, check for tasks where:
+# - due_date is within 24 hours from now
+# - due_date > now (not yet overdue)
+# - reminder_sent = False
+# - status NOT IN ('completed', 'cancelled')
+# - has assignee
+
+# For each matching task:
+# 1. Publish task.reminder event
+# 2. Set reminder_sent = True
+```
+
+### 2.3 Activity Notifications
+
+| Event | Trigger | Recipient |
+|-------|---------|-----------|
+| `task.assigned` | Task assigned to someone | Assignee |
+| `task.completed` | Task marked complete | Creator (if different from completer) |
+| `task.spawned` | Recurring task spawned new occurrence | Assignee of new task |
+
+### 2.4 Event Payload Schema
 
 ```json
 {
-  "type": "task.assigned",
+  "type": "task.reminder",
   "task_id": 42,
-  "task_title": "Fix bug #123",
+  "task_title": "Weekly Standup",
   "project_id": 1,
-  "user_id": "recipient-sso-id",
-  "actor_id": "actor-sso-id",
-  "actor_name": "Sarah",
+  "user_id": "recipient-sso-user-id",
+  "actor_id": "system",
   "metadata": {
-    "due_date": "2025-12-15T10:00:00Z"
+    "due_date": "2025-12-15T09:00:00Z",
+    "hours_until_due": 24,
+    "is_recurring": true,
+    "recurrence_pattern": "weekly"
   }
 }
 ```
 
 ---
 
-## 3. Implementation
+## 3. Model Additions
 
-### 3.1 Event Service (API)
+### 3.1 Add `reminder_sent` Field
+
+Agent 2A may have added this, but verify it exists:
+
+**File**: `packages/api/src/taskflow_api/models/task.py`
+
+```python
+# Add if not present:
+reminder_sent: bool = Field(
+    default=False,
+    description="Whether reminder was sent for current due date",
+)
+```
+
+### 3.2 Verify Spawn Trigger Field
+
+Agent 2A should have added:
+
+```python
+spawn_trigger: str = Field(
+    default="on_completion",
+    description="When to spawn next: on_completion, on_due_date, both",
+)
+```
+
+If using `on_due_date` or `both`, we need to track if we've already spawned for this due date to avoid duplicates.
+
+---
+
+## 4. Implementation
+
+### 4.1 Event Service
 
 **File**: `packages/api/src/taskflow_api/services/events.py` (NEW)
 
 ```python
-"""Event publishing service using Dapr pubsub."""
+"""Event publishing via Dapr pub/sub - non-blocking."""
 
 import logging
 from typing import Any
-
 import httpx
-
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -107,22 +195,11 @@ PUBSUB_NAME = "taskflow-pubsub"
 
 
 async def publish_event(topic: str, payload: dict[str, Any]) -> bool:
-    """Publish event via Dapr pubsub.
+    """Publish event via Dapr. Non-blocking - failures don't crash the app."""
     
-    NON-BLOCKING: If Dapr unavailable, logs warning and returns False.
-    The main application flow continues regardless.
-    
-    Args:
-        topic: Event topic (e.g., "task.assigned")
-        payload: Event data including user_id for recipient
-        
-    Returns:
-        True if published successfully, False otherwise
-    """
-    # Skip in dev mode without Dapr
-    if settings.dev_mode and not getattr(settings, 'dapr_enabled', False):
-        logger.info("[EVENT] Dev mode, Dapr disabled. Would publish %s: %s", 
-                   topic, payload.get("task_title", ""))
+    # Dev mode without Dapr
+    if not getattr(settings, 'dapr_enabled', False):
+        logger.info("[EVENT] Would publish %s: %s", topic, payload.get("task_title", ""))
         return True
     
     url = f"{DAPR_URL}/v1.0/publish/{PUBSUB_NAME}/{topic}"
@@ -133,90 +210,17 @@ async def publish_event(topic: str, payload: dict[str, Any]) -> bool:
             response.raise_for_status()
             logger.info("[EVENT] Published %s for task %s", topic, payload.get("task_id"))
             return True
-    except httpx.TimeoutException:
-        logger.warning("[EVENT] Timeout publishing %s - continuing without notification", topic)
-        return False
-    except httpx.HTTPError as e:
-        logger.warning("[EVENT] HTTP error publishing %s: %s - continuing", topic, str(e))
-        return False
     except Exception as e:
-        logger.error("[EVENT] Unexpected error publishing %s: %s - continuing", topic, str(e))
+        logger.warning("[EVENT] Failed to publish %s: %s (continuing)", topic, e)
         return False
 ```
 
-**File**: `packages/api/src/taskflow_api/config.py` (ADD)
-
-```python
-# Add to Settings class:
-dapr_enabled: bool = False  # Set True in K8s deployment
-```
-
-### 3.2 Wire Events to Task CRUD
-
-**File**: `packages/api/src/taskflow_api/routers/tasks.py` (MODIFY)
-
-```python
-# Add import at top
-from ..services.events import publish_event
-
-# In assign_task(), after session.commit():
-async def assign_task(...):
-    # ... existing code ...
-    
-    await session.commit()
-    await session.refresh(task)
-    
-    # NEW: Publish event (non-blocking)
-    if assignee.user_id:  # Only notify humans
-        await publish_event("task.assigned", {
-            "type": "task.assigned",
-            "task_id": task_id,
-            "task_title": task.title,
-            "project_id": task.project_id,
-            "user_id": assignee.user_id,
-            "actor_id": user.id,
-            "actor_name": worker.name,
-            "metadata": {
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-            }
-        })
-    
-    return task_to_read(task, assignee)
-
-
-# In update_status() when completing:
-async def update_status(...):
-    # ... existing code ...
-    
-    elif data.status == "completed":
-        task.completed_at = datetime.utcnow()
-        task.progress_percent = 100
-        
-        # Existing: Handle recurring task
-        if task.is_recurring and task.recurrence_pattern:
-            await create_next_occurrence(session, task, worker_id, worker_type)
-        
-        # NEW: Publish completion event
-        # Get creator's user_id
-        creator = await session.get(Worker, task.created_by_id)
-        if creator and creator.user_id and creator.user_id != user.id:
-            await publish_event("task.completed", {
-                "type": "task.completed",
-                "task_id": task_id,
-                "task_title": task.title,
-                "project_id": task.project_id,
-                "user_id": creator.user_id,
-                "actor_id": user.id,
-                "actor_name": worker.name,
-            })
-```
-
-### 3.3 Cron Handler for Reminders
+### 4.2 Cron Handler
 
 **File**: `packages/api/src/taskflow_api/routers/dapr.py` (NEW)
 
 ```python
-"""Dapr integration - cron handler for reminders."""
+"""Dapr cron handler - recurring spawns and reminders."""
 
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
@@ -227,48 +231,119 @@ from ..database import get_session
 from ..models.task import Task
 from ..models.worker import Worker
 from ..services.events import publish_event
+from ..services.audit import log_action
 
 router = APIRouter(prefix="/dapr", tags=["Dapr"])
 
-REMINDER_HOURS = 24  # Send reminder when due within 24 hours
+REMINDER_HOURS = 24
 
 
 @router.post("/cron")
 async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
-    """Called by Dapr cron binding every 5 minutes.
-    
-    Checks for tasks due soon and publishes reminder events.
+    """Called by Dapr cron every minute. Handles:
+    1. On-due-date recurring task spawns
+    2. Reminder notifications for tasks due soon
     """
     now = datetime.utcnow()
+    results = {"spawned": 0, "reminders": 0}
+    
+    # ========================================
+    # 1. ON DUE DATE RECURRING SPAWN
+    # ========================================
+    # Find recurring tasks where:
+    # - spawn_trigger is 'on_due_date' or 'both'
+    # - due_date has passed
+    # - not yet spawned for this due date
+    
+    spawn_stmt = select(Task).where(
+        Task.is_recurring == True,
+        Task.spawn_trigger.in_(["on_due_date", "both"]),
+        Task.due_date.isnot(None),
+        Task.due_date <= now,
+        Task.status != "completed",  # Completion spawn handled separately
+        Task.due_date_spawn_done == False,  # Haven't spawned for this due date yet
+    )
+    
+    spawn_result = await session.exec(spawn_stmt)
+    for task in spawn_result.all():
+        try:
+            # Spawn next occurrence (reuse Agent 2A's logic if available)
+            next_due = calculate_next_due(task.recurrence_pattern, task.due_date)
+            
+            new_task = Task(
+                title=task.title,
+                description=task.description,
+                project_id=task.project_id,
+                assignee_id=task.assignee_id,
+                created_by_id=task.created_by_id,
+                priority=task.priority,
+                tags=task.tags.copy() if task.tags else [],
+                due_date=next_due,
+                is_recurring=True,
+                recurrence_pattern=task.recurrence_pattern,
+                spawn_trigger=task.spawn_trigger,
+                recurring_root_id=task.recurring_root_id or task.id,
+                clone_subtasks=task.clone_subtasks,
+            )
+            session.add(new_task)
+            
+            # Mark original so we don't spawn again
+            task.due_date_spawn_done = True
+            session.add(task)
+            
+            # Audit log
+            await log_action(
+                session,
+                entity_type="task",
+                entity_id=new_task.id,
+                action="spawned_on_due_date",
+                actor_id=task.created_by_id,
+                actor_type="system",
+                details={"from_task": task.id, "pattern": task.recurrence_pattern},
+            )
+            
+            # Publish event
+            if task.assignee_id:
+                assignee = await session.get(Worker, task.assignee_id)
+                if assignee and assignee.user_id:
+                    await publish_event("task.spawned", {
+                        "type": "task.spawned",
+                        "task_id": new_task.id,
+                        "task_title": new_task.title,
+                        "project_id": new_task.project_id,
+                        "user_id": assignee.user_id,
+                        "metadata": {"spawned_from": task.id, "trigger": "on_due_date"}
+                    })
+            
+            results["spawned"] += 1
+            
+        except Exception as e:
+            logger.error("[CRON] Spawn error for task %s: %s", task.id, e)
+    
+    # ========================================
+    # 2. REMINDERS
+    # ========================================
     reminder_threshold = now + timedelta(hours=REMINDER_HOURS)
     
-    results = {"reminders_sent": 0, "errors": 0}
-    
-    # Find tasks due soon that haven't been reminded
-    stmt = select(Task).where(
+    reminder_stmt = select(Task).where(
         Task.due_date.isnot(None),
         Task.due_date <= reminder_threshold,
-        Task.due_date > now,  # Not overdue yet
+        Task.due_date > now,
         Task.status.notin_(["completed", "cancelled"]),
         Task.reminder_sent == False,
         Task.assignee_id.isnot(None),
     )
     
-    result = await session.exec(stmt)
-    tasks = result.all()
-    
-    for task in tasks:
+    reminder_result = await session.exec(reminder_stmt)
+    for task in reminder_result.all():
         try:
-            # Get assignee's user_id
             assignee = await session.get(Worker, task.assignee_id)
             if not assignee or not assignee.user_id:
                 continue
             
-            # Calculate hours until due
             hours_until = (task.due_date - now).total_seconds() / 3600
             
-            # Publish reminder event
-            success = await publish_event("task.reminder", {
+            await publish_event("task.reminder", {
                 "type": "task.reminder",
                 "task_id": task.id,
                 "task_title": task.title,
@@ -277,37 +352,75 @@ async def handle_cron(session: AsyncSession = Depends(get_session)) -> dict:
                 "metadata": {
                     "due_date": task.due_date.isoformat(),
                     "hours_until_due": int(hours_until),
+                    "is_recurring": task.is_recurring,
                 }
             })
             
-            if success:
-                task.reminder_sent = True
-                session.add(task)
-                results["reminders_sent"] += 1
-                
+            task.reminder_sent = True
+            session.add(task)
+            results["reminders"] += 1
+            
         except Exception as e:
-            results["errors"] += 1
+            logger.error("[CRON] Reminder error for task %s: %s", task.id, e)
     
     await session.commit()
-    
     return {"status": "ok", **results}
 
 
-@router.get("/health")
-async def dapr_health():
-    """Health check for Dapr sidecar."""
-    return {"status": "healthy", "component": "dapr-integration"}
+def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
+    """Calculate next due date from recurrence pattern."""
+    patterns = {
+        "1m": timedelta(minutes=1),
+        "5m": timedelta(minutes=5),
+        "10m": timedelta(minutes=10),
+        "15m": timedelta(minutes=15),
+        "30m": timedelta(minutes=30),
+        "1h": timedelta(hours=1),
+        "daily": timedelta(days=1),
+        "weekly": timedelta(weeks=1),
+        "monthly": timedelta(days=30),
+    }
+    return from_time + patterns.get(pattern, timedelta(days=1))
 ```
 
-**Register in main.py**:
+### 4.3 Wire Events to Task CRUD
+
+**File**: `packages/api/src/taskflow_api/routers/tasks.py` (MODIFY)
 
 ```python
-from .routers import dapr
+from ..services.events import publish_event
 
-app.include_router(dapr.router)
+# In assign_task(), after commit:
+if assignee.user_id:
+    await publish_event("task.assigned", {
+        "type": "task.assigned",
+        "task_id": task_id,
+        "task_title": task.title,
+        "project_id": task.project_id,
+        "user_id": assignee.user_id,
+        "actor_id": user.id,
+        "actor_name": worker.name,
+    })
+
+# In update_status() when completing:
+if data.status == "completed":
+    # ... existing completion logic ...
+    
+    # Notify creator if different from completer
+    creator = await session.get(Worker, task.created_by_id)
+    if creator and creator.user_id and creator.user_id != user.id:
+        await publish_event("task.completed", {
+            "type": "task.completed",
+            "task_id": task_id,
+            "task_title": task.title,
+            "project_id": task.project_id,
+            "user_id": creator.user_id,
+            "actor_id": user.id,
+            "actor_name": worker.name,
+        })
 ```
 
-### 3.4 Notification Service
+### 4.4 Notification Service
 
 **Structure**:
 ```
@@ -319,12 +432,10 @@ packages/notification-service/
 │   ├── database.py
 │   ├── models.py
 │   └── routers/
-│       ├── __init__.py
-│       ├── dapr.py
-│       └── notifications.py
+│       ├── dapr.py          # Event subscription
+│       └── notifications.py  # User API
 ├── Dockerfile
-├── pyproject.toml
-└── README.md
+└── pyproject.toml
 ```
 
 **File**: `packages/notification-service/src/notification_service/models.py`
@@ -333,208 +444,123 @@ packages/notification-service/
 from datetime import datetime
 from sqlmodel import Field, SQLModel
 
-
 class Notification(SQLModel, table=True):
-    """User notification - stores all notification types."""
-    
     __tablename__ = "notification"
     
     id: int | None = Field(default=None, primary_key=True)
     user_id: str = Field(index=True)
-    
-    type: str  # task.assigned, task.reminder, task.completed
+    type: str  # task.assigned, task.reminder, task.completed, task.spawned
     title: str = Field(max_length=200)
     body: str | None = Field(default=None, max_length=500)
-    
     task_id: int | None = None
     project_id: int | None = None
-    actor_id: str | None = None
-    
     read: bool = Field(default=False)
-    read_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 ```
 
 **File**: `packages/notification-service/src/notification_service/routers/dapr.py`
 
 ```python
-"""Dapr subscription endpoint."""
-
-import logging
 from fastapi import APIRouter, Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
-
 from ..database import get_session
 from ..models import Notification
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/dapr", tags=["Dapr"])
-
+router = APIRouter(prefix="/dapr")
 
 @router.get("/subscribe")
 async def subscribe():
-    """Dapr subscription configuration."""
     return [
         {"pubsubname": "taskflow-pubsub", "topic": "task.assigned", "route": "/dapr/events"},
         {"pubsubname": "taskflow-pubsub", "topic": "task.reminder", "route": "/dapr/events"},
         {"pubsubname": "taskflow-pubsub", "topic": "task.completed", "route": "/dapr/events"},
+        {"pubsubname": "taskflow-pubsub", "topic": "task.spawned", "route": "/dapr/events"},
     ]
-
 
 @router.post("/events")
 async def handle_event(request: Request, session: AsyncSession = Depends(get_session)):
-    """Handle incoming events from Dapr."""
-    try:
-        event = await request.json()
-        event_type = event.get("type")
-        user_id = event.get("user_id")
-        
-        if not user_id:
-            return {"status": "skipped", "reason": "no user_id"}
-        
-        # Generate notification content
-        title, body = _generate_content(event)
-        
-        # Store notification
-        notification = Notification(
-            user_id=user_id,
-            type=event_type,
-            title=title,
-            body=body,
-            task_id=event.get("task_id"),
-            project_id=event.get("project_id"),
-            actor_id=event.get("actor_id"),
-        )
-        session.add(notification)
-        await session.commit()
-        
-        logger.info("[NOTIFICATION] Stored: %s for %s", title, user_id)
-        return {"status": "ok"}
-        
-    except Exception as e:
-        logger.error("[NOTIFICATION] Error: %s", str(e))
-        return {"status": "error"}
-
+    event = await request.json()
+    user_id = event.get("user_id")
+    if not user_id:
+        return {"status": "skipped"}
+    
+    title, body = _generate_content(event)
+    
+    notification = Notification(
+        user_id=user_id,
+        type=event.get("type"),
+        title=title,
+        body=body,
+        task_id=event.get("task_id"),
+        project_id=event.get("project_id"),
+    )
+    session.add(notification)
+    await session.commit()
+    return {"status": "ok"}
 
 def _generate_content(event: dict) -> tuple[str, str]:
-    """Generate notification title and body."""
     event_type = event.get("type")
     task_title = event.get("task_title", "Task")
     actor_name = event.get("actor_name", "Someone")
     metadata = event.get("metadata", {})
     
     if event_type == "task.assigned":
-        return (
-            "Task assigned to you",
-            f"{actor_name} assigned '{task_title}'"
-        )
+        return "Task assigned to you", f"{actor_name} assigned '{task_title}'"
     elif event_type == "task.reminder":
         hours = metadata.get("hours_until_due", 24)
-        return (
-            f"Task due in {hours} hours",
-            f"'{task_title}' is due soon"
-        )
+        return f"Task due in {hours} hours", f"'{task_title}' is due soon"
     elif event_type == "task.completed":
-        return (
-            "Task completed",
-            f"'{task_title}' was completed by {actor_name}"
-        )
-    return ("Notification", task_title)
+        return "Task completed", f"'{task_title}' was completed"
+    elif event_type == "task.spawned":
+        return "Recurring task created", f"Next '{task_title}' is ready"
+    return "Notification", task_title
 ```
 
 **File**: `packages/notification-service/src/notification_service/routers/notifications.py`
 
 ```python
-"""User-facing notification API."""
-
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
-
 from ..database import get_session
 from ..models import Notification
 
-router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
-
+router = APIRouter(prefix="/api/notifications")
 
 @router.get("")
 async def list_notifications(
     user_id: str = Query(...),
     unread_only: bool = False,
-    limit: int = Query(default=20, le=100),
+    limit: int = 20,
     session: AsyncSession = Depends(get_session),
 ):
-    """List notifications for a user."""
     stmt = select(Notification).where(Notification.user_id == user_id)
     if unread_only:
         stmt = stmt.where(Notification.read == False)
     stmt = stmt.order_by(Notification.created_at.desc()).limit(limit)
-    
     result = await session.exec(stmt)
-    return [
-        {
-            "id": n.id,
-            "type": n.type,
-            "title": n.title,
-            "body": n.body,
-            "task_id": n.task_id,
-            "read": n.read,
-            "created_at": n.created_at.isoformat(),
-        }
-        for n in result.all()
-    ]
-
+    return [{"id": n.id, "type": n.type, "title": n.title, "body": n.body, 
+             "task_id": n.task_id, "read": n.read, "created_at": n.created_at.isoformat()} 
+            for n in result.all()]
 
 @router.get("/unread-count")
-async def unread_count(
-    user_id: str = Query(...),
-    session: AsyncSession = Depends(get_session),
-):
-    """Get unread notification count."""
+async def unread_count(user_id: str = Query(...), session: AsyncSession = Depends(get_session)):
     stmt = select(func.count(Notification.id)).where(
-        Notification.user_id == user_id,
-        Notification.read == False,
-    )
+        Notification.user_id == user_id, Notification.read == False)
     result = await session.exec(stmt)
     return {"count": result.one()}
 
-
 @router.patch("/{notification_id}/read")
-async def mark_read(
-    notification_id: int,
-    session: AsyncSession = Depends(get_session),
-):
-    """Mark notification as read."""
+async def mark_read(notification_id: int, session: AsyncSession = Depends(get_session)):
     notification = await session.get(Notification, notification_id)
     if notification:
         notification.read = True
-        notification.read_at = datetime.utcnow()
         await session.commit()
     return {"status": "ok"}
-
-
-@router.post("/read-all")
-async def mark_all_read(
-    user_id: str = Query(...),
-    session: AsyncSession = Depends(get_session),
-):
-    """Mark all as read for user."""
-    stmt = select(Notification).where(
-        Notification.user_id == user_id,
-        Notification.read == False,
-    )
-    result = await session.exec(stmt)
-    count = 0
-    for n in result.all():
-        n.read = True
-        n.read_at = datetime.utcnow()
-        count += 1
-    await session.commit()
-    return {"status": "ok", "marked": count}
 ```
 
-### 3.5 Helm Charts
+### 4.5 Helm Charts
 
 **File**: `helm/taskflow/templates/dapr/pubsub.yaml`
 
@@ -543,13 +569,12 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: taskflow-pubsub
-  namespace: {{ .Release.Namespace }}
 spec:
   type: pubsub.redis
   version: v1
   metadata:
     - name: redisHost
-      value: "{{ .Values.redis.host | default "redis" }}:{{ .Values.redis.port | default "6379" }}"
+      value: "redis:6379"
 ```
 
 **File**: `helm/taskflow/templates/dapr/cron-binding.yaml`
@@ -559,58 +584,31 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: taskflow-cron
-  namespace: {{ .Release.Namespace }}
 spec:
   type: bindings.cron
   version: v1
   metadata:
     - name: schedule
-      value: "*/5 * * * *"
-    - name: direction
-      value: "input"
+      value: "*/1 * * * *"  # Every minute for on_due_date triggers
 scopes:
   - taskflow-api
 ```
 
-**Update**: `helm/taskflow/templates/api/deployment.yaml` (add annotations)
-
-```yaml
-spec:
-  template:
-    metadata:
-      annotations:
-        dapr.io/enabled: "true"
-        dapr.io/app-id: "taskflow-api"
-        dapr.io/app-port: "8000"
-```
-
-### 3.6 Frontend Bell
+### 4.6 Frontend Notification Bell
 
 **File**: `web-dashboard/src/components/NotificationBell.tsx`
 
 ```tsx
 "use client";
-
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 interface Notification {
-  id: number;
-  type: string;
-  title: string;
-  body: string;
-  task_id: number | null;
-  read: boolean;
-  created_at: string;
+  id: number; type: string; title: string; body: string; task_id: number | null; read: boolean; created_at: string;
 }
 
 const NOTIFICATION_URL = process.env.NEXT_PUBLIC_NOTIFICATION_URL || "http://localhost:8001";
@@ -625,9 +623,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       const data = await res.json();
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.read).length);
-    } catch (e) {
-      console.error("Failed to fetch notifications");
-    }
+    } catch (e) { console.error("Failed to fetch notifications"); }
   };
 
   const markRead = async (id: number) => {
@@ -645,6 +641,7 @@ export function NotificationBell({ userId }: { userId: string }) {
     if (type === "task.reminder") return "⏰";
     if (type === "task.assigned") return "📋";
     if (type === "task.completed") return "✅";
+    if (type === "task.spawned") return "🔄";
     return "🔔";
   };
 
@@ -666,16 +663,14 @@ export function NotificationBell({ userId }: { userId: string }) {
           <div className="px-3 py-8 text-center text-muted-foreground">No notifications</div>
         ) : (
           notifications.map((n) => (
-            <DropdownMenuItem key={n.id} className={`p-3 ${!n.read ? "bg-muted/50" : ""}`} onClick={() => markRead(n.id)}>
-              <span className="mr-2">{getIcon(n.type)}</span>
-              <div className="flex-1">
-                <p className={`text-sm ${!n.read ? "font-medium" : ""}`}>{n.title}</p>
-                <p className="text-xs text-muted-foreground">{n.body}</p>
+            <DropdownMenuItem key={n.id} className={`p-3 cursor-pointer ${!n.read ? "bg-muted/50" : ""}`} onClick={() => markRead(n.id)}>
+              <span className="mr-2 text-lg">{getIcon(n.type)}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate ${!n.read ? "font-medium" : ""}`}>{n.title}</p>
+                <p className="text-xs text-muted-foreground truncate">{n.body}</p>
               </div>
               {n.task_id && (
-                <Link href={`/tasks/${n.task_id}`} className="text-xs text-primary" onClick={(e) => e.stopPropagation()}>
-                  View
-                </Link>
+                <Link href={`/tasks/${n.task_id}`} className="text-xs text-primary ml-2" onClick={(e) => e.stopPropagation()}>View</Link>
               )}
             </DropdownMenuItem>
           ))
@@ -688,66 +683,78 @@ export function NotificationBell({ userId }: { userId: string }) {
 
 ---
 
-## 4. Implementation Checklist
+## 5. Implementation Checklist
 
-### Phase 1: Event Service (15 min)
+### Phase 1: Model Updates (5 min)
+- [ ] Add `reminder_sent` field to Task model (if not present)
+- [ ] Add `due_date_spawn_done` field for on_due_date tracking
+- [ ] Run migration
+
+### Phase 2: Event Service (10 min)
 - [ ] Create `services/events.py`
-- [ ] Add `dapr_enabled` to config
-- [ ] Test publish_event with logging
+- [ ] Add `dapr_enabled` config
+- [ ] Test with logging
 
-### Phase 2: Wire Events (10 min)
-- [ ] Add event publishing to `assign_task()`
-- [ ] Add event publishing to `update_status()` completion
-- [ ] Verify non-blocking behavior
-
-### Phase 3: Cron Handler (10 min)
+### Phase 3: Cron Handler (20 min)
 - [ ] Create `routers/dapr.py`
-- [ ] Implement reminder check logic
-- [ ] Register in `main.py`
+- [ ] Implement on_due_date spawn logic
+- [ ] Implement reminder logic
+- [ ] Register router in `main.py`
 
-### Phase 4: Notification Service (20 min)
+### Phase 4: Wire Events (10 min)
+- [ ] Add event publishing to `assign_task()`
+- [ ] Add event publishing to `update_status()`
+- [ ] Add event publishing to spawn (if not already in 2A)
+
+### Phase 5: Notification Service (20 min)
 - [ ] Create package structure
 - [ ] Implement models
 - [ ] Implement Dapr subscription
 - [ ] Implement notifications API
 - [ ] Create Dockerfile
 
-### Phase 5: Helm Charts (10 min)
+### Phase 6: Helm Charts (10 min)
 - [ ] Create `dapr/pubsub.yaml`
 - [ ] Create `dapr/cron-binding.yaml`
-- [ ] Update API deployment
+- [ ] Update API deployment annotations
 - [ ] Create notification service deployment
 
-### Phase 6: Frontend (10 min)
+### Phase 7: Frontend (10 min)
 - [ ] Create NotificationBell component
 - [ ] Add to navbar
 - [ ] Test polling
 
 ---
 
-## 5. Testing
+## 6. Testing
 
 ```bash
-# Manual trigger cron
+# Trigger cron manually
 curl -X POST "http://localhost:8000/dapr/cron"
 
 # Check notifications
 curl "http://localhost:8001/api/notifications?user_id=test-user"
 
-# Verify Dapr pods
-kubectl get pods  # Should show 2/2 for API and notification service
+# Verify Dapr sidecars
+kubectl get pods  # 2/2 containers
+
+# Demo flow:
+# 1. Create recurring task with spawn_trigger="on_due_date"
+# 2. Wait for due_date to pass
+# 3. Cron creates next occurrence
+# 4. 🔄 notification appears in bell
 ```
 
 ---
 
-## 6. Definition of Done
+## 7. Definition of Done
 
-- [ ] Events publish via Dapr (or log in dev mode)
-- [ ] Cron handler sends reminders for tasks due soon
-- [ ] Notification service stores notifications
+- [ ] `on_due_date` spawn trigger works (removes "Coming Soon" status)
+- [ ] Reminders sent for tasks due within 24h
+- [ ] Notifications stored in notification service
 - [ ] Frontend bell shows unread count
 - [ ] Dapr sidecars running (2/2)
 - [ ] API continues if notification service down
-- [ ] Demo: Assign task → notification appears
-- [ ] Demo: Task due soon → reminder notification
-
+- [ ] Demo: On due date → Next task spawns → Notification appears
+- [ ] Demo: Task assigned → Notification appears
+- [ ] Demo: Task due soon → Reminder notification
