@@ -3,9 +3,10 @@
 Each MCP tool has a corresponding input model that validates
 parameters before making REST API calls.
 
-Authentication:
-- In dev mode (TASKFLOW_DEV_MODE=true), only user_id is needed
-- In production, access_token (JWT) should be provided by Chat Server
+Authentication (014-mcp-oauth-standardization):
+- Token is extracted from Authorization header by middleware
+- Tools use get_current_user() to access authenticated user
+- No auth params in tool signatures
 """
 
 from typing import Literal
@@ -14,26 +15,11 @@ from pydantic import BaseModel, Field
 
 
 # =============================================================================
-# Base Model with Auth
+# Task Tool Input Models (No auth params - middleware handles auth)
 # =============================================================================
 
 
-class AuthenticatedInput(BaseModel):
-    """Base model with authentication fields."""
-
-    user_id: str = Field(..., description="User ID performing the action")
-    access_token: str | None = Field(
-        None,
-        description="JWT access token (required in production, optional in dev mode)",
-    )
-
-
-# =============================================================================
-# Task Tool Input Models
-# =============================================================================
-
-
-class AddTaskInput(AuthenticatedInput):
+class AddTaskInput(BaseModel):
     """Input for taskflow_add_task tool."""
 
     project_id: int = Field(..., description="Project ID to add task to")
@@ -47,7 +33,7 @@ class AddTaskInput(AuthenticatedInput):
     max_occurrences: int | None = Field(None, gt=0, description="Max recurrences (null=unlimited)")
 
 
-class ListTasksInput(AuthenticatedInput):
+class ListTasksInput(BaseModel):
     """Input for taskflow_list_tasks tool."""
 
     project_id: int = Field(..., description="Project ID to list tasks from")
@@ -64,7 +50,7 @@ class ListTasksInput(AuthenticatedInput):
     sort_order: Literal["asc", "desc"] | None = Field(None, description="Sort order (default: desc)")
 
 
-class TaskIdInput(AuthenticatedInput):
+class TaskIdInput(BaseModel):
     """Input for tools that operate on a single task by ID.
 
     Used by: taskflow_complete_task, taskflow_delete_task,
@@ -74,7 +60,7 @@ class TaskIdInput(AuthenticatedInput):
     task_id: int = Field(..., description="Task ID to operate on")
 
 
-class UpdateTaskInput(AuthenticatedInput):
+class UpdateTaskInput(BaseModel):
     """Input for taskflow_update_task tool."""
 
     task_id: int = Field(..., description="Task ID to update")
@@ -82,7 +68,7 @@ class UpdateTaskInput(AuthenticatedInput):
     description: str | None = Field(None, max_length=2000, description="New task description")
 
 
-class ProgressInput(AuthenticatedInput):
+class ProgressInput(BaseModel):
     """Input for taskflow_update_progress tool."""
 
     task_id: int = Field(..., description="Task ID to update progress for")
@@ -90,7 +76,7 @@ class ProgressInput(AuthenticatedInput):
     note: str | None = Field(None, max_length=500, description="Progress note")
 
 
-class AssignInput(AuthenticatedInput):
+class AssignInput(BaseModel):
     """Input for taskflow_assign_task tool."""
 
     task_id: int = Field(..., description="Task ID to assign")
@@ -102,7 +88,7 @@ class AssignInput(AuthenticatedInput):
 # =============================================================================
 
 
-class ListProjectsInput(AuthenticatedInput):
+class ListProjectsInput(BaseModel):
     """Input for taskflow_list_projects tool."""
 
-    pass  # Only needs user_id and access_token from base class
+    pass  # No parameters needed - user context from auth middleware

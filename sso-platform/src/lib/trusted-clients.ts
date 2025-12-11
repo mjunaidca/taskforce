@@ -15,6 +15,33 @@
  */
 
 /**
+ * Filter redirect URLs based on environment
+ *
+ * SECURITY: In production, localhost URLs are removed to prevent:
+ * 1. Authorization code interception on local networks
+ * 2. Token hijacking via rogue localhost services
+ *
+ * In development, all URLs are allowed for testing convenience.
+ */
+function filterRedirectUrls(urls: string[]): string[] {
+  if (process.env.NODE_ENV !== "production") {
+    return urls; // Allow all URLs in development
+  }
+
+  // In production, filter out localhost URLs
+  return urls.filter((url) => {
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+      // Remove localhost, 127.0.0.1, and [::1] URLs
+      return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "[::1]";
+    } catch {
+      return false; // Invalid URLs are filtered out
+    }
+  });
+}
+
+/**
  * ==============================================================================
  * ORGANIZATION CONFIGURATION
  * ==============================================================================
@@ -48,10 +75,10 @@ export const TRUSTED_CLIENTS = [
     clientId: ROBOLEARN_INTERFACE_CLIENT_ID,
     name: "RoboLearn Book Interface",
     type: "public" as const,
-    redirectUrls: [
+    redirectUrls: filterRedirectUrls([
       "http://localhost:3000/auth/callback",
       "https://mjunaidca.github.io/robolearn/auth/callback",
-    ],
+    ]),
     disabled: false,
     skipConsent: true,
     metadata: {},
@@ -61,9 +88,9 @@ export const TRUSTED_CLIENTS = [
     name: "RoboLearn Backend Service (Test)",
     type: "web" as const, // "web" type for server-side confidential clients with secrets
     clientSecret: "robolearn-confidential-secret-for-testing-only",
-    redirectUrls: [
+    redirectUrls: filterRedirectUrls([
       "http://localhost:8000/auth/callback",
-    ],
+    ]),
     disabled: false,
     skipConsent: true,
     metadata: {},
@@ -72,13 +99,90 @@ export const TRUSTED_CLIENTS = [
     clientId: "taskflow-sso-public-client",
     name: "Taskflow SSO",
     type: "public" as const,
-    redirectUrls: [
+    redirectUrls: filterRedirectUrls([
       "http://localhost:3000/api/auth/callback",
       "https://taskflow.org/api/auth/callback",
-    ],
+    ]),
     disabled: false,
     skipConsent: true,
     metadata: {},
+  },
+  // =============================================================================
+  // MCP OAuth Clients - 014-mcp-oauth-standardization
+  // These clients use Device Authorization Flow (RFC 8628) for headless auth
+  // =============================================================================
+  {
+    clientId: "claude-code-client",
+    name: "Claude Code (Anthropic CLI)",
+    type: "public" as const,
+    redirectUrls: [], // Device flow doesn't use redirect URIs
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "Anthropic's Claude Code CLI for AI-assisted development",
+      allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
+    },
+  },
+  {
+    clientId: "cursor-client",
+    name: "Cursor IDE",
+    type: "public" as const,
+    redirectUrls: [],
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "Cursor AI-powered IDE",
+      allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
+    },
+  },
+  {
+    clientId: "mcp-inspector",
+    name: "MCP Inspector",
+    type: "public" as const,
+    // Note: MCP Inspector only runs locally for debugging, so it only has localhost URLs
+    // In production, this client will have no valid redirect URLs (by design)
+    redirectUrls: filterRedirectUrls([
+      "http://localhost:5173/callback",
+      "http://localhost:5173/oauth/callback",
+      "http://localhost:6274/callback",
+      "http://localhost:6274/oauth/callback",
+    ]),
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "MCP Protocol Inspector for debugging",
+      allowedGrantTypes: ["authorization_code", "refresh_token"],
+    },
+  },
+  {
+    clientId: "windsurf-client",
+    name: "Windsurf IDE",
+    type: "public" as const,
+    redirectUrls: [],
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "Codeium's Windsurf AI IDE",
+      allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
+    },
+  },
+  {
+    clientId: "gemini-cli",
+    name: "Google Gemini CLI",
+    type: "public" as const,
+    // Note: Gemini CLI uses localhost callback for OAuth flow
+    // In production, this client will need Device Flow or a different redirect strategy
+    redirectUrls: filterRedirectUrls([
+      "http://localhost/callback",
+      "http://127.0.0.1/callback",
+      "http://localhost:3000/callback",
+    ]),
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "Google's Gemini CLI for AI-assisted development",
+      allowedGrantTypes: ["authorization_code", "refresh_token"],
+    },
   }
   // {
   //   clientId: "ai-native-public-client",

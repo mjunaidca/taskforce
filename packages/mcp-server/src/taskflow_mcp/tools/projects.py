@@ -2,6 +2,10 @@
 
 Implements project discovery tool:
 - taskflow_list_projects: List user's projects
+
+Authentication (014-mcp-oauth-standardization):
+- User context is obtained from middleware via get_current_user()
+- No auth params in tool signatures
 """
 
 import json
@@ -10,6 +14,7 @@ from mcp.server.fastmcp.server import Context
 
 from ..api_client import APIError, get_api_client
 from ..app import mcp
+from ..auth import get_current_user
 from ..models import ListProjectsInput
 
 
@@ -27,20 +32,21 @@ async def taskflow_list_projects(params: ListProjectsInput, ctx: Context) -> str
     """List projects the user belongs to.
 
     Args:
-        params: ListProjectsInput with user_id
+        params: ListProjectsInput (no parameters needed)
 
     Returns:
         JSON array of projects with id, name, slug, task_count, member_count
 
     Example:
-        Input: {"user_id": "user123"}
+        Input: {}
         Output: [{"id": 1, "name": "My Project", "slug": "my-project", ...}, ...]
     """
     try:
+        user = get_current_user()
         client = get_api_client()
         projects = await client.list_projects(
-            user_id=params.user_id,
-            access_token=params.access_token,
+            user_id=user.id,
+            access_token=user.token,
         )
         # Return simplified project list
         result = [

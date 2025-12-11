@@ -7,6 +7,8 @@ Environment variables:
 - TASKFLOW_MCP_PORT: Server port (default: 8001)
 - TASKFLOW_DEV_MODE: Enable dev mode (API must also be in dev mode)
 - TASKFLOW_SERVICE_TOKEN: Service token for internal API calls (optional)
+- TASKFLOW_SSO_URL: SSO Platform URL for OAuth (default: http://localhost:3001)
+- TASKFLOW_OAUTH_CLIENT_ID: OAuth client ID (default: taskflow-mcp)
 """
 
 from functools import lru_cache
@@ -25,9 +27,15 @@ class Settings(BaseSettings):
     mcp_host: str = "0.0.0.0"
     mcp_port: int = 8001
 
+    # OAuth/SSO configuration (014-mcp-oauth-standardization)
+    # SSO Platform URL for JWKS and API key verification
+    sso_url: str = "http://localhost:3001"
+    # OAuth client ID (for audience validation, optional)
+    oauth_client_id: str = "taskflow-mcp"
+
     # Authentication mode
     # Dev mode: API must also have DEV_MODE=true, uses X-User-ID header
-    # Production: Chat Server passes JWT via access_token parameter
+    # Production: Uses Authorization: Bearer header with JWT or API key
     dev_mode: bool = False
 
     # Optional service token for internal API calls

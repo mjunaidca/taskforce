@@ -281,10 +281,8 @@ async def list_tasks(
     mcp_url = agent_ctx.mcp_server_url
 
     # Build MCP tool arguments - FastMCP expects arguments wrapped in "params" key
-    # because the tool function parameter is named "params"
+    # Auth is handled by MCP middleware via Authorization header (014-mcp-oauth-standardization)
     tool_params: dict[str, Any] = {
-        "user_id": agent_ctx.user_id,
-        "access_token": agent_ctx.access_token,
         "project_id": project_id if project_id is not None else agent_ctx.project_id,
     }
     if status:
@@ -300,7 +298,7 @@ async def list_tasks(
             mcp_url,
             "taskflow_list_tasks",
             arguments,
-            agent_ctx.access_token,
+            agent_ctx.access_token,  # Passed via Authorization header
         )
         logger.info(
             "[LOCAL TOOL] list_tasks returned %d tasks",
@@ -334,9 +332,8 @@ async def add_task(
     mcp_url = agent_ctx.mcp_server_url
 
     # Build MCP tool arguments - FastMCP expects arguments wrapped in "params" key
+    # Auth is handled by MCP middleware via Authorization header (014-mcp-oauth-standardization)
     tool_params: dict[str, Any] = {
-        "user_id": agent_ctx.user_id,
-        "access_token": agent_ctx.access_token,
         "project_id": project_id if project_id is not None else agent_ctx.project_id,
         "title": title,
     }
@@ -353,7 +350,7 @@ async def add_task(
             mcp_url,
             "taskflow_add_task",
             arguments,
-            agent_ctx.access_token,
+            agent_ctx.access_token,  # Passed via Authorization header
         )
         logger.info(
             "[LOCAL TOOL] add_task created task_id=%s",
@@ -377,10 +374,9 @@ async def show_task_form(
     agent_ctx = ctx.context
     mcp_url = agent_ctx.mcp_server_url
 
-    # Build MCP tool arguments - task_id is ignored, just need user context
+    # Build MCP tool arguments - task_id is required by TaskIdInput schema
+    # Auth is handled by MCP middleware via Authorization header (014-mcp-oauth-standardization)
     tool_params: dict[str, Any] = {
-        "user_id": agent_ctx.user_id,
-        "access_token": agent_ctx.access_token,
         "task_id": 0,  # Ignored by the tool, but required by TaskIdInput schema
     }
 
@@ -393,7 +389,7 @@ async def show_task_form(
             mcp_url,
             "taskflow_show_task_form",
             arguments,
-            agent_ctx.access_token,
+            agent_ctx.access_token,  # Passed via Authorization header
         )
         logger.info("[LOCAL TOOL] show_task_form returned: %s", result)
         return json.dumps(result)
@@ -410,22 +406,18 @@ async def list_projects(
     agent_ctx = ctx.context
     mcp_url = agent_ctx.mcp_server_url
 
-    # Build MCP tool arguments - FastMCP expects arguments wrapped in "params" key
-    tool_params: dict[str, Any] = {
-        "user_id": agent_ctx.user_id,
-        "access_token": agent_ctx.access_token,
-    }
+    # Build MCP tool arguments - no params needed for list_projects
+    # Auth is handled by MCP middleware via Authorization header (014-mcp-oauth-standardization)
+    arguments = {"params": {}}
 
-    arguments = {"params": tool_params}
-
-    logger.info("[LOCAL TOOL] list_projects called with user_id=%s", agent_ctx.user_id)
+    logger.info("[LOCAL TOOL] list_projects called")
 
     try:
         result = await _call_mcp_tool(
             mcp_url,
             "taskflow_list_projects",
             arguments,
-            agent_ctx.access_token,
+            agent_ctx.access_token,  # Passed via Authorization header
         )
         logger.info(
             "[LOCAL TOOL] list_projects returned %d projects",
@@ -603,18 +595,14 @@ class WidgetStreamingHooks(RunHooks[TaskFlowAgentContext]):
         project_id = context.context.project_id
 
         # Fetch members for assignee dropdown via MCP
+        # Auth is handled by MCP headers set in connection (014-mcp-oauth-standardization)
         members = []
         try:
             mcp_server = context.context.mcp_server
-            access_token = context.context.access_token
-            user_id = context.context.user_id
 
             members_result = await mcp_server.call_tool(
                 "taskflow_list_workers",
-                {
-                    "user_id": user_id,
-                    "access_token": access_token,
-                },
+                {"params": {}},  # Auth via headers, no params needed
             )
             members_data = _parse_mcp_result(members_result)
             members = (
@@ -908,12 +896,18 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             )
 
             # Connect to MCP server and run agent
+            # Pass auth token via headers (014-mcp-oauth-standardization)
             # Block MCP tools that we've replaced with local wrappers (for widget support)
+            mcp_headers = {}
+            if access_token:
+                mcp_headers["Authorization"] = f"Bearer {access_token}"
+
             async with MCPServerStreamableHttp(
                 name="TaskFlow MCP",
                 params={
                     "url": self.mcp_server_url,
                     "timeout": 30,
+                    "headers": mcp_headers,  # Auth token for MCP server
                 },
                 cache_tools_list=True,
                 max_retry_attempts=3,
@@ -940,10 +934,9 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
                     mcp_server_url=self.mcp_server_url,
                 )
 
-                # Format system prompt with user context and auth token
+                # Format system prompt with user context
+                # Auth is handled via headers, not prompt (014-mcp-oauth-standardization)
                 instructions = TASKFLOW_SYSTEM_PROMPT.format(
-                    user_id=user_id,
-                    access_token=access_token,
                     user_name=user_name,
                     project_name=project_name or "No project selected",
                     project_id=project_id or "N/A",
@@ -1019,29 +1012,27 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         payload: dict,
         context: RequestContext,
     ) -> dict:
-        """Handle task.complete action via MCP."""
+        """Handle task.complete action via MCP.
+
+        Note: These handlers use MCPServerStreamableHttp SDK which doesn't support
+        custom headers. For now, these handlers should be migrated to use _call_mcp_tool
+        with proper auth header support (014-mcp-oauth-standardization).
+        """
         task_id = payload.get("task_id")
         if not task_id:
             raise ValueError("task_id required")
 
         # Call MCP tool to complete task
+        # TODO: Migrate to _call_mcp_tool for proper auth header support
         await mcp_server.call_tool(
             "taskflow_complete_task",
-            {
-                "task_id": task_id,
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-            },
+            {"params": {"task_id": task_id}},
         )
 
         # Fetch updated task list
         tasks_result = await mcp_server.call_tool(
             "taskflow_list_tasks",
-            {
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-                "project_id": context.metadata.get("project_id"),
-            },
+            {"params": {"project_id": context.metadata.get("project_id")}},
         )
         tasks_data = _parse_mcp_result(tasks_result)
         tasks = tasks_data if isinstance(tasks_data, list) else []
@@ -1057,29 +1048,27 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         payload: dict,
         context: RequestContext,
     ) -> dict:
-        """Handle task.start action via MCP."""
+        """Handle task.start action via MCP.
+
+        Note: These handlers use MCPServerStreamableHttp SDK which doesn't support
+        custom headers. For now, these handlers should be migrated to use _call_mcp_tool
+        with proper auth header support (014-mcp-oauth-standardization).
+        """
         task_id = payload.get("task_id")
         if not task_id:
             raise ValueError("task_id required")
 
         # Call MCP tool to start task
+        # TODO: Migrate to _call_mcp_tool for proper auth header support
         await mcp_server.call_tool(
             "taskflow_start_task",
-            {
-                "task_id": task_id,
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-            },
+            {"params": {"task_id": task_id}},
         )
 
         # Fetch updated task list
         tasks_result = await mcp_server.call_tool(
             "taskflow_list_tasks",
-            {
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-                "project_id": context.metadata.get("project_id"),
-            },
+            {"params": {"project_id": context.metadata.get("project_id")}},
         )
         tasks_data = _parse_mcp_result(tasks_result)
         tasks = tasks_data if isinstance(tasks_data, list) else []
@@ -1095,15 +1084,17 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         payload: dict,
         context: RequestContext,
     ) -> dict:
-        """Handle task.refresh action via MCP."""
+        """Handle task.refresh action via MCP.
+
+        Note: Uses MCPServerStreamableHttp SDK - needs migration to _call_mcp_tool
+        for proper auth header support (014-mcp-oauth-standardization).
+        """
         # Fetch current task list
+        # TODO: Migrate to _call_mcp_tool for proper auth header support
+        project_id = payload.get("project_id") or context.metadata.get("project_id")
         tasks_result = await mcp_server.call_tool(
             "taskflow_list_tasks",
-            {
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-                "project_id": payload.get("project_id") or context.metadata.get("project_id"),
-            },
+            {"params": {"project_id": project_id}},
         )
         tasks_data = _parse_mcp_result(tasks_result)
         tasks = tasks_data if isinstance(tasks_data, list) else []
@@ -1122,6 +1113,7 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         """Handle task.create action via MCP.
 
         Handles both form submissions (with task.* field names) and direct action calls.
+        Auth is handled by MCP connection headers (014-mcp-oauth-standardization).
         """
         # Map form field names (task.title, task.description, etc.) to handler params
         title = payload.get("task.title") or payload.get("title")
@@ -1131,7 +1123,9 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         recurrence_pattern = payload.get("task.recurrencePattern") or payload.get(
             "recurrence_pattern"
         )
-        max_occurrences_str = payload.get("task.maxOccurrences") or payload.get("max_occurrences")
+        max_occurrences_str = (
+            payload.get("task.maxOccurrences") or payload.get("max_occurrences")
+        )
 
         if not title:
             raise ValueError("title required")
@@ -1144,26 +1138,27 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
             except (ValueError, TypeError):
                 pass
 
-        # Build MCP tool arguments
-        mcp_args: dict[str, Any] = {
+        # Build MCP tool arguments (auth via headers, not params)
+        tool_params: dict[str, Any] = {
             "title": title,
-            "description": description,
-            "priority": priority,
-            "assigned_to": assignee_id,
             "project_id": payload.get("project_id") or context.metadata.get("project_id"),
-            "user_id": context.user_id,
-            "access_token": context.metadata.get("access_token", ""),
         }
+        if description:
+            tool_params["description"] = description
+        if priority:
+            tool_params["priority"] = priority
+        if assignee_id:
+            tool_params["assigned_to"] = assignee_id
 
         # Add recurring fields if pattern is set
         if recurrence_pattern:
-            mcp_args["is_recurring"] = True
-            mcp_args["recurrence_pattern"] = recurrence_pattern
+            tool_params["is_recurring"] = True
+            tool_params["recurrence_pattern"] = recurrence_pattern
             if max_occurrences:
-                mcp_args["max_occurrences"] = max_occurrences
+                tool_params["max_occurrences"] = max_occurrences
 
         # Call MCP tool to create task
-        result = await mcp_server.call_tool("taskflow_add_task", mcp_args)
+        result = await mcp_server.call_tool("taskflow_add_task", {"params": tool_params})
         data = _parse_mcp_result(result)
         task_id = data.get("task_id") if isinstance(data, dict) else None
         project_name = context.metadata.get("project_name")
@@ -1188,7 +1183,10 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         payload: dict,
         context: RequestContext,
     ) -> dict:
-        """Handle task.create_form action - show form widget."""
+        """Handle task.create_form action - show form widget.
+
+        Auth is handled by MCP connection headers (014-mcp-oauth-standardization).
+        """
         project_id = payload.get("project_id") or context.metadata.get("project_id")
         project_name = context.metadata.get("project_name")
 
@@ -1197,10 +1195,7 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         try:
             members_result = await mcp_server.call_tool(
                 "taskflow_list_workers",
-                {
-                    "user_id": context.user_id,
-                    "access_token": context.metadata.get("access_token", ""),
-                },
+                {"params": {}},  # Auth via headers
             )
             data = _parse_mcp_result(members_result)
             members = (
@@ -1228,22 +1223,20 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         payload: dict,
         context: RequestContext,
     ) -> dict:
-        """Handle audit.show action via MCP."""
+        """Handle audit.show action via MCP.
+
+        Auth is handled by MCP connection headers (014-mcp-oauth-standardization).
+        """
         entity_type = payload.get("entity_type", "task")
         entity_id = payload.get("entity_id") or payload.get("task_id")
 
         if not entity_id:
             raise ValueError("entity_id or task_id required")
 
-        # Fetch audit log
+        # Fetch audit log (auth via headers)
         audit_result = await mcp_server.call_tool(
             "taskflow_get_audit_log",
-            {
-                "entity_type": entity_type,
-                "entity_id": entity_id,
-                "user_id": context.user_id,
-                "access_token": context.metadata.get("access_token", ""),
-            },
+            {"params": {"entity_type": entity_type, "entity_id": entity_id}},
         )
         data = _parse_mcp_result(audit_result)
 

@@ -11,14 +11,6 @@ from agents.mcp import MCPServerStreamableHttp
 
 TASKFLOW_SYSTEM_PROMPT = """You are TaskFlow Assistant, an AI helper for task management.
 
-## Authentication Context
-- User ID: {user_id}
-- Access Token: {access_token}
-
-CRITICAL: When calling ANY MCP tool, you MUST ALWAYS include these parameters:
-- user_id: "{user_id}"
-- access_token: "{access_token}"
-
 ## User Context
 - User Name: {user_name}
 - Current Project: {project_name} (ID: {project_id})
@@ -95,8 +87,7 @@ When the user wants to create a task:
 3. If a request is ambiguous, ask for clarification
 4. If a task is not found, suggest listing tasks to find the correct one
 5. Be concise and helpful
-6. ALWAYS include user_id="{user_id}" and access_token="{access_token}" in every tool call
-7. When no project is specified, automatically use the "Default" project
+6. When no project is specified, automatically use the "Default" project
    (find it via list_projects first)
 
 ## Response Format
