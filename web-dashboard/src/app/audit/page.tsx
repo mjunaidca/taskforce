@@ -100,11 +100,15 @@ function AuditContent() {
   }
 
   const formatDetails = (details: Record<string, unknown>) => {
-    if (details.before !== undefined && details.after !== undefined) {
-      return `${details.before} → ${details.after}`
+    // Skip client_id and client_name - they're shown in the header
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { client_id, client_name, ...rest } = details
+
+    if (rest.before !== undefined && rest.after !== undefined) {
+      return `${rest.before} → ${rest.after}`
     }
-    if (details.note) return String(details.note)
-    if (details.assignee_handle) return `Assigned to ${details.assignee_handle}`
+    if (rest.note) return String(rest.note)
+    if (rest.assignee_handle) return `Assigned to ${rest.assignee_handle}`
     return null
   }
 
@@ -226,7 +230,7 @@ function AuditContent() {
                             )}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span
                                 className={`font-medium ${
                                   entry.actor_type === "agent" ? "text-primary" : ""
@@ -234,6 +238,12 @@ function AuditContent() {
                               >
                                 {entry.actor_handle}
                               </span>
+                              {/* Show "via Client" when client_name is present */}
+                              {entry.details?.client_name && (
+                                <span className="text-xs text-muted-foreground">
+                                  via {entry.details.client_name as string}
+                                </span>
+                              )}
                               <Badge
                                 variant="outline"
                                 className={

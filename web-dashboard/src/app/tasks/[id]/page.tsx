@@ -710,8 +710,14 @@ export default function TaskDetailPage() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">{entry.actor_handle}</span>
+                          {/* Show "via Client" when client_name is present */}
+                          {entry.details?.client_name && (
+                            <span className="text-xs text-muted-foreground">
+                              via {entry.details.client_name as string}
+                            </span>
+                          )}
                           <span className="text-muted-foreground">{entry.action}</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
