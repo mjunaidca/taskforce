@@ -1,10 +1,19 @@
 """JWT/JWKS authentication against Better Auth SSO.
 
-Flow:
-1. Frontend gets JWT via OAuth2 PKCE from SSO
-2. Frontend sends: Authorization: Bearer <JWT>
+Supports two token types:
+1. JWT (id_token) - Verified locally using JWKS public keys
+2. Opaque (access_token) - Verified via SSO userinfo endpoint
+
+Flow for JWT:
+1. Frontend/MCP gets JWT via OAuth2 PKCE from SSO
+2. Sends: Authorization: Bearer <JWT>
 3. Backend fetches JWKS public keys from SSO (cached 1 hour)
 4. Backend verifies JWT signature locally (no SSO call per request)
+
+Flow for Opaque Token (e.g., Gemini CLI bug sends access_token):
+1. MCP client gets access_token via OAuth2 from SSO
+2. Sends: Authorization: Bearer <opaque_token>
+3. Backend validates via SSO userinfo endpoint
 """
 
 import logging
@@ -132,6 +141,65 @@ async def verify_jwt(token: str) -> dict[str, Any]:
         ) from e
 
 
+async def verify_opaque_token(token: str) -> dict[str, Any]:
+    """Verify opaque access token via SSO userinfo endpoint.
+
+    When OAuth clients (like Gemini CLI) send opaque access_tokens instead of JWTs,
+    we validate them by calling the SSO's userinfo endpoint.
+
+    Args:
+        token: Opaque access token from OAuth flow
+
+    Returns:
+        User claims from userinfo response
+
+    Raises:
+        HTTPException: If token is invalid or expired
+    """
+    userinfo_url = f"{settings.sso_url}/api/auth/oauth2/userinfo"
+    token_preview = f"{token[:10]}...{token[-10:]}" if len(token) > 25 else "[short]"
+    logger.info("[AUTH] Validating opaque token via userinfo: %s", token_preview)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                userinfo_url,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+            if response.status_code == 401:
+                logger.warning("[AUTH] Userinfo returned 401 - token invalid or expired")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token invalid or expired",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if response.status_code != 200:
+                logger.error("[AUTH] Userinfo returned %d", response.status_code)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Userinfo request failed: {response.status_code}",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            data = response.json()
+            logger.info(
+                "[AUTH] Opaque token verified - sub: %s, email: %s, client: %s",
+                data.get("sub"),
+                data.get("email"),
+                data.get("client_name"),
+            )
+            return data
+
+    except httpx.RequestError as e:
+        logger.error("[AUTH] Userinfo request failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Authentication service unavailable: {e}",
+        ) from e
+
+
 class CurrentUser:
     """Authenticated user extracted from JWT claims.
 
@@ -142,6 +210,8 @@ class CurrentUser:
     - role: "user" | "admin"
     - tenant_id: Primary organization (optional)
     - organization_id: Alternative tenant claim (optional)
+    - client_id: OAuth client ID (for audit: which tool was used)
+    - client_name: OAuth client name (e.g., "Claude Code")
     """
 
     def __init__(self, payload: dict[str, Any]) -> None:
@@ -153,15 +223,22 @@ class CurrentUser:
         self.tenant_id: str | None = (
             payload.get("tenant_id") or payload.get("organization_id") or None
         )
+        # OAuth client identity for audit trail (e.g., "@user via Claude Code")
+        self.client_id: str | None = payload.get("client_id")
+        self.client_name: str | None = payload.get("client_name")
 
     def __repr__(self) -> str:
-        return f"CurrentUser(id={self.id!r}, email={self.email!r})"
+        client_info = f", client={self.client_name!r}" if self.client_name else ""
+        return f"CurrentUser(id={self.id!r}, email={self.email!r}{client_info})"
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> CurrentUser:
-    """FastAPI dependency to get authenticated user from JWT.
+    """FastAPI dependency to get authenticated user from token.
+
+    Supports both JWT (id_token) and opaque (access_token) tokens.
+    Tries JWT first, falls back to opaque token validation via userinfo.
 
     Usage in routes:
         @router.get("/api/projects")
@@ -170,7 +247,7 @@ async def get_current_user(
     """
     # Dev mode bypass for local development
     if settings.dev_mode:
-        logger.debug("[AUTH] Dev mode enabled, bypassing JWT verification")
+        logger.debug("[AUTH] Dev mode enabled, bypassing token verification")
         return CurrentUser(
             {
                 "sub": settings.dev_user_id,
@@ -180,12 +257,31 @@ async def get_current_user(
             }
         )
 
-    logger.debug("[AUTH] Production mode, verifying JWT...")
+    token = credentials.credentials
+    token_parts = token.count(".")
 
-    # Production: Verify JWT using JWKS
-    payload = await verify_jwt(credentials.credentials)
+    # Detect token type: JWT has 3 dot-separated segments
+    logger.debug(
+        "[AUTH] Token validation - segments: %d, type: %s",
+        token_parts + 1,
+        "JWT" if token_parts == 2 else "opaque",
+    )
+
+    # Try JWT first if it looks like a JWT
+    if token_parts == 2:
+        try:
+            payload = await verify_jwt(token)
+            user = CurrentUser(payload)
+            logger.info("[AUTH] Authenticated via JWT: %s", user)
+            return user
+        except HTTPException:
+            # JWT validation failed, try opaque as fallback
+            logger.debug("[AUTH] JWT validation failed, trying opaque token...")
+
+    # Opaque token validation via userinfo endpoint
+    payload = await verify_opaque_token(token)
     user = CurrentUser(payload)
-    logger.info("[AUTH] Authenticated user: %s", user)
+    logger.info("[AUTH] Authenticated via opaque token: %s", user)
     return user
 
 

@@ -17,6 +17,8 @@ async def log_action(
     actor_id: int,
     actor_type: str = "human",
     details: dict[str, Any] | None = None,
+    client_id: str | None = None,
+    client_name: str | None = None,
 ) -> AuditLog:
     """Create an immutable audit log entry.
 
@@ -31,17 +33,26 @@ async def log_action(
         actor_id: Worker ID who performed the action
         actor_type: Type of actor ("human" or "agent")
         details: Additional context (before/after values, notes)
+        client_id: OAuth client ID or API key ID (for "via X" in audit)
+        client_name: OAuth client name (e.g., "Claude Code", "My Script")
 
     Returns:
         Created AuditLog entry (not yet committed)
     """
+    # Merge client info into details for audit trail
+    merged_details = details.copy() if details else {}
+    if client_id:
+        merged_details["client_id"] = client_id
+    if client_name:
+        merged_details["client_name"] = client_name
+
     log = AuditLog(
         entity_type=entity_type,
         entity_id=entity_id,
         action=action,
         actor_id=actor_id,
         actor_type=actor_type,
-        details=details or {},
+        details=merged_details,
     )
     session.add(log)
     return log

@@ -198,9 +198,12 @@ mcpServer:
 
   env:
     ENV: production
-    SSO_URL: http://sso-platform:3001
     # MCP uses TASKFLOW_ prefix for env vars (see config.py env_prefix)
     TASKFLOW_API_URL: http://taskflow-api:8000
+    # SSO Platform URL for OAuth/JWT verification (014-mcp-oauth-standardization)
+    TASKFLOW_SSO_URL: http://sso-platform:3001
+    # Production mode - require JWT or API key auth
+    TASKFLOW_DEV_MODE: "false"
 
   resources:
     requests:

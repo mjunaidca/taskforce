@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "taskflow": {
+      "type": "http",
+      "url": "http://0.0.0.0:8001/mcp"
+    },
     "context7": {
       "type": "stdio",
       "command": "npx",

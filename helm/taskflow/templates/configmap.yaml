@@ -58,8 +58,13 @@ metadata:
     {{- include "taskflow.componentLabels" (dict "root" . "component" "mcp") | nindent 4 }}
 data:
   ENV: {{ .Values.mcpServer.env.ENV | quote }}
-  SSO_URL: {{ .Values.mcpServer.env.SSO_URL | quote }}
+  # MCP uses TASKFLOW_ prefix for all env vars (see config.py env_prefix)
   TASKFLOW_API_URL: {{ .Values.mcpServer.env.TASKFLOW_API_URL | quote }}
+  # SSO Platform URL for OAuth/JWT verification (014-mcp-oauth-standardization)
+  TASKFLOW_SSO_URL: {{ .Values.mcpServer.env.TASKFLOW_SSO_URL | quote }}
+  # Production mode - require JWT or API key auth
+  TASKFLOW_DEV_MODE: {{ .Values.mcpServer.env.TASKFLOW_DEV_MODE | default "false" | quote }}
+  # Database config (shared with API)
   DATABASE_HOST: {{ .Values.mcpServer.database.host | quote }}
   DATABASE_PORT: {{ .Values.mcpServer.database.port | quote }}
   DATABASE_NAME: {{ .Values.mcpServer.database.name | quote }}

@@ -42,14 +42,14 @@ export default async function AdminOrganizationsPage({
       createdAt: organization.createdAt,
       memberCount: sql<number>`(
         SELECT COUNT(*)::int
-        FROM ${member}
-        WHERE ${member.organizationId} = ${organization.id}
+        FROM "member" m2
+        WHERE m2.organization_id = "organization".id
       )`,
       ownerEmail: sql<string>`(
         SELECT u.email
-        FROM ${member} m
+        FROM "member" m
         JOIN "user" u ON u.id = m.user_id
-        WHERE m.organization_id = ${organization.id}
+        WHERE m.organization_id = "organization".id
         AND m.role = 'owner'
         LIMIT 1
       )`,

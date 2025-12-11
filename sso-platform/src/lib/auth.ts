@@ -9,6 +9,7 @@ import { username } from "better-auth/plugins";
 import { haveIBeenPwned } from "better-auth/plugins";
 import { apiKey } from "better-auth/plugins";
 import { genericOAuth } from "better-auth/plugins"; // 008-social-login-providers
+import { deviceAuthorization } from "better-auth/plugins"; // 014-mcp-oauth-standardization
 import { db } from "./db";
 import * as schema from "../../auth-schema"; // Use Better Auth generated schema
 import { member } from "../../auth-schema";
@@ -579,14 +580,23 @@ export const auth = betterAuth({
       // Seed them with: pnpm run seed:prod
       // Configuration: See src/lib/trusted-clients.ts
       trustedClients: TRUSTED_CLIENTS,
-      // SECURITY: Disable open dynamic client registration
-      // Use /api/admin/clients/register (admin auth) or /api/clients/register (API key) instead
-      allowDynamicClientRegistration: false,
+      // SECURITY: Dynamic client registration
+      // RFC 7591 - OAuth 2.0 Dynamic Client Registration
+      //
+      // ⚠️  PRODUCTION WARNING: Set to false in production!
+      // Dynamic registration allows any client to register, which can be abused for phishing.
+      // MCP clients (Gemini CLI, Cursor, Claude Code) should be pre-registered in TRUSTED_CLIENTS.
+      //
+      // Only enable for local development when testing new MCP clients.
+      // In production, pre-register all clients in trusted-clients.ts
+      allowDynamicClientRegistration: process.env.NODE_ENV !== "production",
       // Add custom claims to userinfo endpoint and ID token
-      async getAdditionalUserInfoClaim(user) {
-        // DEBUG: Log user object
+      // Parameters: user object, requested scopes, OAuth client that initiated the request
+      async getAdditionalUserInfoClaim(user, scopes, client) {
+        // DEBUG: Log user and client info
         console.log("[JWT] getAdditionalUserInfoClaim - user.id:", user.id);
         console.log("[JWT] getAdditionalUserInfoClaim - user.email:", user.email);
+        console.log("[JWT] getAdditionalUserInfoClaim - client:", client?.clientId, client?.name);
 
         // Fetch user's organization memberships for tenant_id
         const memberships = await db
@@ -674,6 +684,11 @@ export const auth = betterAuth({
           father_name: user.fatherName || null,
           city: user.city || null,
           country: user.country || null,
+          // OAuth client identity (for audit trail: "@user via Claude Code")
+          // azp = authorized party (OIDC standard claim)
+          azp: client?.clientId || null,
+          client_id: client?.clientId || null,
+          client_name: client?.name || null,
         };
       },
     }),
@@ -731,6 +746,35 @@ export const auth = betterAuth({
         defaultExpiresIn: null, // No expiration by default
         minExpiresIn: 1, // Minimum 1 day if expiration set
         maxExpiresIn: 365, // Maximum 1 year
+      },
+    }),
+
+    // =============================================================================
+    // Device Authorization Flow (RFC 8628) - 014-mcp-oauth-standardization
+    // Enables CLI tools (Claude Code, Cursor) to authenticate without browser access
+    // =============================================================================
+    deviceAuthorization({
+      // Verification URI where users enter their code
+      verificationUri: "/auth/device",
+      // Device code expiration (15 minutes)
+      expiresIn: "15m",
+      // Minimum polling interval (5 seconds)
+      interval: "5s",
+      // User code length (8 characters, e.g., ABCD-1234)
+      userCodeLength: 8,
+      // Validate client ID (only allow registered MCP clients)
+      validateClient: async (clientId) => {
+        const validMcpClients = [
+          "claude-code-client",
+          "cursor-client",
+          "mcp-inspector",
+          "windsurf-client",
+        ];
+        return validMcpClients.includes(clientId);
+      },
+      // Log device auth requests for debugging
+      onDeviceAuthRequest: async (clientId, scope) => {
+        console.log(`[DeviceAuth] Request from client: ${clientId}, scope: ${scope || "default"}`);
       },
     }),
 
