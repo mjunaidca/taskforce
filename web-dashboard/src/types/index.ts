@@ -34,6 +34,7 @@ export interface ProjectRead {
   task_count: number;
   created_at: string;
   updated_at: string;
+  is_shared?: boolean;
 }
 
 export interface ProjectCreate {

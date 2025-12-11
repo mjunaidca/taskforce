@@ -697,11 +697,10 @@ export default function TaskDetailPage() {
                   {audit.map((entry) => (
                     <div key={entry.id} className="flex items-start gap-3">
                       <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                          entry.actor_type === "agent"
+                        className={`h-8 w-8 rounded-full flex items-center justify-center ${entry.actor_type === "agent"
                             ? "bg-primary/10"
                             : "bg-muted"
-                        }`}
+                          }`}
                       >
                         {entry.actor_type === "agent" ? (
                           <Bot className="h-4 w-4 text-primary" />
@@ -713,9 +712,9 @@ export default function TaskDetailPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">{entry.actor_handle}</span>
                           {/* Show "via Client" when client_name is present */}
-                          {entry.details?.client_name && (
+                          {!!entry.details?.client_name && (
                             <span className="text-xs text-muted-foreground">
-                              via {entry.details.client_name as string}
+                              via {String(entry.details.client_name)}
                             </span>
                           )}
                           <span className="text-muted-foreground">{entry.action}</span>
@@ -833,8 +832,8 @@ export default function TaskDetailPage() {
                     task.priority === "critical"
                       ? "bg-destructive/10 text-destructive"
                       : task.priority === "high"
-                      ? "bg-warning/10 text-warning"
-                      : ""
+                        ? "bg-warning/10 text-warning"
+                        : ""
                   }
                 >
                   {task.priority}
