@@ -1123,9 +1123,7 @@ class TaskFlowChatKitServer(ChatKitServer[RequestContext]):
         recurrence_pattern = payload.get("task.recurrencePattern") or payload.get(
             "recurrence_pattern"
         )
-        max_occurrences_str = (
-            payload.get("task.maxOccurrences") or payload.get("max_occurrences")
-        )
+        max_occurrences_str = payload.get("task.maxOccurrences") or payload.get("max_occurrences")
 
         if not title:
             raise ValueError("title required")
