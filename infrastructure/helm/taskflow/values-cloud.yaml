@@ -38,8 +38,8 @@ sso:
   replicaCount: 1
 
   image:
-    # Repository will be: ${global.imageRegistry}/sso-platform
-    repository: sso-platform
+    # Repository will be: ${global.imageRegistry}/sso
+    repository: sso
     pullPolicy: Always
 
   # Disable migrations - run locally for Neon
@@ -62,19 +62,30 @@ sso:
   # Disable in-cluster postgres (using Neon)
   postgresql:
     enabled: false
+    name: sso-platform-postgres
+    password: ""  # Injected via secrets
+
+  # Database config for configmap (not used with Neon but required by template)
+  database:
+    host: ""
+    port: "5432"
+    name: taskflow_sso
+    user: postgres
 
   env:
     NODE_ENV: production
-    # BETTER_AUTH_URL will be https://sso.${domain}
-    # ALLOWED_ORIGINS will be https://${domain},https://sso.${domain}
+    BETTER_AUTH_URL: ""  # Set via --set: https://sso.${domain}
+    BETTER_AUTH_SECRET: ""  # Injected via --set from secrets
+    ALLOWED_ORIGINS: ""  # Set via --set
 
   smtp:
     enabled: true
     host: smtp.gmail.com
     port: "587"
-    user: mr.junaid.ca@gmail.com
+    user: ""  # Injected via --set from secrets
     secure: "false"
     emailFrom: no-reply@taskflow.org
+    password: ""  # Injected via --set from secrets
 
   resources:
     requests:
@@ -113,11 +124,24 @@ api:
   # Disable in-cluster postgres (using Neon)
   postgresql:
     enabled: false
+    name: taskflow-api-postgres
+
+  # Database config for configmap (host/port not used with Neon but required by template)
+  database:
+    host: ""
+    port: "5432"
+    name: taskflow_api
+    user: postgres
 
   env:
     ENV: production
     SSO_URL: http://sso-platform:3001
-    # CORS_ORIGINS set via template
+    MCP_SERVER_URL: http://mcp-server:8001/mcp
+    CORS_ORIGINS: ""  # Set via --set in CD pipeline
+
+  # OpenAI key injected via --set
+  openai:
+    apiKey: ""
 
   resources:
     requests:
@@ -136,18 +160,37 @@ mcpServer:
   replicaCount: 1
 
   image:
-    repository: mcp-server
+    repository: mcp
     pullPolicy: Always
+
+  ingress:
+    enabled: true
+    className: traefik
+    host: ""  # Will be mcp.${domain}
+    tls:
+      enabled: true
+      secretName: mcp-tls
 
   service:
     type: ClusterIP
     port: 8001
     targetPort: 8001
 
+  # Database config for configmap (MCP may not need DB directly, but template expects it)
+  database:
+    host: ""
+    port: "5432"
+    name: taskflow_api
+    user: postgres
+
+  # MCP API key injected via --set (optional, for service-to-service auth)
+  mcpApiKey: ""
+
   env:
     ENV: production
-    SSO_URL: http://sso-platform:3001
+    TASKFLOW_SSO_URL: http://sso-platform:3001
     TASKFLOW_API_URL: http://taskflow-api:8000
+    TASKFLOW_DEV_MODE: "false"
 
   resources:
     requests:
@@ -166,7 +209,7 @@ web:
   replicaCount: 1
 
   image:
-    repository: web-dashboard
+    repository: web
     pullPolicy: Always
 
   service:
@@ -201,14 +244,15 @@ web:
 # =============================================================================
 notificationService:
   enabled: true
-  name: taskflow-notification
+  name: notification-service
   daprAppId: notification-service
   replicas: 1
   port: 8001
   logLevel: INFO
+  allowedOrigins: "*"
 
   image:
-    repository: notification-service
+    repository: notification
     pullPolicy: Always
 
   service:
@@ -218,6 +262,14 @@ notificationService:
   # Disable in-cluster postgres (using Neon)
   postgresql:
     enabled: false
+
+  # Database config (not used with Neon but template may reference it)
+  database:
+    host: ""
+    port: "5432"
+    name: taskflow_notifications
+    user: postgres
+    password: ""
 
   resources:
     requests:

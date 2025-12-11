@@ -25,6 +25,10 @@ spec:
         {{- include "taskflow.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: notification-service
     spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
         {{- if not .Values.managedServices.neon.enabled }}
         # Wait for in-cluster PostgreSQL (skip when using Neon - always available)

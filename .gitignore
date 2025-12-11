@@ -66,3 +66,4 @@ pnpm-store
 .pnpm-store/
 blueprints/
 helm/taskflow/values-secrets.yaml
+infrastructure/helm/taskflow/values-azure.yaml

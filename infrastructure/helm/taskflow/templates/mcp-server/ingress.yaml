@@ -1,0 +1,32 @@
+{{- if and .Values.mcpServer.enabled .Values.mcpServer.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.mcpServer.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "taskflow.componentLabels" (dict "root" . "component" "mcp-server") | nindent 4 }}
+  annotations:
+    {{- if .Values.mcpServer.ingress.tls.enabled }}
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.mcpServer.ingress.className }}
+  rules:
+  - host: {{ .Values.mcpServer.ingress.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.mcpServer.name }}
+            port:
+              number: {{ .Values.mcpServer.service.port }}
+  {{- if .Values.mcpServer.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.mcpServer.ingress.host }}
+    secretName: {{ .Values.mcpServer.name }}-tls
+  {{- end }}
+{{- end }}

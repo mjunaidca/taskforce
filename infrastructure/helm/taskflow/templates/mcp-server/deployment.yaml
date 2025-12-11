@@ -16,6 +16,10 @@ spec:
       labels:
         {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "mcp") | nindent 8 }}
     spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
       {{- if not .Values.managedServices.neon.enabled }}
       # Wait for in-cluster PostgreSQL (skip when using Neon - always available)

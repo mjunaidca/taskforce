@@ -101,7 +101,8 @@ export const TRUSTED_CLIENTS = [
     type: "public" as const,
     redirectUrls: filterRedirectUrls([
       "http://localhost:3000/api/auth/callback",
-      "https://taskflow.org/api/auth/callback",
+      "https://avixato.com/api/auth/callback",
+      "https://api.avixato.com/auth/callback",
     ]),
     disabled: false,
     skipConsent: true,
