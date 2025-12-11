@@ -63,7 +63,9 @@ async def publish_event(
             response.raise_for_status()
             logger.info(
                 "[DAPR-PUBSUB] Published %s to %s: task_id=%s",
-                event_type, topic, data.get("task_id"),
+                event_type,
+                topic,
+                data.get("task_id"),
             )
             return True
     except Exception as e:
