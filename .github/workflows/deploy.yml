@@ -365,15 +365,14 @@ jobs:
           fi
 
           # Create temporary values file for comma-containing values (avoids Helm --set parsing issues)
-          # Note: Heredoc content must not be indented for valid YAML
-          cat > /tmp/helm-overrides.yaml << EOF
-sso:
-  env:
-    ALLOWED_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com"
-api:
-  env:
-    CORS_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com"
-EOF
+          cat > /tmp/helm-overrides.yaml << 'ENDOFVALUES'
+          sso:
+            env:
+              ALLOWED_ORIGINS: "https://${{ vars.DOMAIN }},https://sso.${{ vars.DOMAIN }},https://api.${{ vars.DOMAIN }},https://mcp.${{ vars.DOMAIN }}"
+          api:
+            env:
+              CORS_ORIGINS: "https://${{ vars.DOMAIN }},https://sso.${{ vars.DOMAIN }},https://api.${{ vars.DOMAIN }},https://mcp.${{ vars.DOMAIN }}"
+          ENDOFVALUES
 
           helm upgrade --install taskflow ./infrastructure/helm/taskflow \
             --namespace taskflow \
