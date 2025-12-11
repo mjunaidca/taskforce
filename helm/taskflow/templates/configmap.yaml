@@ -85,4 +85,8 @@ data:
   # Server-side (Next.js API routes) - uses internal K8s service names
   SERVER_API_URL: "http://{{ .Values.api.name }}:{{ .Values.api.service.port }}"
   SERVER_SSO_URL: "http://{{ .Values.sso.name }}:{{ .Values.sso.service.port }}"
+  # Notification Service (separate microservice)
+  {{- if .Values.notificationService.enabled }}
+  SERVER_NOTIFICATION_URL: "http://{{ include "taskflow.fullname" . }}-notification:{{ .Values.notificationService.service.port }}"
+  {{- end }}
 {{- end }}

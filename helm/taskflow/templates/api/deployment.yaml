@@ -15,6 +15,14 @@ spec:
     metadata:
       labels:
         {{- include "taskflow.componentSelectorLabels" (dict "root" . "component" "api") | nindent 8 }}
+      {{- if .Values.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.api.daprAppId | quote }}
+        dapr.io/app-port: {{ .Values.api.service.targetPort | quote }}
+        dapr.io/enable-api-logging: "true"
+        dapr.io/log-level: "info"
+      {{- end }}
     spec:
       initContainers:
       - name: wait-for-db
@@ -76,6 +84,12 @@ spec:
             secretKeyRef:
               name: {{ .Values.api.name }}-secret
               key: TASKFLOW_CHATKIT_DATABASE_URL
+        {{- if .Values.dapr.enabled }}
+        - name: DAPR_HTTP_ENDPOINT
+          value: "http://localhost:3500"
+        - name: DAPR_PUBSUB_NAME
+          value: {{ .Values.dapr.pubsub.name | quote }}
+        {{- end }}
         resources:
           {{- toYaml .Values.api.resources | nindent 10 }}
         livenessProbe:

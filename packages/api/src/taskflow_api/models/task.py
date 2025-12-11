@@ -91,6 +91,10 @@ class Task(SQLModel, table=True):
         default=False,
         description="Whether this task has already spawned its next occurrence",
     )
+    reminder_sent: bool = Field(
+        default=False,
+        description="Whether a reminder notification has been sent for this task's due date",
+    )
 
     # Foreign keys
     project_id: int = Field(foreign_key="project.id", index=True)

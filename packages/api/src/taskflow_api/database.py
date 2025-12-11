@@ -11,6 +11,7 @@ from .config import settings
 
 # Import all models to ensure they're registered with SQLModel.metadata
 # This MUST happen before create_db_and_tables() is called
+# Notification removed - now handled by dedicated Notification Service
 from .models import AuditLog, Project, ProjectMember, Task, Worker  # noqa: F401
 
 

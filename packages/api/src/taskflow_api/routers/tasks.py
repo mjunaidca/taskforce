@@ -24,7 +24,10 @@ from ..schemas.task import (
     TaskRead,
     TaskUpdate,
 )
+from ..config import settings
 from ..services.audit import log_action
+from ..services.events import publish_task_created, publish_task_updated, publish_task_deleted, publish_task_completed, publish_task_assigned
+from ..services.jobs import cancel_recurring_spawn, cancel_reminder, schedule_recurring_spawn, schedule_reminder
 from ..services.user_setup import ensure_user_setup
 
 router = APIRouter(tags=["Tasks"])
@@ -550,6 +553,8 @@ async def create_task(
     worker = await ensure_user_setup(session, user)
     worker_id = worker.id
     worker_type = worker.type
+    worker_user_id = worker.user_id  # Store before commit to avoid MissingGreenlet
+    worker_name = worker.name
 
     # Check project exists and user is member
     project = await session.get(Project, project_id)
@@ -560,9 +565,13 @@ async def create_task(
     # Validate assignee if provided
     assignee = None
     assignee_handle = None
+    assignee_user_id = None
+    assignee_name = None
     if data.assignee_id:
         assignee = await check_assignee_is_member(session, project_id, data.assignee_id)
         assignee_handle = assignee.handle
+        assignee_user_id = assignee.user_id  # Store before commit to avoid MissingGreenlet
+        assignee_name = assignee.name
 
     # Validate parent if provided
     if data.parent_task_id:
@@ -607,6 +616,40 @@ async def create_task(
     # Single commit
     await session.commit()
     await session.refresh(task)
+
+    # Schedule Dapr job for on_due_date recurring tasks (only thing that needs precise timing)
+    if task.due_date and task.is_recurring and task.recurrence_trigger in ("on_due_date", "both"):
+        await schedule_recurring_spawn(
+            task_id=task.id,
+            due_date=task.due_date,
+            dapr_http_endpoint=settings.dapr_http_endpoint,
+        )
+
+    # Schedule reminder if task has due_date and assignee
+    if task.due_date and task.assignee_id and assignee_user_id:
+        reminder_user_id = assignee_user_id or f"@{assignee_name}"
+        await schedule_reminder(
+            task_id=task.id,
+            due_date=task.due_date,
+            user_id=reminder_user_id,
+            title=task.title,
+            project_id=task.project_id,
+            dapr_http_endpoint=settings.dapr_http_endpoint,
+        )
+
+    # Publish task.created event → Notification Service
+    notify_user_id = None
+    if assignee_user_id:
+        notify_user_id = assignee_user_id or f"@{assignee_name}"
+    await publish_task_created(
+        task_id=task.id,
+        task=task,
+        actor_id=worker_user_id or f"@{worker_name}",
+        actor_name=worker_name,
+        user_id=assignee_user_id,  # Notify assignee if different from creator
+        dapr_http_endpoint=settings.dapr_http_endpoint,
+        pubsub_name=settings.dapr_pubsub_name,
+    )
 
     return TaskRead(
         id=task.id,
@@ -746,6 +789,16 @@ async def update_task(
         await session.commit()
         await session.refresh(task)
 
+        # Reschedule spawn job if due_date changed for recurring tasks
+        if "due_date" in changes and task.due_date:
+            await cancel_recurring_spawn(task_id, settings.dapr_http_endpoint)
+            if task.is_recurring and task.recurrence_trigger in ("on_due_date", "both"):
+                await schedule_recurring_spawn(
+                    task_id=task.id,
+                    due_date=task.due_date,
+                    dapr_http_endpoint=settings.dapr_http_endpoint,
+                )
+
     assignee = None
     if task.assignee_id:
         assignee = await session.get(Worker, task.assignee_id)
@@ -763,6 +816,8 @@ async def delete_task(
     worker = await ensure_user_setup(session, user)
     worker_id = worker.id
     worker_type = worker.type
+    worker_user_id = worker.user_id  # Store before commit to avoid MissingGreenlet
+    worker_name = worker.name
 
     task = await session.get(Task, task_id)
     if not task:
@@ -803,6 +858,20 @@ async def delete_task(
     await session.delete(task)
     await session.commit()
 
+    # Cancel scheduled jobs for deleted task
+    await cancel_recurring_spawn(task_id, settings.dapr_http_endpoint)
+    await cancel_reminder(task_id, settings.dapr_http_endpoint)
+
+    # Publish task.deleted event → Notification Service
+    await publish_task_deleted(
+        task_id=task_id,
+        title=task_title,
+        actor_id=worker_user_id or f"@{worker_name}",
+        actor_name=worker_name,
+        dapr_http_endpoint=settings.dapr_http_endpoint,
+        pubsub_name=settings.dapr_pubsub_name,
+    )
+
     return {"ok": True}
 
 
@@ -820,6 +889,8 @@ async def update_status(
     worker = await ensure_user_setup(session, user)
     worker_id = worker.id
     worker_type = worker.type
+    worker_user_id = worker.user_id  # Store before commit to avoid MissingGreenlet
+    worker_name = worker.name
 
     task = await session.get(Task, task_id)
     if not task:
@@ -851,6 +922,9 @@ async def update_status(
         if task.is_recurring and task.recurrence_pattern:
             await create_next_occurrence(session, task, worker_id, worker_type)
 
+        # Notification for task creator is now handled via Dapr pub/sub
+        # See publish_task_completed() call below
+
     session.add(task)
 
     await log_action(
@@ -865,6 +939,28 @@ async def update_status(
 
     await session.commit()
     await session.refresh(task)
+
+    # Publish completion event if task was completed
+    if data.status == "completed":
+        # Get creator info for notification
+        creator_user_id = None
+        if task.created_by_id != worker_id:
+            creator = await session.get(Worker, task.created_by_id)
+            if creator:
+                creator_user_id = creator.user_id or f"@{creator.name}"
+
+        await publish_task_completed(
+            task_id=task_id,
+            task=task,
+            actor_id=worker_user_id or f"@{worker_name}",
+            actor_name=worker_name,
+            creator_id=creator_user_id,
+            dapr_http_endpoint=settings.dapr_http_endpoint,
+            pubsub_name=settings.dapr_pubsub_name,
+        )
+
+        # Cancel reminder since task is done
+        await cancel_reminder(task_id, settings.dapr_http_endpoint)
 
     assignee = None
     if task.assignee_id:
@@ -933,6 +1029,8 @@ async def assign_task(
     worker = await ensure_user_setup(session, user)
     worker_id = worker.id
     worker_type = worker.type
+    worker_user_id = worker.user_id  # Store before commit to avoid MissingGreenlet
+    worker_name = worker.name
 
     task = await session.get(Task, task_id)
     if not task:
@@ -943,6 +1041,8 @@ async def assign_task(
     # Validate assignee
     assignee = await check_assignee_is_member(session, task.project_id, data.assignee_id)
     assignee_handle = assignee.handle
+    assignee_user_id = assignee.user_id  # Store before commit
+    assignee_name = assignee.name
 
     old_assignee_id = task.assignee_id
     task.assignee_id = data.assignee_id
@@ -966,6 +1066,19 @@ async def assign_task(
 
     await session.commit()
     await session.refresh(task)
+
+    # Publish assignment event → Notification Service
+    if data.assignee_id != worker_id:
+        await publish_task_assigned(
+            task_id=task_id,
+            task_title=task.title,
+            assignee_user_id=assignee_user_id or f"@{assignee_name}",
+            actor_id=worker_user_id or f"@{worker_name}",
+            actor_name=worker_name,
+            project_id=task.project_id,
+            dapr_http_endpoint=settings.dapr_http_endpoint,
+            pubsub_name=settings.dapr_pubsub_name,
+        )
 
     # Compute spawn_count for recurring tasks
     spawn_count = 0

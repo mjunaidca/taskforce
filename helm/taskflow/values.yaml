@@ -100,6 +100,7 @@ sso:
 api:
   enabled: true
   name: taskflow-api
+  daprAppId: taskflow-api
   replicaCount: 1
 
   image:
@@ -246,6 +247,66 @@ web:
     limits:
       memory: "512Mi"
       cpu: "500m"
+
+# Notification Service (Dapr pub/sub consumer)
+notificationService:
+  enabled: true
+  name: notification-service
+  daprAppId: notification-service
+  replicas: 1
+  port: 8001
+  logLevel: INFO
+  allowedOrigins: "http://localhost:3000,http://localhost:3001,http://taskflow.local"
+
+  image:
+    repository: taskflow/notification-service
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8001
+
+  # Separate PostgreSQL for notification service (microservice pattern)
+  database:
+    host: notification-postgres
+    port: 5432
+    name: notification_db
+    user: notification_user
+    password: "changeme-notification-db"
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+# Dapr Configuration
+dapr:
+  enabled: true
+
+  # Pub/Sub Component (Kafka in production, Redis locally)
+  pubsub:
+    name: taskflow-pubsub
+    # For local dev: pubsub.redis
+    # For production: pubsub.kafka
+    type: pubsub.redis
+    # Redis config (local)
+    redisHost: redis:6379
+    redisPassword: ""
+    # Kafka config (production) - uncomment and set for cloud
+    # type: pubsub.kafka
+    # brokers: "kafka.example.com:9092"
+    # consumerGroup: taskflow-group
+    # authType: password
+    # secretName: kafka-credentials
+
+  # Scheduler Component (for Jobs API)
+  scheduler:
+    enabled: true
+    name: taskflow-scheduler
 
 # Ingress Controller (NGINX)
 ingress-nginx:
