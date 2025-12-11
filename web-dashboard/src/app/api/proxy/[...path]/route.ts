@@ -4,6 +4,20 @@ import { cookies } from "next/headers";
 // SERVER_API_URL for Docker (container names), fallback to NEXT_PUBLIC for local dev
 const API_BASE = process.env.SERVER_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Notification Service URL - separate microservice
+const NOTIFICATION_SERVICE_URL = process.env.SERVER_NOTIFICATION_URL || process.env.NEXT_PUBLIC_NOTIFICATION_URL || "http://localhost:8001";
+
+// Routes that go to Notification Service instead of main API
+const NOTIFICATION_ROUTES = ["notifications"];
+
+function getTargetUrl(path: string[]): string {
+  // Check if this is a notification route
+  if (path.length > 0 && NOTIFICATION_ROUTES.includes(path[0])) {
+    return NOTIFICATION_SERVICE_URL;
+  }
+  return API_BASE;
+}
+
 async function proxyRequest(request: NextRequest, params: Promise<{ path: string[] }>) {
   const { path } = await params;
   const cookieStore = await cookies();
@@ -25,9 +39,14 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Determine target service based on route
+  const targetBase = getTargetUrl(path);
+
   // Build the target URL - prepend /api since backend expects /api/...
   const targetPath = "/api/" + path.join("/");
-  const url = new URL(targetPath, API_BASE);
+  const url = new URL(targetPath, targetBase);
+
+  console.log("[Proxy] Routing to:", url.toString());
 
   // Copy query params
   request.nextUrl.searchParams.forEach((value, key) => {

@@ -1,0 +1,52 @@
+{{- if .Values.dapr.enabled }}
+# Dapr Pub/Sub Component - Kafka/Redis abstraction
+# No Kafka client code needed in app - Dapr handles connection
+# Supports: in-cluster Redis, Upstash Redis (managed), or Kafka
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: {{ .Values.dapr.pubsub.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: {{ .Values.dapr.pubsub.type }}
+  version: v1
+  metadata:
+    {{- if eq .Values.dapr.pubsub.type "pubsub.kafka" }}
+    # Kafka configuration (production)
+    - name: brokers
+      value: {{ .Values.dapr.pubsub.brokers | quote }}
+    - name: consumerGroup
+      value: {{ .Values.dapr.pubsub.consumerGroup | default "taskflow-group" | quote }}
+    - name: authType
+      value: {{ .Values.dapr.pubsub.authType | default "none" | quote }}
+    {{- if .Values.dapr.pubsub.saslUsername }}
+    - name: saslUsername
+      secretKeyRef:
+        name: {{ .Values.dapr.pubsub.secretName | default "kafka-credentials" }}
+        key: username
+    - name: saslPassword
+      secretKeyRef:
+        name: {{ .Values.dapr.pubsub.secretName | default "kafka-credentials" }}
+        key: password
+    {{- end }}
+    {{- else if eq .Values.dapr.pubsub.type "pubsub.redis" }}
+    {{- if .Values.managedServices.upstash.enabled }}
+    # Upstash Redis configuration (managed - TLS enabled)
+    - name: redisHost
+      value: {{ .Values.managedServices.upstash.host | quote }}
+    - name: redisPassword
+      value: {{ .Values.managedServices.upstash.password | quote }}
+    - name: enableTLS
+      value: "true"
+    {{- else }}
+    # In-cluster Redis configuration (local development)
+    - name: redisHost
+      value: {{ .Values.dapr.pubsub.redisHost | default "redis:6379" | quote }}
+    - name: redisPassword
+      value: {{ .Values.dapr.pubsub.redisPassword | default "" | quote }}
+    {{- end }}
+    {{- end }}
+scopes:
+  - {{ .Values.api.daprAppId }}
+  - {{ .Values.notificationService.daprAppId }}
+{{- end }}

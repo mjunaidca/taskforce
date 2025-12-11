@@ -111,8 +111,8 @@ export const RECURRENCE_PATTERNS: { value: RecurrencePattern; label: string }[] 
 // Recurrence trigger options for UI dropdowns
 export const RECURRENCE_TRIGGERS: { value: RecurrenceTrigger; label: string; description: string; comingSoon?: boolean }[] = [
   { value: "on_complete", label: "On Completion", description: "Create next occurrence when task is completed" },
-  { value: "on_due_date", label: "On Due Date", description: "Create next occurrence when due date passes", comingSoon: true },
-  { value: "both", label: "Both", description: "Create on completion or due date, whichever comes first", comingSoon: true },
+  { value: "on_due_date", label: "On Due Date", description: "Create next occurrence when due date passes" },
+  { value: "both", label: "Both", description: "Create on completion or due date, whichever comes first" },
 ];
 
 export interface TaskListItem {

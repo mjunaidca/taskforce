@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { OrgSwitcher } from "@/components/OrgSwitcher"
+import { NotificationBell } from "@/components/NotificationBell"
 import { LogOut, User, Settings, Moon, Sun } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -58,6 +59,9 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* Organization Switcher */}
         <OrgSwitcher />
+
+        {/* Notification Bell */}
+        <NotificationBell />
 
         {/* Theme toggle */}
         <Button

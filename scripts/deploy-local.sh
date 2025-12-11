@@ -79,7 +79,7 @@ echo ""
 
 # Check if ALL required images exist, build if any missing or if --rebuild flag is set
 echo "🏗️  Checking Docker images..."
-REQUIRED_IMAGES=("taskflow/sso-platform-migrations" "taskflow/sso-platform" "taskflow/api" "taskflow/mcp-server" "taskflow/web-dashboard")
+REQUIRED_IMAGES=("taskflow/sso-platform-migrations" "taskflow/sso-platform" "taskflow/api" "taskflow/mcp-server" "taskflow/notification-service" "taskflow/web-dashboard")
 MISSING_IMAGES=()
 
 for img in "${REQUIRED_IMAGES[@]}"; do
@@ -120,7 +120,7 @@ elif [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
     exit 1
   fi
 else
-  echo "✅ All 5 images available (skipping build)"
+  echo "✅ All 6 images available (skipping build)"
 fi
 echo ""
 
@@ -148,6 +148,24 @@ set -a
 source .env
 set +a
 echo "✅ Secrets loaded"
+echo ""
+
+# Install Dapr (required for pub/sub and jobs)
+echo "🔧 Checking Dapr installation..."
+helm repo add dapr https://dapr.github.io/helm-charts/ 2>/dev/null || true
+helm repo update dapr > /dev/null 2>&1
+
+if helm list -n dapr-system 2>/dev/null | grep -q "dapr"; then
+  echo "✅ Dapr already installed"
+else
+  echo "📦 Installing Dapr..."
+  helm upgrade --install dapr dapr/dapr \
+    --version=1.15 \
+    --namespace dapr-system \
+    --create-namespace \
+    --wait
+  echo "✅ Dapr installed"
+fi
 echo ""
 
 # Optional: Delete existing deployment for clean start
@@ -184,6 +202,9 @@ helm upgrade --install taskflow ./helm/taskflow \
     --set api.jwtSecret="${JWT_SECRET:-changeme-jwt}" \
     --set api.openai.apiKey="${OPENAI_API_KEY:-}" \
     --set mcpServer.mcpApiKey="${MCP_API_KEY:-changeme-mcp}" \
+    --set notificationService.enabled=true \
+    --set notificationService.database.password="${POSTGRES_NOTIFICATION_PASSWORD:-changeme-notification}" \
+    --set dapr.enabled=true \
     --wait \
     --timeout 15m
 
@@ -223,12 +244,18 @@ fi
 echo "✅ All Done!"
 echo ""
 echo "🌍 Services:"
-echo "   - Web Dashboard: http://localhost:3000"
-echo "   - SSO Platform:  http://localhost:3001"
-echo "   - API Docs:      http://localhost:8000/docs"
+echo "   - Web Dashboard:        http://localhost:3000"
+echo "   - SSO Platform:         http://localhost:3001"
+echo "   - API Docs:             http://localhost:8000/docs"
+echo "   - MCP Server:           http://localhost:8001"
+echo "   - Notification Service: http://localhost:8002/health"
 if [ "$PGADMIN" = true ]; then
-  echo "   - pgAdmin:       http://localhost:5050"
+  echo "   - pgAdmin:              http://localhost:5050"
 fi
+echo ""
+echo "🔧 Dapr:"
+echo "   - Pods with 2/2 = Dapr sidecar injected (API, Notification Service)"
+echo "   - kubectl get pods -n taskflow  # Check READY column"
 echo ""
 echo "📋 Useful commands:"
 echo "   ./scripts/deploy-local.sh --skip-cleanup --port-forward        # Fast upgrade (2-3 min)"
@@ -236,5 +263,6 @@ echo "   ./scripts/deploy-local.sh --rebuild --skip-cleanup             # Rebuil
 echo "   ./scripts/deploy-local.sh --pgadmin --port-forward             # Clean deploy with extras"
 echo "   kubectl get pods -n taskflow -w                                # Watch pods"
 echo "   kubectl logs -n taskflow -l app=sso-platform                   # View SSO logs"
+echo "   kubectl logs -n taskflow -l app=api -c daprd                   # View Dapr sidecar logs"
 echo "   kubectl delete namespace taskflow                              # Clean up"
 echo ""

@@ -20,6 +20,12 @@ import {
   PaginationParams,
   TaskFilterParams,
 } from "@/types";
+import {
+  Notification,
+  NotificationUnreadCount,
+  NotificationUpdate,
+  MarkAllReadResponse,
+} from "@/types/notification";
 
 // API requests go through our proxy which adds the auth token from httpOnly cookies
 // Proxy prepends /api/ to all paths, so we use paths without /api/ prefix
@@ -263,6 +269,32 @@ class ApiClient {
     if (params?.offset) searchParams.set("offset", params.offset.toString());
     const query = searchParams.toString();
     return this.request<AuditRead[]>(`/projects/${projectId}/audit${query ? `?${query}` : ""}`);
+  }
+
+  // Notifications API
+  async getNotifications(unreadOnly = false, limit = 50): Promise<Notification[]> {
+    const searchParams = new URLSearchParams();
+    if (unreadOnly) searchParams.set("unread_only", "true");
+    searchParams.set("limit", limit.toString());
+    const query = searchParams.toString();
+    return this.request<Notification[]>(`/notifications${query ? `?${query}` : ""}`);
+  }
+
+  async getUnreadNotificationCount(): Promise<NotificationUnreadCount> {
+    return this.request<NotificationUnreadCount>("/notifications/unread-count");
+  }
+
+  async markNotificationRead(notificationId: number, read = true): Promise<Notification> {
+    return this.request<Notification>(`/notifications/${notificationId}/read`, {
+      method: "PATCH",
+      body: JSON.stringify({ read } satisfies NotificationUpdate),
+    });
+  }
+
+  async markAllNotificationsRead(): Promise<MarkAllReadResponse> {
+    return this.request<MarkAllReadResponse>("/notifications/mark-all-read", {
+      method: "POST",
+    });
   }
 }
 

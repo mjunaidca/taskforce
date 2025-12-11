@@ -1,0 +1,10 @@
+{{- /*
+Dapr Jobs API is built into Dapr 1.15+ - no separate scheduler component needed.
+The Jobs API uses the Dapr Scheduler service which is deployed automatically
+with the Dapr control plane.
+
+To schedule jobs, the API service uses HTTP POST to:
+  http://localhost:3500/v1.0-alpha1/jobs/{job-name}
+
+This file is intentionally empty.
+*/ -}}

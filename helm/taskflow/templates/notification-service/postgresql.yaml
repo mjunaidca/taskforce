@@ -1,0 +1,96 @@
+{{- if and .Values.notificationService.enabled (not .Values.managedServices.neon.enabled) }}
+# PostgreSQL for Notification Service (separate DB - microservice pattern)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.notificationService.database.host }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "taskflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notification-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "taskflow.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: notification-db
+  template:
+    metadata:
+      labels:
+        {{- include "taskflow.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: notification-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.notificationService.database.name | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.notificationService.database.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "taskflow.fullname" . }}-notification-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            # Allow password auth without SSL (required for asyncpg which doesn't support sslmode URL param)
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: scram-sha-256
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - pg_isready -U {{ .Values.notificationService.database.user }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - pg_isready -U {{ .Values.notificationService.database.user }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: data
+          emptyDir: {}  # For demo; use PVC in production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.notificationService.database.host }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "taskflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notification-db
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.notificationService.database.port }}
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    {{- include "taskflow.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: notification-db
+{{- end }}

@@ -52,10 +52,21 @@ kubectl port-forward -n taskflow svc/mcp-server 8001:8001 &
 PID4=$!
 sleep 1
 
+# Notification Service (optional - only if Dapr enabled)
+# Service runs on internal port 8001, we expose it locally on 8002 to avoid conflict with MCP server
+if kubectl get svc taskflow-notification -n taskflow &>/dev/null; then
+    kubectl port-forward -n taskflow svc/taskflow-notification 8002:8001 &
+    PID5=$!
+    sleep 1
+    NOTIFICATION_MSG="   - Notifications:  http://localhost:8002/health"
+else
+    NOTIFICATION_MSG=""
+fi
+
 # pgAdmin (optional - only if deployed)
 if kubectl get svc pgadmin -n taskflow &>/dev/null; then
     kubectl port-forward -n taskflow svc/pgadmin 5050:80 &
-    PID5=$!
+    PID6=$!
     sleep 1
     PGADMIN_MSG="   - pgAdmin:        http://localhost:5050"
 else
@@ -70,6 +81,7 @@ echo "   - Web Dashboard:  http://localhost:3000"
 echo "   - SSO Platform:   http://localhost:3001"
 echo "   - API Docs:       http://localhost:8000/docs"
 echo "   - MCP Server:     http://localhost:8001"
+[ -n "$NOTIFICATION_MSG" ] && echo "$NOTIFICATION_MSG"
 [ -n "$PGADMIN_MSG" ] && echo "$PGADMIN_MSG"
 echo ""
 echo "💡 Press Ctrl+C to stop all port-forwards"

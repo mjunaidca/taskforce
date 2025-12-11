@@ -706,6 +706,96 @@ export const auth = betterAuth({
     organization({
       // Allow any user to create organizations (can be restricted later)
       allowUserToCreateOrganization: true,
+      // Send invitation emails when members are invited to organizations
+      sendInvitationEmail: async ({ email, organization, inviter, invitation }) => {
+        const appName = process.env.NEXT_PUBLIC_APP_NAME || "Taskflow SSO";
+        const appDescription = process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Secure Single Sign-On";
+        const orgNameEnv = process.env.NEXT_PUBLIC_ORG_NAME || "Taskflow";
+
+        // Build invitation URL from invitation ID
+        const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3001";
+        const inviteUrl = `${baseUrl}/auth/accept-invitation?token=${invitation.id}`;
+
+        // Get inviter name from the nested user object
+        const inviterName = inviter.user?.name || inviter.user?.email || "Someone";
+
+        await sendEmail({
+          to: email,
+          subject: `You've been invited to join ${organization.name}`,
+          html: `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            </head>
+            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5; padding: 40px 0;">
+                <tr>
+                  <td align="center">
+                    <!-- Main container -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                      <!-- Header -->
+                      <tr>
+                        <td style="padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                          <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">${appName}</h1>
+                          <p style="margin: 8px 0 0; font-size: 14px; color: #6b7280;">${appDescription}</p>
+                        </td>
+                      </tr>
+
+                      <!-- Content -->
+                      <tr>
+                        <td style="padding: 40px;">
+                          <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #111827;">You're Invited! 🎉</h2>
+                          <p style="margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #374151;">
+                            <strong>${inviterName}</strong> has invited you to join <strong>${organization.name}</strong> on ${appName}.
+                          </p>
+
+                          <!-- Button -->
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td align="center" style="padding: 0 0 24px;">
+                                <a href="${inviteUrl}" style="display: inline-block; padding: 14px 32px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Accept Invitation</a>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <p style="margin: 0 0 16px; font-size: 14px; line-height: 20px; color: #6b7280;">
+                            Or copy and paste this link into your browser:
+                          </p>
+                          <p style="margin: 0 0 24px; padding: 12px; background-color: #f9fafb; border-radius: 4px; font-size: 13px; color: #374151; word-break: break-all; font-family: monospace;">
+                            ${inviteUrl}
+                          </p>
+
+                          <div style="padding: 16px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 4px;">
+                            <p style="margin: 0; font-size: 14px; color: #065f46;">
+                              <strong>🔐 Secure Access:</strong> Once you accept, you'll have access to ${organization.name}'s resources and projects.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <!-- Footer -->
+                      <tr>
+                        <td style="padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; background-color: #f9fafb;">
+                          <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">
+                            This is an automated message from <strong>${appName}</strong>
+                          </p>
+                          <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                            Secure authentication for your ${orgNameEnv} applications
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+          `,
+        });
+      },
     }),
 
     // Username plugin - Adds username fields for user profiles

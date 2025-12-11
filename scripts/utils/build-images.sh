@@ -115,8 +115,8 @@ if [ "$PARALLEL" = true ]; then
   echo -e "${YELLOW}[2/4] Building SSO runner...${NC}"
   build_image "sso-platform" "sso-platform/Dockerfile" "sso-platform" "runner"
 
-  # Batch 1: API + MCP (2 parallel)
-  echo -e "${YELLOW}[3/4] Building API + MCP in parallel...${NC}"
+  # Batch 1: API + MCP + Notification Service (3 parallel)
+  echo -e "${YELLOW}[3/5] Building API + MCP + Notification Service in parallel...${NC}"
   PIDS=()
   NAMES=()
 
@@ -127,6 +127,10 @@ if [ "$PARALLEL" = true ]; then
   build_image "mcp-server" "packages/mcp-server/Dockerfile" "packages/mcp-server" > "${LOG_DIR}/mcp-server.log" 2>&1 &
   PIDS+=($!)
   NAMES+=("mcp-server")
+
+  build_image "notification-service" "packages/notification-service/Dockerfile" "packages/notification-service" > "${LOG_DIR}/notification-service.log" 2>&1 &
+  PIDS+=($!)
+  NAMES+=("notification-service")
 
   # Progress indicator while waiting
   START_TIME=$SECONDS
@@ -169,8 +173,10 @@ if [ "$PARALLEL" = true ]; then
   fi
 
   # Batch 2: Web (sequential - give it full resources)
-  echo -e "${YELLOW}[4/4] Building Web dashboard...${NC}"
+  echo -e "${YELLOW}[4/5] Building Web dashboard...${NC}"
   build_image "web-dashboard" "web-dashboard/Dockerfile" "web-dashboard"
+
+  echo -e "${GREEN}[5/5] All images built${NC}"
 
   # Cleanup
   rm -rf "${LOG_DIR}"
@@ -181,6 +187,7 @@ else
   build_image "sso-platform" "sso-platform/Dockerfile" "sso-platform" "runner"
   build_image "api" "packages/api/Dockerfile" "packages/api"
   build_image "mcp-server" "packages/mcp-server/Dockerfile" "packages/mcp-server"
+  build_image "notification-service" "packages/notification-service/Dockerfile" "packages/notification-service"
   build_image "web-dashboard" "web-dashboard/Dockerfile" "web-dashboard"
 fi
 
@@ -191,6 +198,7 @@ echo "  - ${REGISTRY}/sso-platform-migrations:${VERSION} (for DB migrations)"
 echo "  - ${REGISTRY}/sso-platform:${VERSION} (slim production)"
 echo "  - ${REGISTRY}/api:${VERSION}"
 echo "  - ${REGISTRY}/mcp-server:${VERSION}"
+echo "  - ${REGISTRY}/notification-service:${VERSION}"
 echo "  - ${REGISTRY}/web-dashboard:${VERSION}"
 
 # Load images into Minikube (if not pushing to registry)
