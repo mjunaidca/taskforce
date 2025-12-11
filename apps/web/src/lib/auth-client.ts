@@ -14,6 +14,9 @@ import { organizationClient } from "better-auth/client/plugins";
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001",
   plugins: [organizationClient()],
+  fetchOptions: {
+    credentials: "include", // Required for cross-origin cookie handling
+  },
 });
 
 export const { organization } = authClient;

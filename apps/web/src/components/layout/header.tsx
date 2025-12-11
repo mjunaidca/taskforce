@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { OrgSwitcher } from "@/components/OrgSwitcher"
 import { NotificationBell } from "@/components/NotificationBell"
-import { LogOut, User, Settings, Moon, Sun, Building2 } from "lucide-react"
+import { LogOut, User, Moon, Sun, Building2 } from "lucide-react"
 import { useState, useEffect } from "react"
 
 export function Header() {
@@ -104,15 +104,9 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href={`${process.env.NEXT_PUBLIC_SSO_URL || 'http://localhost:3001'}/account`} target="_blank" rel="noopener noreferrer">
+              <a href={`${process.env.NEXT_PUBLIC_SSO_URL || 'http://localhost:3001'}/account/profile`} target="_blank" rel="noopener noreferrer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href={`${process.env.NEXT_PUBLIC_SSO_URL || 'http://localhost:3001'}/account/settings`} target="_blank" rel="noopener noreferrer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
