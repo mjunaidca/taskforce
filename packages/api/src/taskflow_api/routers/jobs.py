@@ -21,7 +21,7 @@ from ..database import get_session
 from ..models.task import Task
 from ..models.worker import Worker
 from ..services.audit import log_action
-from ..services.events import publish_event, publish_task_spawned, TOPIC_REMINDERS
+from ..services.events import TOPIC_REMINDERS, publish_event, publish_task_spawned
 from ..services.jobs import schedule_recurring_spawn, schedule_reminder
 
 logger = logging.getLogger(__name__)

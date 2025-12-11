@@ -12,7 +12,7 @@ Architecture:
 
 import logging
 from datetime import datetime
-from typing import Any, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
 
@@ -61,7 +61,10 @@ async def publish_event(
         async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.post(url, json=payload)
             response.raise_for_status()
-            logger.info("[DAPR-PUBSUB] Published %s to %s: task_id=%s", event_type, topic, data.get("task_id"))
+            logger.info(
+                "[DAPR-PUBSUB] Published %s to %s: task_id=%s",
+                event_type, topic, data.get("task_id"),
+            )
             return True
     except Exception as e:
         # Log but don't crash - pub/sub is for downstream services

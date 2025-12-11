@@ -10,6 +10,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..auth import CurrentUser, get_current_user
+from ..config import settings
 from ..database import get_session
 from ..models.project import Project, ProjectMember
 from ..models.task import VALID_TRANSITIONS, Task, validate_status_transition
@@ -24,10 +25,19 @@ from ..schemas.task import (
     TaskRead,
     TaskUpdate,
 )
-from ..config import settings
 from ..services.audit import log_action
-from ..services.events import publish_task_created, publish_task_updated, publish_task_deleted, publish_task_completed, publish_task_assigned
-from ..services.jobs import cancel_recurring_spawn, cancel_reminder, schedule_recurring_spawn, schedule_reminder
+from ..services.events import (
+    publish_task_assigned,
+    publish_task_completed,
+    publish_task_created,
+    publish_task_deleted,
+)
+from ..services.jobs import (
+    cancel_recurring_spawn,
+    cancel_reminder,
+    schedule_recurring_spawn,
+    schedule_reminder,
+)
 from ..services.user_setup import ensure_user_setup
 
 router = APIRouter(tags=["Tasks"])
@@ -638,9 +648,6 @@ async def create_task(
         )
 
     # Publish task.created event → Notification Service
-    notify_user_id = None
-    if assignee_user_id:
-        notify_user_id = assignee_user_id or f"@{assignee_name}"
     await publish_task_created(
         task_id=task.id,
         task=task,

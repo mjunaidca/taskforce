@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     # OpenAI API Key (required for chat)
     openai_api_key: str | None = None
 
-    # Dapr configuration (Phase V requires Full Dapr: Pub/Sub, State, Bindings, Secrets, Service Invocation)
+    # Dapr configuration
+    # Phase V requires Full Dapr: Pub/Sub, State, Bindings, Secrets, Service Invocation
     dapr_http_endpoint: str = "http://localhost:3500"
     dapr_pubsub_name: str = "taskflow-pubsub"  # Kafka via Dapr
 
