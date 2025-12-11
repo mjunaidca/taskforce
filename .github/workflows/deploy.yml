@@ -385,15 +385,15 @@ jobs:
             --values /tmp/helm-overrides.yaml \
             --set global.imagePullSecrets[0].name=ghcr-secret \
             --set "sso.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/sso" \
-            --set "sso.image.tag=latest" \
+            --set "sso.image.tag=5325e86" \
             --set "api.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api" \
-            --set "api.image.tag=latest" \
+            --set "api.image.tag=5325e86" \
             --set "web.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web" \
-            --set "web.image.tag=latest" \
+            --set "web.image.tag=5325e86" \
             --set "mcpServer.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/mcp" \
-            --set "mcpServer.image.tag=latest" \
+            --set "mcpServer.image.tag=5325e86" \
             --set "notificationService.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/notification" \
-            --set "notificationService.image.tag=latest" \
+            --set "notificationService.image.tag=5325e86" \
             --set managedServices.neon.enabled=true \
             --set "managedServices.neon.ssoDatabase=${{ secrets.NEON_SSO_DATABASE_URL }}" \
             --set "managedServices.neon.apiDatabase=${{ secrets.NEON_API_DATABASE_URL }}" \
