@@ -109,12 +109,11 @@ class AuthMiddleware:
                 "token_endpoint": f"{config.sso_url}/api/auth/oauth2/token",
                 "device_authorization_endpoint": f"{config.sso_url}/api/auth/device/code",
                 "jwks_uri": f"{config.sso_url}/api/auth/jwks",
+                # Only standard OIDC scopes - Better Auth doesn't support custom scopes
                 "scopes_supported": [
                     "openid",
                     "profile",
                     "email",
-                    "taskflow:read",
-                    "taskflow:write",
                 ],
                 "response_types_supported": ["code"],
                 "grant_types_supported": [
@@ -135,11 +134,11 @@ class AuthMiddleware:
             response = JSONResponse({
                 "resource": f"http://{config.mcp_host}:{config.mcp_port}/mcp",
                 "authorization_servers": [config.sso_url],
+                # Only standard OIDC scopes
                 "scopes_supported": [
                     "openid",
-                    "profile", 
-                    "taskflow:read",
-                    "taskflow:write",
+                    "profile",
+                    "email",
                 ],
                 "bearer_methods_supported": ["header"],
                 "resource_documentation": "https://github.com/mjunaidca/taskforce",
