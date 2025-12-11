@@ -382,11 +382,11 @@ jobs:
             --set "managedServices.upstash.restToken=${{ secrets.REDIS_TOKEN }}" \
             --set "sso.env.BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}" \
             --set "sso.env.BETTER_AUTH_URL=https://sso.${{ vars.DOMAIN }}" \
-            --set "sso.env.ALLOWED_ORIGINS=https://${{ vars.DOMAIN }}\,https://sso.${{ vars.DOMAIN }}\,https://api.${{ vars.DOMAIN }}\,https://mcp.${{ vars.DOMAIN }}" \
+            --set "sso.env.ALLOWED_ORIGINS=https://${{ vars.DOMAIN }}\\,https://sso.${{ vars.DOMAIN }}\\,https://api.${{ vars.DOMAIN }}\\,https://mcp.${{ vars.DOMAIN }}" \
             --set "sso.smtp.user=${{ secrets.SMTP_USER }}" \
             --set "sso.smtp.password=${{ secrets.SMTP_PASSWORD }}" \
             --set "api.openai.apiKey=${{ secrets.OPENAI_API_KEY }}" \
-            --set "api.env.CORS_ORIGINS=https://${{ vars.DOMAIN }}\,https://sso.${{ vars.DOMAIN }}\,https://api.${{ vars.DOMAIN }}\,https://mcp.${{ vars.DOMAIN }}" \
+            --set "api.env.CORS_ORIGINS=https://${{ vars.DOMAIN }}\\,https://sso.${{ vars.DOMAIN }}\\,https://api.${{ vars.DOMAIN }}\\,https://mcp.${{ vars.DOMAIN }}" \
             --set notificationService.enabled=true \
             --set dapr.enabled=true \
             --set "dapr.pubsub.redisHost=${{ secrets.UPSTASH_REDIS_HOST }}" \
