@@ -72,7 +72,7 @@ src/
 
 ## Development Guidelines
 
-**Reference**: `papers/prompting-practices-claude.md` for complete Claude 4 best practices.
+**Reference**: `docs/papers/prompting-practices-claude.md` for complete Claude 4 best practices.
 
 ### 0. Default to Action:
 By default, implement changes rather than only suggesting them. If the user's intent is unclear, infer the most useful likely action and proceed, using tools to discover any missing details instead of guessing. Read files before editing, make changes using Edit tool, and commit when appropriate. Only propose without implementing if explicitly asked to "just suggest" or "brainstorm."

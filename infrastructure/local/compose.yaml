@@ -54,7 +54,7 @@ services:
   # ===========================================================================
   sso-platform:
     build:
-      context: ./apps/sso
+      context: ../../apps/sso
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001
@@ -93,7 +93,7 @@ services:
   # ===========================================================================
   api:
     build:
-      context: ./apps/api
+      context: ../../apps/api
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow
@@ -129,7 +129,7 @@ services:
   # ===========================================================================
   mcp-server:
     build:
-      context: ./apps/mcp-server
+      context: ../../apps/mcp-server
       dockerfile: Dockerfile
     environment:
       - TASKFLOW_API_URL=http://api:8000
@@ -161,7 +161,7 @@ services:
   # ===========================================================================
   web-dashboard:
     build:
-      context: ./apps/web
+      context: ../../apps/web
       dockerfile: Dockerfile
       args:
         # BROWSER: baked into JS bundle, runs on user's machine

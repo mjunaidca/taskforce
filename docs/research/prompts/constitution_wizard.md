@@ -8,9 +8,9 @@
 3.  `GEMINI.md`: The operational guide for Gemini AI.
 
 **Context Sources**:
-- `papers/compass_artifact_wf...md`: Use the "Persona + Questions + Principles" framework.
-- `papers/skills-thinking-framework.md`: Use "Distributional Convergence" awareness to prevent generic outcomes.
-- `papers/prompting-practices-claude.md`: Use "Default to Action" and "Investigation" rules for `CLAUDE.md`.
+- `docs/papers/compass_artifact_wf...md`: Use the "Persona + Questions + Principles" framework.
+- `docs/papers/skills-thinking-framework.md`: Use "Distributional Convergence" awareness to prevent generic outcomes.
+- `docs/papers/prompting-practices-claude.md`: Use "Default to Action" and "Investigation" rules for `CLAUDE.md`.
 
 ---
 

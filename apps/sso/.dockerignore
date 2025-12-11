@@ -36,7 +36,7 @@ test-results/
 *.md
 !README.md
 docs/
-papers/
+docs/papers/
 
 # Development
 .turbo

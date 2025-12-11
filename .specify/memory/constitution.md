@@ -593,8 +593,8 @@ Configurable per-project:
 - **Hackathon Requirements**: `docs/research/requirement.md`
 - **Master Directives**: `docs/research/DIRECTIVES.md`
 - **Platform Vision**: `docs/research/ideate.md`
-- **Reasoning Activation**: `papers/compass_artifact_wf-*.md`
-- **Skills Framework**: `papers/skills-thinking-framework.md`
+- **Reasoning Activation**: `docs/papers/compass_artifact_wf-*.md`
+- **Skills Framework**: `docs/papers/skills-thinking-framework.md`
 
 ---
 
