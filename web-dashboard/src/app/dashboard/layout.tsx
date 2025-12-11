@@ -5,7 +5,6 @@ import { ProtectedRoute } from "@/components/layout/protected-route"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { ChatKitWidget } from "@/components/chat"
 
 export default function DashboardLayout({
   children,
@@ -22,8 +21,7 @@ export default function DashboardLayout({
               <Header />
               <main className="p-6">{children}</main>
             </div>
-            {/* ChatKit floating widget */}
-            <ChatKitWidget />
+
           </div>
         </ProtectedRoute>
       </TooltipProvider>

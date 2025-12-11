@@ -16,6 +16,8 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { api } from "@/lib/api";
 import { ProjectRead, TaskListItem, WorkerRead } from "@/types";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import {
   Bot,
   Command,
@@ -78,7 +80,7 @@ const AgentAvatar = ({ name, role, status, type }: any) => (
   </div>
 );
 
-const WorkspacePage = () => {
+const WorkspaceContent = () => {
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [projects, setProjects] = useState<ProjectRead[]>([]);
   const [recentTasks, setRecentTasks] = useState<TaskListItem[]>([]);
@@ -155,6 +157,30 @@ const WorkspacePage = () => {
       ]
     }
   });
+
+  // --- Auto-Execution Logic (URL Params) ---
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const prompt = searchParams.get("prompt");
+    const autoVoice = searchParams.get("autoVoice");
+
+    if (prompt) {
+      // Execute command immediately
+      console.log("Auto-executing prompt:", prompt);
+      sendUserMessage({ text: prompt, newThread: false });
+
+      // Clear URL param to prevent re-execution
+      router.replace("/workspace");
+    }
+
+    if (autoVoice === "true") {
+      console.log("Auto-activating Voice Mode...");
+      setIsListening(true);
+      router.replace("/workspace");
+    }
+  }, [searchParams, router, sendUserMessage]);
 
   // --- Voice Recognition Hook ---
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -624,6 +650,12 @@ const WorkspacePage = () => {
 
     </div>
   );
-}
+};
+
+const WorkspacePage = () => (
+  <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-black text-white font-mono">LOADING MISSION CONTROL...</div>}>
+    <WorkspaceContent />
+  </Suspense>
+);
 
 export default WorkspacePage;
