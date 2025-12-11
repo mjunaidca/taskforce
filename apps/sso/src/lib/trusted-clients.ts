@@ -171,13 +171,14 @@ export const TRUSTED_CLIENTS = [
     clientId: "gemini-cli",
     name: "Google Gemini CLI",
     type: "public" as const,
-    // Note: Gemini CLI uses localhost callback for OAuth flow
-    // In production, this client will need Device Flow or a different redirect strategy
-    redirectUrls: filterRedirectUrls([
+    // NOTE: CLI tools use localhost callbacks (RFC 8252 - OAuth for Native Apps)
+    // These MUST NOT be filtered even in production - the callback goes to user's local machine
+    redirectUrls: [
       "http://localhost/callback",
+      "http://localhost:7777/oauth/callback",
       "http://127.0.0.1/callback",
-      "http://localhost:3000/callback",
-    ]),
+      "http://127.0.0.1:7777/oauth/callback",
+    ],
     disabled: false,
     skipConsent: true,
     metadata: {
