@@ -4,16 +4,16 @@ on:
   push:
     branches: [main, 003-backend-api]
     paths:
-      - 'packages/api/**'
+      - 'apps/api/**'
       - '.github/workflows/api.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'packages/api/**'
+      - 'apps/api/**'
 
 defaults:
   run:
-    working-directory: packages/api
+    working-directory: apps/api
 
 env:
   # Test environment variables

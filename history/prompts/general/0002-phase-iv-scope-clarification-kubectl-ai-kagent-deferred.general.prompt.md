@@ -11,7 +11,7 @@ user: mjs
 command: N/A (conversation)
 labels: ["scope", "phase-iv", "kubectl-ai", "kagent", "clarification", "hackathon"]
 links:
-  spec: research/requirement.md
+  spec: docs/research/requirement.md
   ticket: null
   adr: null
   pr: null

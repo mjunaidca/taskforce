@@ -4,16 +4,16 @@ on:
   push:
     branches: [main, 001-cli-core]
     paths:
-      - 'packages/cli/**'
+      - 'apps/cli/**'
       - '.github/workflows/cli.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'packages/cli/**'
+      - 'apps/cli/**'
 
 defaults:
   run:
-    working-directory: packages/cli
+    working-directory: apps/cli
 
 jobs:
   test:
@@ -36,7 +36,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          file: packages/cli/coverage.xml
+          file: apps/cli/coverage.xml
         continue-on-error: true
 
   lint:

@@ -767,7 +767,7 @@ Frontend: Widget updates instantly (no page refresh)
 
 - **Feature Spec**: `/Users/mjs/Documents/code/mjunaidca/tf-agui/specs/008-agentic-ui-dashboard/spec.md`
 - **Constitution**: `/Users/mjs/Documents/code/mjunaidca/tf-agui/.specify/memory/constitution.md`
-- **Directives**: `/Users/mjs/Documents/code/mjunaidca/tf-agui/research/DIRECTIVES.md`
+- **Directives**: `/Users/mjs/Documents/code/mjunaidca/tf-agui/docs/research/DIRECTIVES.md`
 
 ### Skills
 

@@ -145,7 +145,7 @@ echo -e "${YELLOW}[5/6] Running SSO database migrations...${NC}"
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/taskflow"
 
 echo "  - Pushing SSO schema..."
-cd sso-platform
+cd apps/sso
 DATABASE_URL="${DATABASE_URL}" npx drizzle-kit push --force 2>/dev/null || {
     echo -e "${YELLOW}  Schema push skipped (may already exist)${NC}"
 }
@@ -154,7 +154,7 @@ echo "  - Running seed setup..."
 DATABASE_URL="${DATABASE_URL}" pnpm seed:setup 2>/dev/null || {
     echo -e "${YELLOW}  Seed setup skipped (may already be seeded)${NC}"
 }
-cd ..
+cd ../..
 
 # Step 6: Start all services (build images from Dockerfile.dev)
 echo -e "${YELLOW}[6/6] Building and starting dev services...${NC}"
@@ -181,8 +181,8 @@ echo "  - pgAdmin:    http://localhost:5050 (admin@example.com / admin)"
 echo "  - PostgreSQL: localhost:5432"
 echo ""
 echo -e "${CYAN}Hot Reload:${NC}"
-echo "  - Edit Python files in packages/api or packages/mcp-server → auto-reload"
-echo "  - Edit React files in web-dashboard or sso-platform → Fast Refresh"
+echo "  - Edit Python files in apps/api or apps/mcp-server → auto-reload"
+echo "  - Edit React files in apps/web or apps/sso → Fast Refresh"
 echo ""
 echo -e "${CYAN}Commands:${NC}"
 echo "  - View logs:  docker compose -f $COMPOSE_FILE -p $PROJECT_NAME logs -f"

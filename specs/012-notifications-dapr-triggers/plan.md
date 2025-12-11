@@ -1166,7 +1166,7 @@ DROP TABLE notification CASCADE;
 
 **Spec**: `/specs/012-notifications-dapr-triggers/spec.md`
 **Constitution**: `.specify/memory/constitution.md`
-**Directives**: `research/DIRECTIVES.md`
+**Directives**: `docs/research/DIRECTIVES.md`
 **Existing Cron Logic**: `packages/api/src/taskflow_api/routers/tasks.py` (line 100: `calculate_next_due()`)
 **Audit Service**: `packages/api/src/taskflow_api/services/audit.py`
 **Recurring Task Fields**: `packages/api/src/taskflow_api/models/task.py` (lines 64-97)

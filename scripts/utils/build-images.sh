@@ -110,25 +110,25 @@ if [ "$PARALLEL" = true ]; then
 
   # SSO images must be sequential (share Dockerfile cache)
   echo -e "${YELLOW}[1/4] Building SSO migrations...${NC}"
-  build_image "sso-platform-migrations" "sso-platform/Dockerfile" "sso-platform" "builder"
+  build_image "sso-platform-migrations" "apps/sso/Dockerfile" "apps/sso" "builder"
 
   echo -e "${YELLOW}[2/4] Building SSO runner...${NC}"
-  build_image "sso-platform" "sso-platform/Dockerfile" "sso-platform" "runner"
+  build_image "sso-platform" "apps/sso/Dockerfile" "apps/sso" "runner"
 
   # Batch 1: API + MCP + Notification Service (3 parallel)
   echo -e "${YELLOW}[3/5] Building API + MCP + Notification Service in parallel...${NC}"
   PIDS=()
   NAMES=()
 
-  build_image "api" "packages/api/Dockerfile" "packages/api" > "${LOG_DIR}/api.log" 2>&1 &
+  build_image "api" "apps/api/Dockerfile" "apps/api" > "${LOG_DIR}/api.log" 2>&1 &
   PIDS+=($!)
   NAMES+=("api")
 
-  build_image "mcp-server" "packages/mcp-server/Dockerfile" "packages/mcp-server" > "${LOG_DIR}/mcp-server.log" 2>&1 &
+  build_image "mcp-server" "apps/mcp-server/Dockerfile" "apps/mcp-server" > "${LOG_DIR}/mcp-server.log" 2>&1 &
   PIDS+=($!)
   NAMES+=("mcp-server")
 
-  build_image "notification-service" "packages/notification-service/Dockerfile" "packages/notification-service" > "${LOG_DIR}/notification-service.log" 2>&1 &
+  build_image "notification-service" "apps/notification-service/Dockerfile" "apps/notification-service" > "${LOG_DIR}/notification-service.log" 2>&1 &
   PIDS+=($!)
   NAMES+=("notification-service")
 
@@ -174,7 +174,7 @@ if [ "$PARALLEL" = true ]; then
 
   # Batch 2: Web (sequential - give it full resources)
   echo -e "${YELLOW}[4/5] Building Web dashboard...${NC}"
-  build_image "web-dashboard" "web-dashboard/Dockerfile" "web-dashboard"
+  build_image "web-dashboard" "apps/web/Dockerfile" "apps/web"
 
   echo -e "${GREEN}[5/5] All images built${NC}"
 
@@ -183,12 +183,12 @@ if [ "$PARALLEL" = true ]; then
 else
   # Sequential builds (original behavior)
   # SSO Platform: Build both migrations (builder stage) and runner images
-  build_image "sso-platform-migrations" "sso-platform/Dockerfile" "sso-platform" "builder"
-  build_image "sso-platform" "sso-platform/Dockerfile" "sso-platform" "runner"
-  build_image "api" "packages/api/Dockerfile" "packages/api"
-  build_image "mcp-server" "packages/mcp-server/Dockerfile" "packages/mcp-server"
-  build_image "notification-service" "packages/notification-service/Dockerfile" "packages/notification-service"
-  build_image "web-dashboard" "web-dashboard/Dockerfile" "web-dashboard"
+  build_image "sso-platform-migrations" "apps/sso/Dockerfile" "apps/sso" "builder"
+  build_image "sso-platform" "apps/sso/Dockerfile" "apps/sso" "runner"
+  build_image "api" "apps/api/Dockerfile" "apps/api"
+  build_image "mcp-server" "apps/mcp-server/Dockerfile" "apps/mcp-server"
+  build_image "notification-service" "apps/notification-service/Dockerfile" "apps/notification-service"
+  build_image "web-dashboard" "apps/web/Dockerfile" "apps/web"
 fi
 
 echo ""

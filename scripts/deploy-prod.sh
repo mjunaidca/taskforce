@@ -188,7 +188,7 @@ echo "   - No Redis pod (using Upstash)"
 echo "   - Faster startup (no wait-for-db)"
 echo ""
 
-helm upgrade --install taskflow ./helm/taskflow \
+helm upgrade --install taskflow ./infrastructure/helm/taskflow \
     --namespace taskflow \
     --create-namespace \
     --set global.imagePullPolicy=Never \

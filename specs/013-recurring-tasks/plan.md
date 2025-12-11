@@ -1179,7 +1179,7 @@ git revert <migration-commit>
 - **Spec**: `specs/013-recurring-tasks/spec.md`
 - **PRD**: `specs/011-phase-v-features-planner/agent-2a-recurring-tasks-prd.md`
 - **Constitution**: `.specify/memory/constitution.md`
-- **Directives**: `research/DIRECTIVES.md`
+- **Directives**: `docs/research/DIRECTIVES.md`
 - **Previous Feature**: `specs/012-task-search-filter-sort/plan.md` (Agent 1)
 
 ---

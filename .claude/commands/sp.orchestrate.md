@@ -196,7 +196,7 @@ cat .specify/memory/constitution.md
 cat README.md
 
 # Hackathon requirements
-cat research/requirement.md
+cat docs/research/requirement.md
 
 # Existing specs (patterns)
 find specs/ -name "spec.md" -type f 2>/dev/null | head -3

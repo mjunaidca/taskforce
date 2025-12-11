@@ -53,8 +53,8 @@ When reality contradicts your model, your model is wrong. Stop. Fix the model be
 
 **For ALL work**, read these first:
 1. `.specify/memory/constitution.md` — Platform governance and principles
-2. `research/DIRECTIVES.md` — Phase-specific execution guidance
-3. `research/requirement.md` — Hackathon requirements and constraints
+2. `docs/research/DIRECTIVES.md` — Phase-specific execution guidance
+3. `docs/research/requirement.md` — Hackathon requirements and constraints
 
 **For feature work**, additionally read:
 4. Relevant spec in `specs/` folder
@@ -282,7 +282,7 @@ Sprint 3 (19 min): start → progress → complete → audit
 
 ### Phase IV-V: Kubernetes + Production
 
-See `research/DIRECTIVES.md` for detailed guidance.
+See `docs/research/DIRECTIVES.md` for detailed guidance.
 
 ---
 
@@ -312,7 +312,7 @@ See `research/DIRECTIVES.md` for detailed guidance.
 ```
 /specs/features/          # Feature specifications
 /.specify/memory/         # Constitution and memory
-/research/                # Requirements and directives
+/docs/research/                # Requirements and directives
 /src/                     # Python source (CLI, backend, MCP)
 /frontend/                # Next.js frontend
 /helm/                    # Kubernetes charts (Phase IV+)
@@ -323,7 +323,7 @@ See `research/DIRECTIVES.md` for detailed guidance.
 ```bash
 # Always start by reading context
 cat .specify/memory/constitution.md
-cat research/DIRECTIVES.md
+cat docs/research/DIRECTIVES.md
 
 # Check for existing spec
 ls specs/features/

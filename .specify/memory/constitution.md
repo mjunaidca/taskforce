@@ -590,9 +590,9 @@ Configurable per-project:
 - HOW to implement → CLAUDE.md, GEMINI.md, specs folder
 
 ### Key References
-- **Hackathon Requirements**: `research/requirement.md`
-- **Master Directives**: `research/DIRECTIVES.md`
-- **Platform Vision**: `research/ideate.md`
+- **Hackathon Requirements**: `docs/research/requirement.md`
+- **Master Directives**: `docs/research/DIRECTIVES.md`
+- **Platform Vision**: `docs/research/ideate.md`
 - **Reasoning Activation**: `papers/compass_artifact_wf-*.md`
 - **Skills Framework**: `papers/skills-thinking-framework.md`
 

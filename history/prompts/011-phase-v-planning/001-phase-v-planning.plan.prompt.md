@@ -16,7 +16,7 @@ links:
   adr: null
   pr: null
 files:
- - /Users/mjs/Documents/code/mjunaidca/tf-k8/research/requirement.md
+ - /Users/mjs/Documents/code/mjunaidca/tf-k8/docs/research/requirement.md
  - /Users/mjs/Documents/code/mjunaidca/tf-k8/docs/LEARNINGS-PHASE-IV.md
 tests:
  - null

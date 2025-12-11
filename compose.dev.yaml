@@ -70,7 +70,7 @@ services:
   # ===========================================================================
   sso-platform:
     build:
-      context: ./sso-platform
+      context: ./apps/sso
       dockerfile: Dockerfile.dev
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow?sslmode=disable
@@ -80,7 +80,7 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,http://web-dashboard:3000,http://api:8000
       - DISABLE_EMAIL_VERIFICATION=true
     volumes:
-      - ./sso-platform:/app
+      - ./apps/sso:/app
       - /app/node_modules
       - /app/.next
     ports:
@@ -97,7 +97,7 @@ services:
   # ===========================================================================
   api:
     build:
-      context: ./packages/api
+      context: ./apps/api
       dockerfile: Dockerfile.dev
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow
@@ -110,7 +110,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - TASKFLOW_CHATKIT_DATABASE_URL=${TASKFLOW_CHATKIT_DATABASE_URL:-postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/taskflow}
     volumes:
-      - ./packages/api/src:/app/src
+      - ./apps/api/src:/app/src
     ports:
       - "8000:8000"
     depends_on:
@@ -125,7 +125,7 @@ services:
   # ===========================================================================
   mcp-server:
     build:
-      context: ./packages/mcp-server
+      context: ./apps/mcp-server
       dockerfile: Dockerfile.dev
     environment:
       - TASKFLOW_API_URL=http://api:8000
@@ -134,7 +134,7 @@ services:
       - TASKFLOW_DEV_MODE=true
       - TASKFLOW_API_TIMEOUT=30.0
     volumes:
-      - ./packages/mcp-server/src:/app/src
+      - ./apps/mcp-server/src:/app/src
     ports:
       - "8001:8001"
     depends_on:
@@ -149,7 +149,7 @@ services:
   # ===========================================================================
   web-dashboard:
     build:
-      context: ./web-dashboard
+      context: ./apps/web
       dockerfile: Dockerfile.dev
     environment:
       # Browser URLs (used by client-side code)
@@ -163,7 +163,7 @@ services:
       - SERVER_API_URL=http://api:8000
       - SERVER_SSO_URL=http://sso-platform:3001
     volumes:
-      - ./web-dashboard:/app
+      - ./apps/web:/app
       - /app/node_modules
       - /app/.next
     ports:
