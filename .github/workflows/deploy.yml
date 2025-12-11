@@ -88,7 +88,7 @@ jobs:
           context: apps/api
           file: apps/api/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           no-cache: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
@@ -130,7 +130,7 @@ jobs:
           context: apps/sso
           file: apps/sso/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           no-cache: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
@@ -176,7 +176,7 @@ jobs:
           context: apps/mcp-server
           file: apps/mcp-server/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           no-cache: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
@@ -218,7 +218,7 @@ jobs:
           context: apps/notification-service
           file: apps/notification-service/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           no-cache: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
@@ -260,7 +260,7 @@ jobs:
           context: apps/web
           file: apps/web/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           no-cache: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
