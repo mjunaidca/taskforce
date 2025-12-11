@@ -17,9 +17,9 @@ export default function AuditLayout({
         <ProtectedRoute>
           <div className="min-h-screen bg-background">
             <Sidebar />
-            <div className="pl-64">
+            <div className="pl-0 md:pl-16">
               <Header />
-              <main className="p-6">{children}</main>
+              <main className="p-4 md:p-6">{children}</main>
             </div>
           </div>
         </ProtectedRoute>

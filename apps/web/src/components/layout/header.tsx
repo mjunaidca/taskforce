@@ -49,16 +49,18 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-      {/* Left side - can add breadcrumbs or search here */}
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 flex h-14 md:h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+      {/* Left side - spacer for mobile menu button */}
+      <div className="flex items-center gap-4 pl-12 md:pl-0">
         {/* Placeholder for breadcrumbs */}
       </div>
 
       {/* Right side - user menu */}
-      <div className="flex items-center gap-4">
-        {/* Organization Switcher */}
-        <OrgSwitcher />
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Organization Switcher - hidden on small mobile */}
+        <div className="hidden sm:block">
+          <OrgSwitcher />
+        </div>
 
         {/* Notification Bell */}
         <NotificationBell />
@@ -68,7 +70,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="h-9 w-9"
+          className="h-8 w-8 md:h-9 md:w-9"
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
@@ -76,9 +78,9 @@ export function Header() {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground">
+            <Button variant="ghost" className="relative h-8 w-8 md:h-9 md:w-9 rounded-full">
+              <Avatar className="h-8 w-8 md:h-9 md:w-9">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs md:text-sm">
                   {getInitials(user?.name)}
                 </AvatarFallback>
               </Avatar>

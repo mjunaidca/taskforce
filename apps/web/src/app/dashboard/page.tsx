@@ -14,8 +14,6 @@ import {
   Bot,
   ArrowRight,
   Sparkles,
-  Terminal,
-  X,
   ArrowRight as ArrowRightIcon
 } from "lucide-react"
 import Link from "next/link"
@@ -46,16 +44,6 @@ export default function DashboardPage() {
   const [workers, setWorkers] = useState<WorkerRead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Command Control State
-  const [showInput, setShowInput] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (showInput && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [showInput])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -152,19 +140,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 min-h-screen pb-20">
-      <div className="flex-1 space-y-6">
+    <div className="space-y-6 md:space-y-8 min-h-screen pb-20">
+      <div className="flex-1 space-y-4 md:space-y-6">
         {/* Welcome Section */}
         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-4xl font-display font-medium tracking-tight text-foreground">
+          <h1 className="text-2xl md:text-4xl font-display font-medium tracking-tight text-foreground">
             Welcome back, <span className="text-primary">{user?.name?.split(" ")[0] || "Pilot"}</span>
           </h1>
-          <p className="text-muted-foreground font-mono text-sm max-w-xl">
+          <p className="text-muted-foreground font-mono text-xs md:text-sm max-w-xl">
             System operational. {projects.length} active neural networks detected.
             {recentTasks.length > 0 ? ` ${recentTasks.length} pending directives.` : " Awaiting new protocols."}
           </p>
         </div>
-        <Button asChild className="bg-ifk-cyan-500 hover:bg-ifk-cyan-400 text-black border-none font-bold">
+        <Button asChild size="sm" className="bg-ifk-cyan-500 hover:bg-ifk-cyan-400 text-black border-none font-bold md:size-default">
           <Link href="/projects/new">
             New Project
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -212,7 +200,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
           <GlassCard key={stat.name} className="p-4 flex items-center justify-between group">
             <div>
@@ -231,7 +219,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Recent Projects */}
         <GlassCard className="flex flex-col">
           <div className="p-6 border-b border-ifk-gray-800 flex items-center justify-between">
@@ -332,83 +320,33 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <GlassCard className="p-6">
+      <GlassCard className="p-4 md:p-6">
         <div>
-          <h2 className="text-lg font-bold font-display tracking-wide mb-1">Quick Actions</h2>
-          <p className="text-xs text-ifk-gray-500 font-mono mb-6">RAPID DEPLOYMENT PROTOCOLS</p>
+          <h2 className="text-base md:text-lg font-bold font-display tracking-wide mb-1">Quick Actions</h2>
+          <p className="text-xs text-ifk-gray-500 font-mono mb-4 md:mb-6">RAPID DEPLOYMENT PROTOCOLS</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Button variant="outline" className="h-auto py-6 flex-col gap-3 bg-secondary/10 border-border hover:bg-ifk-cyan-900/20 hover:border-ifk-cyan-500/50 hover:text-ifk-cyan-400 dark:hover:text-ifk-cyan-300 transition-all group" asChild>
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <Button variant="outline" className="h-auto py-4 md:py-6 flex-col gap-2 md:gap-3 bg-secondary/10 border-border hover:bg-ifk-cyan-900/20 hover:border-ifk-cyan-500/50 hover:text-ifk-cyan-400 dark:hover:text-ifk-cyan-300 transition-all group" asChild>
             <Link href="/projects/new">
-              <FolderKanban className="h-6 w-6 text-muted-foreground group-hover:text-ifk-cyan-500 group-hover:scale-110 transition-all" />
-              <span className="font-mono text-xs tracking-wider text-foreground group-hover:text-ifk-cyan-400">INIT PROJECT</span>
+              <FolderKanban className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground group-hover:text-ifk-cyan-500 group-hover:scale-110 transition-all" />
+              <span className="font-mono text-[10px] md:text-xs tracking-wider text-foreground group-hover:text-ifk-cyan-400">PROJECT</span>
             </Link>
           </Button>
-          <Button variant="outline" className="h-auto py-6 flex-col gap-3 bg-secondary/10 border-border hover:bg-amber-500/10 hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400 transition-all group" asChild>
+          <Button variant="outline" className="h-auto py-4 md:py-6 flex-col gap-2 md:gap-3 bg-secondary/10 border-border hover:bg-amber-500/10 hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400 transition-all group" asChild>
             <Link href="/agents/new">
-              <Bot className="h-6 w-6 text-muted-foreground group-hover:text-amber-500 group-hover:scale-110 transition-all" />
-              <span className="font-mono text-xs tracking-wider text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400">DEPLOY AGENT</span>
+              <Bot className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground group-hover:text-amber-500 group-hover:scale-110 transition-all" />
+              <span className="font-mono text-[10px] md:text-xs tracking-wider text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400">AGENT</span>
             </Link>
           </Button>
-          <Button variant="outline" className="h-auto py-6 flex-col gap-3 bg-secondary/10 border-border hover:bg-purple-500/10 hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-purple-400 transition-all group" asChild>
+          <Button variant="outline" className="h-auto py-4 md:py-6 flex-col gap-2 md:gap-3 bg-secondary/10 border-border hover:bg-purple-500/10 hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-purple-400 transition-all group" asChild>
             <Link href="/audit">
-              <Sparkles className="h-6 w-6 text-muted-foreground group-hover:text-purple-500 group-hover:scale-110 transition-all" />
-              <span className="font-mono text-xs tracking-wider text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400">VIEW AUDIT LOG</span>
+              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground group-hover:text-purple-500 group-hover:scale-110 transition-all" />
+              <span className="font-mono text-[10px] md:text-xs tracking-wider text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400">AUDIT</span>
             </Link>
           </Button>
         </div>
       </GlassCard>
 
-      {/* Persistent Command Control - Fixed Bottom Right */}
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
-
-        {/* Command Input Overlay (Slide in) */}
-        {showInput && (
-          <div className="bg-ifk-gray-950 backdrop-blur-xl border border-ifk-cyan-500/30 rounded-xl p-3 mb-2 shadow-[0_0_30px_rgba(6,182,212,0.15)] animate-in slide-in-from-right-4 fade-in w-96">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-ifk-cyan-500" />
-              <span className="text-xs font-mono text-ifk-cyan-400 uppercase tracking-wider">TaskFlow Agent</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Ask anything... (Press Enter to send)"
-                className="flex-1 bg-black/50 border border-ifk-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-ifk-gray-500 focus:border-ifk-cyan-500/50 focus:outline-none transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const target = e.target as HTMLInputElement;
-                    if (target.value.trim()) {
-                      router.push(`/workspace?prompt=${encodeURIComponent(target.value.trim())}`);
-                    }
-                  }
-                }}
-              />
-              <button
-                onClick={() => setShowInput(false)}
-                className="p-2 hover:bg-ifk-gray-800 rounded-lg text-ifk-gray-500 hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-[10px] text-ifk-gray-500 mt-2 font-mono">
-              Press Enter to open full workspace with your message
-            </p>
-          </div>
-        )}
-
-        {/* Terminal Toggle Button */}
-        <button
-          onClick={() => setShowInput(!showInput)}
-          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all shadow-lg ${showInput
-            ? 'bg-ifk-cyan-500/20 text-ifk-cyan-400 border-2 border-ifk-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-            : 'bg-ifk-gray-900 text-ifk-gray-400 hover:text-ifk-cyan-400 hover:bg-ifk-gray-800 border border-ifk-gray-700 hover:border-ifk-cyan-500/30'
-            }`}
-          title="Quick Command"
-        >
-          <Terminal className="h-5 w-5" />
-        </button>
-      </div>
     </div>
   )
 }
