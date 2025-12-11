@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bot, Plus, Search, MoreHorizontal, Zap } from "lucide-react"
+import { Bot, Plus, Search, MoreHorizontal, Zap, CheckCircle2, Clock, Terminal, Key } from "lucide-react"
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<WorkerRead[]>([])
@@ -97,19 +97,59 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      {/* Info Card */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex items-start gap-4 py-4">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Zap className="h-5 w-5 text-primary" />
+      {/* What Works Now */}
+      <Card className="border-green-500/20 bg-green-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-lg">Working Now</CardTitle>
           </div>
-          <div>
-            <p className="font-medium">Agent Parity</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              AI agents are first-class workers in TaskFlow. They can be assigned tasks,
-              update progress, and complete work just like human team members. All actions
-              are fully auditable.
-            </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Terminal className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="font-medium">CLI Coding Agents</p>
+              <p className="text-sm text-muted-foreground">
+                Claude Code, Cursor, Gemini CLI authenticate with your SSO account.
+                Audit shows: <code className="text-xs bg-muted px-1 py-0.5 rounded">@you via Claude Code</code>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Key className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="font-medium">API Keys</p>
+              <p className="text-sm text-muted-foreground">
+                Create keys for automation scripts.
+                Audit shows: <code className="text-xs bg-muted px-1 py-0.5 rounded">@you via Script Name</code>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Coming Soon */}
+      <Card className="border-amber-500/20 bg-amber-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-lg">Coming Soon</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start gap-3">
+            <Bot className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="font-medium">Autonomous Agents</p>
+              <p className="text-sm text-muted-foreground">
+                Agents with their own identity (e.g., <code className="text-xs bg-muted px-1 py-0.5 rounded">@claude-agent-1</code>).
+                Independent task assignment and separate audit trails.
+              </p>
+              <p className="text-xs text-amber-600 mt-2">
+                The agents below can be assigned tasks manually, but cannot authenticate independently yet.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

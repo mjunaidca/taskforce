@@ -125,16 +125,26 @@ class TestApiKeyValidation:
 
     @pytest.mark.asyncio
     async def test_validate_api_key_success(self):
-        """API key validation succeeds with valid key."""
+        """API key validation succeeds with valid key.
+
+        SSO returns response format:
+        {
+            "valid": true,
+            "key": {
+                "id": "key-id",
+                "userId": "user-id",
+                "name": "My Script"
+            }
+        }
+        """
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "valid": True,
-            "user": {
-                "id": "user-789",
-                "email": "api@example.com",
-                "tenant_id": "tenant-2",
-                "name": "API User",
+            "key": {
+                "id": "key-abc123",
+                "userId": "user-789",
+                "name": "My Automation Script",
             },
         }
 
@@ -148,8 +158,10 @@ class TestApiKeyValidation:
             user = await validate_api_key("tf_test_key_123")
 
             assert user.id == "user-789"
-            assert user.email == "api@example.com"
+            assert user.email == ""  # Not available from API key verification
             assert user.token_type == "api_key"
+            assert user.client_id == "key-abc123"
+            assert user.client_name == "My Automation Script"
 
     @pytest.mark.asyncio
     async def test_validate_api_key_invalid(self):
@@ -181,7 +193,11 @@ class TestAuthenticateRouting:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "valid": True,
-            "user": {"id": "api-user", "email": "api@test.com"},
+            "key": {
+                "id": "key-xyz",
+                "userId": "api-user",
+                "name": "Test Key",
+            },
         }
 
         with patch("httpx.AsyncClient") as mock_client:
@@ -198,18 +214,15 @@ class TestAuthenticateRouting:
 
     @pytest.mark.asyncio
     async def test_jwt_routing(self):
-        """Non-tf_ tokens route to JWT validation."""
-        # This will fail because there's no valid JWKS, but it tests routing
-        with patch("taskflow_mcp.auth.get_jwks_client") as mock_jwks:
-            mock_jwks_client = MagicMock()
-            mock_jwks_client.get_signing_key_from_jwt.side_effect = Exception(
-                "Invalid token"
-            )
-            mock_jwks.return_value = mock_jwks_client
+        """Non-tf_ tokens route to JWT validation and fail with invalid token."""
+        # This should fail because there's no valid JWKS
+        # We patch get_jwks to return a mock JWKS
+        mock_jwks = {"keys": []}  # Empty JWKS - no matching key
 
-            with pytest.raises(Exception) as exc_info:
-                await authenticate("Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.invalid")
+        with patch("taskflow_mcp.auth.get_jwks", return_value=mock_jwks):
+            with pytest.raises(ValueError) as exc_info:
+                await authenticate("Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3Qta2V5In0.invalid.signature")
 
-            # The error should be from JWT validation, not API key
-            assert "Invalid token" in str(exc_info.value)
+            # The error should mention token validation failed
+            assert "Token validation failed" in str(exc_info.value)
 

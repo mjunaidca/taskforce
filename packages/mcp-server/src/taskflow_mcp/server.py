@@ -108,7 +108,7 @@ class AuthMiddleware:
                 "authorization_endpoint": f"{config.sso_url}/api/auth/oauth2/authorize",
                 "token_endpoint": f"{config.sso_url}/api/auth/oauth2/token",
                 "device_authorization_endpoint": f"{config.sso_url}/api/auth/device/code",
-                "jwks_uri": f"{config.sso_url}/.well-known/jwks.json",
+                "jwks_uri": f"{config.sso_url}/api/auth/jwks",
                 "scopes_supported": [
                     "openid",
                     "profile",

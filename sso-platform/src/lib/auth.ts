@@ -591,10 +591,12 @@ export const auth = betterAuth({
       // In production, pre-register all clients in trusted-clients.ts
       allowDynamicClientRegistration: process.env.NODE_ENV !== "production",
       // Add custom claims to userinfo endpoint and ID token
-      async getAdditionalUserInfoClaim(user) {
-        // DEBUG: Log user object
+      // Parameters: user object, requested scopes, OAuth client that initiated the request
+      async getAdditionalUserInfoClaim(user, scopes, client) {
+        // DEBUG: Log user and client info
         console.log("[JWT] getAdditionalUserInfoClaim - user.id:", user.id);
         console.log("[JWT] getAdditionalUserInfoClaim - user.email:", user.email);
+        console.log("[JWT] getAdditionalUserInfoClaim - client:", client?.clientId, client?.name);
 
         // Fetch user's organization memberships for tenant_id
         const memberships = await db
@@ -682,6 +684,11 @@ export const auth = betterAuth({
           father_name: user.fatherName || null,
           city: user.city || null,
           country: user.country || null,
+          // OAuth client identity (for audit trail: "@user via Claude Code")
+          // azp = authorized party (OIDC standard claim)
+          azp: client?.clientId || null,
+          client_id: client?.clientId || null,
+          client_name: client?.name || null,
         };
       },
     }),

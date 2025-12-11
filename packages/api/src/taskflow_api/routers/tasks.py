@@ -602,6 +602,8 @@ async def create_task(
             "is_recurring": task.is_recurring,
             "recurrence_pattern": task.recurrence_pattern,
         },
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     # Single commit
@@ -741,6 +743,8 @@ async def update_task(
             actor_id=worker_id,
             actor_type=worker_type,
             details=changes,
+            client_id=user.client_id,
+            client_name=user.client_name,
         )
 
         await session.commit()
@@ -798,6 +802,8 @@ async def delete_task(
         actor_id=worker_id,
         actor_type=worker_type,
         details={"title": task_title, "status": task_status, "subtasks_deleted": subtask_count},
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.delete(task)
@@ -861,6 +867,8 @@ async def update_status(
         actor_id=worker_id,
         actor_type=worker_type,
         details={"before": old_status, "after": data.status},
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.commit()
@@ -910,6 +918,8 @@ async def update_progress(
         actor_id=worker_id,
         actor_type=worker_type,
         details={"before": old_progress, "after": data.percent, "note": data.note},
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.commit()
@@ -962,6 +972,8 @@ async def assign_task(
             "after": data.assignee_id,
             "assignee_handle": assignee_handle,
         },
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.commit()
@@ -1060,6 +1072,8 @@ async def create_subtask(
             "parent_task_id": task_id,
             "is_subtask": True,
         },
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.commit()
@@ -1132,6 +1146,8 @@ async def approve_task(
         actor_id=worker_id,
         actor_type=worker_type,
         details={"from_status": "review", "to_status": "completed"},
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     # Handle recurring task - create next occurrence
@@ -1186,6 +1202,8 @@ async def reject_task(
         actor_id=worker_id,
         actor_type=worker_type,
         details={"reason": data.reason, "from_status": "review", "to_status": "in_progress"},
+        client_id=user.client_id,
+        client_name=user.client_name,
     )
 
     await session.commit()

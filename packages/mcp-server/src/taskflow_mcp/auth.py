@@ -49,7 +49,10 @@ class AuthenticatedUser:
     tenant_id: str | None
     name: str | None
     token: str  # Original token for API calls
-    token_type: str  # "jwt", "api_key", or "dev"
+    token_type: str  # "jwt", "api_key", "opaque", or "dev"
+    # Client identity for audit trail (e.g., "@user via Claude Code")
+    client_id: str | None = None  # OAuth client ID or API key ID
+    client_name: str | None = None  # "Claude Code", "My Automation Script", etc.
 
     @property
     def is_authenticated(self) -> bool:
@@ -145,7 +148,12 @@ async def validate_jwt(token: str) -> AuthenticatedUser:
             },
         )
 
-        logger.info("[AUTH] JWT verified - sub: %s, email: %s", payload.get("sub"), payload.get("email"))
+        logger.info(
+            "[AUTH] JWT verified - sub: %s, email: %s, client: %s",
+            payload.get("sub"),
+            payload.get("email"),
+            payload.get("client_name"),
+        )
 
         return AuthenticatedUser(
             id=payload.get("sub", ""),
@@ -154,6 +162,8 @@ async def validate_jwt(token: str) -> AuthenticatedUser:
             name=payload.get("name"),
             token=token,
             token_type="jwt",
+            client_id=payload.get("client_id"),
+            client_name=payload.get("client_name"),
         )
     except jwt.ExpiredSignatureError:
         logger.warning("[AUTH] JWT expired")
@@ -179,7 +189,8 @@ async def validate_opaque_token(token: str) -> AuthenticatedUser:
         ValueError: If token is invalid or expired
     """
     userinfo_url = f"{config.sso_url}/api/auth/oauth2/userinfo"
-    logger.info("[AUTH] Validating opaque token via userinfo endpoint")
+    token_preview = f"{token[:15]}...{token[-10:]}" if len(token) > 30 else "[short]"
+    logger.info("[AUTH] Validating opaque token via userinfo endpoint: %s", token_preview)
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -188,14 +199,35 @@ async def validate_opaque_token(token: str) -> AuthenticatedUser:
                 headers={"Authorization": f"Bearer {token}"},
             )
 
+            logger.debug("[AUTH] Userinfo response: status=%d", response.status_code)
+
             if response.status_code == 401:
-                raise ValueError("Token invalid or expired")
+                # Try to get error details from response body
+                try:
+                    error_body = response.json()
+                    error_detail = error_body.get("error_description", error_body.get("error", ""))
+                    logger.warning("[AUTH] Userinfo 401: %s", error_detail)
+                except Exception:
+                    error_detail = response.text[:200] if response.text else ""
+                    logger.warning("[AUTH] Userinfo 401 (raw): %s", error_detail)
+                raise ValueError(f"Token invalid or expired: {error_detail}" if error_detail else "Token invalid or expired")
 
             if response.status_code != 200:
+                # Log response body for debugging
+                try:
+                    error_body = response.text[:500]
+                    logger.error("[AUTH] Userinfo non-200: status=%d, body=%s", response.status_code, error_body)
+                except Exception:
+                    pass
                 raise ValueError(f"Userinfo request failed: {response.status_code}")
 
             data = response.json()
-            logger.info("[AUTH] Opaque token verified - sub: %s, email: %s", data.get("sub"), data.get("email"))
+            logger.info(
+                "[AUTH] Opaque token verified - sub: %s, email: %s, client: %s",
+                data.get("sub"),
+                data.get("email"),
+                data.get("client_name"),
+            )
 
             return AuthenticatedUser(
                 id=data.get("sub", ""),
@@ -204,10 +236,16 @@ async def validate_opaque_token(token: str) -> AuthenticatedUser:
                 name=data.get("name"),
                 token=token,
                 token_type="opaque",
+                client_id=data.get("client_id"),
+                client_name=data.get("client_name"),
             )
     except httpx.RequestError as e:
-        logger.error("[AUTH] Userinfo request failed: %s", e)
-        raise ValueError(f"Failed to validate token: {e}")
+        logger.error("[AUTH] Userinfo HTTP request error: %s (%s)", type(e).__name__, e)
+        raise ValueError(f"Failed to validate token: {type(e).__name__}: {e}")
+    except Exception as e:
+        # Catch any other unexpected errors
+        logger.error("[AUTH] Userinfo unexpected error: %s (%s)", type(e).__name__, e)
+        raise
 
 
 async def validate_api_key(api_key: str) -> AuthenticatedUser:
@@ -239,18 +277,34 @@ async def validate_api_key(api_key: str) -> AuthenticatedUser:
             if not data.get("valid"):
                 raise ValueError("API key not valid or expired")
 
-            user = data.get("user", {})
+            key_info = data.get("key", {})
 
+            # API key verification returns key info, need to fetch user details
+            # The key.userId tells us who owns this key
+            user_id = key_info.get("userId", "")
+            key_name = key_info.get("name", "")
+            key_id = key_info.get("id", "")
+
+            logger.info(
+                "[AUTH] API key verified - userId: %s, keyName: %s",
+                user_id,
+                key_name,
+            )
+
+            # Note: API key doesn't return full user info, just userId
+            # Email will be empty - caller should handle this
             return AuthenticatedUser(
-                id=user.get("id", ""),
-                email=user.get("email", ""),
-                tenant_id=user.get("tenant_id"),
-                name=user.get("name"),
+                id=user_id,
+                email="",  # Not available from API key verification
+                tenant_id=None,  # Not available from API key verification
+                name=None,
                 token=api_key,
                 token_type="api_key",
+                client_id=key_id,  # Use key ID as client identifier
+                client_name=key_name,  # Use key name (e.g., "My Automation Script")
             )
     except httpx.RequestError as e:
-        logger.error("API key verification request failed: %s", e)
+        logger.error("[AUTH] API key verification request failed: %s", e)
         raise ValueError(f"Failed to verify API key: {e}")
 
 
@@ -287,6 +341,15 @@ async def authenticate(authorization_header: str | None) -> AuthenticatedUser:
 
     # Try JWT first (id_token from web dashboard, ChatKit)
     # If that fails, try opaque token validation (access_token from Gemini CLI, etc.)
+    token_preview = f"{token[:15]}...{token[-10:]}" if len(token) > 30 else token[:20]
+    token_parts = token.count(".")
+    logger.info(
+        "[AUTH] Attempting token validation: %s (segments: %d, looks_like: %s)",
+        token_preview,
+        token_parts + 1,
+        "JWT" if token_parts == 2 else "opaque/access_token" if token_parts < 2 else "unknown",
+    )
+
     try:
         return await validate_jwt(token)
     except (jwt.InvalidTokenError, ValueError) as jwt_error:
@@ -294,9 +357,17 @@ async def authenticate(authorization_header: str | None) -> AuthenticatedUser:
         try:
             return await validate_opaque_token(token)
         except ValueError as opaque_error:
-            # Both failed - raise the original JWT error for better debugging
-            logger.warning("[AUTH] Both JWT and opaque token validation failed")
-            raise ValueError(f"Token validation failed: {jwt_error}")
+            # Both failed - log both errors for debugging
+            logger.warning(
+                "[AUTH] Both JWT and opaque token validation failed. "
+                "JWT: %s | Opaque: %s",
+                jwt_error,
+                opaque_error,
+            )
+            # Raise combined error for better debugging
+            raise ValueError(
+                f"Token validation failed. JWT: {jwt_error} | Opaque: {opaque_error}"
+            )
 
 
 def create_dev_user(user_id: str) -> AuthenticatedUser:
