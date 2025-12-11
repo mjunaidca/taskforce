@@ -1,4 +1,4 @@
-{{- if and .Values.sso.enabled .Values.sso.postgresql.enabled }}
+{{- if and .Values.sso.enabled .Values.sso.postgresql.enabled (not .Values.managedServices.neon.enabled) }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

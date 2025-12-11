@@ -1,4 +1,4 @@
-{{- if and .Values.dapr.enabled (eq .Values.dapr.pubsub.type "pubsub.redis") }}
+{{- if and .Values.dapr.enabled (eq .Values.dapr.pubsub.type "pubsub.redis") (not .Values.managedServices.upstash.enabled) }}
 # Redis for Dapr Pub/Sub (local development)
 # In production, use Kafka via Redpanda Cloud
 apiVersion: apps/v1

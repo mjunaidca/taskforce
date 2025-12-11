@@ -6,6 +6,36 @@ global:
   namespace: taskflow
   imagePullPolicy: IfNotPresent
 
+# =============================================================================
+# MANAGED SERVICES CONFIGURATION
+# Set to true to use external managed services (Neon, Upstash) instead of
+# in-cluster postgres/redis. This makes the cluster lightweight and reliable.
+# =============================================================================
+managedServices:
+  # Use Neon PostgreSQL instead of in-cluster postgres
+  neon:
+    enabled: false  # Set to true to use Neon
+    # Connection strings - set these in values-prod.yaml or via --set
+    ssoDatabase: ""           # postgresql://user:pass@ep-xxx.neon.tech/sso_db?sslmode=require
+    apiDatabase: ""           # postgresql://user:pass@ep-xxx.neon.tech/taskflow_db?sslmode=require
+    chatkitDatabase: ""       # postgresql://user:pass@ep-xxx.neon.tech/chatkit_db?sslmode=require
+    notificationDatabase: ""  # postgresql://user:pass@ep-xxx.neon.tech/notification_db?sslmode=require
+
+  # Use Upstash Redis instead of in-cluster redis
+  upstash:
+    enabled: false  # Set to true to use Upstash
+    # Upstash Redis connection - set in values-prod.yaml or via --set
+    # For Dapr pub/sub (standard Redis protocol)
+    host: ""        # xxx.upstash.io:6379
+    password: ""    # Your Upstash password
+    # For SSO rate limiting (Upstash REST API)
+    restUrl: ""     # https://xxx.upstash.io
+    restToken: ""   # AXxxxx...
+
+# pgAdmin (disable in production)
+pgadmin:
+  enabled: true  # Set to false when using Neon (use Neon console instead)
+
 # SSO Platform (Better Auth + PostgreSQL)
 sso:
   enabled: true
@@ -18,6 +48,9 @@ sso:
     pullPolicy: IfNotPresent
 
   # Separate migrations image (builder stage with full dependencies)
+  # Set migrations.enabled=false when using Neon (run migrations locally instead)
+  migrations:
+    enabled: true  # Set to false for Neon - run migrations locally
   migrationsImage:
     repository: taskflow/sso-platform-migrations
     tag: latest

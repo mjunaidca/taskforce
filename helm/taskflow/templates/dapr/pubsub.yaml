@@ -1,6 +1,7 @@
 {{- if .Values.dapr.enabled }}
 # Dapr Pub/Sub Component - Kafka/Redis abstraction
 # No Kafka client code needed in app - Dapr handles connection
+# Supports: in-cluster Redis, Upstash Redis (managed), or Kafka
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
@@ -29,11 +30,21 @@ spec:
         key: password
     {{- end }}
     {{- else if eq .Values.dapr.pubsub.type "pubsub.redis" }}
-    # Redis configuration (local development)
+    {{- if .Values.managedServices.upstash.enabled }}
+    # Upstash Redis configuration (managed - TLS enabled)
+    - name: redisHost
+      value: {{ .Values.managedServices.upstash.host | quote }}
+    - name: redisPassword
+      value: {{ .Values.managedServices.upstash.password | quote }}
+    - name: enableTLS
+      value: "true"
+    {{- else }}
+    # In-cluster Redis configuration (local development)
     - name: redisHost
       value: {{ .Values.dapr.pubsub.redisHost | default "redis:6379" | quote }}
     - name: redisPassword
       value: {{ .Values.dapr.pubsub.redisPassword | default "" | quote }}
+    {{- end }}
     {{- end }}
 scopes:
   - {{ .Values.api.daprAppId }}

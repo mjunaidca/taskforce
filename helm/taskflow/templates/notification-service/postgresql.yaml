@@ -1,4 +1,4 @@
-{{- if .Values.notificationService.enabled }}
+{{- if and .Values.notificationService.enabled (not .Values.managedServices.neon.enabled) }}
 # PostgreSQL for Notification Service (separate DB - microservice pattern)
 apiVersion: apps/v1
 kind: Deployment

@@ -25,6 +25,8 @@ spec:
       {{- end }}
     spec:
       initContainers:
+      {{- if not .Values.managedServices.neon.enabled }}
+      # Wait for in-cluster PostgreSQL (skip when using Neon - always available)
       - name: wait-for-db
         image: busybox:1.36
         command:
@@ -36,6 +38,7 @@ spec:
             sleep 2
           done
           echo "PostgreSQL is ready!"
+      {{- end }}
       - name: wait-for-sso
         image: busybox:1.36
         command:
@@ -59,11 +62,13 @@ spec:
         - configMapRef:
             name: {{ .Values.api.name }}-config
         env:
+        {{- if not .Values.managedServices.neon.enabled }}
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ .Values.api.name }}-secret
               key: DATABASE_PASSWORD
+        {{- end }}
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:

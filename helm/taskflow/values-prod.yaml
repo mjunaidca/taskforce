@@ -1,0 +1,118 @@
+# TaskFlow Platform - Production Values (Managed Services)
+# Uses Neon PostgreSQL and Upstash Redis for reliability
+#
+# Usage:
+#   helm upgrade --install taskflow ./helm/taskflow -f helm/taskflow/values-prod.yaml
+#
+# Or merge with base values:
+#   helm upgrade --install taskflow ./helm/taskflow -f helm/taskflow/values.yaml -f helm/taskflow/values-prod.yaml
+
+# =============================================================================
+# MANAGED SERVICES - Enable for Production
+# =============================================================================
+managedServices:
+  neon:
+    enabled: true
+    # Set these via environment variables or --set for security:
+    #   --set managedServices.neon.ssoDatabase="postgresql://..."
+    #
+    # Create 3 databases in Neon:
+    #   1. sso_db - Better Auth SSO data
+    #   2. taskflow_db - API + ChatKit data
+    #   3. notification_db - Notification service data
+    #
+    # Connection string format: postgresql://user:pass@ep-xxx.neon.tech/db_name?sslmode=require
+    ssoDatabase: ""
+    apiDatabase: ""
+    notificationDatabase: ""
+
+  upstash:
+    enabled: true
+    # Set these via environment variables or --set for security:
+    #   --set managedServices.upstash.host="xxx.upstash.io:6379"
+    #   --set managedServices.upstash.password="your-password"
+    #
+    # Get from Upstash Console: https://console.upstash.com/
+    host: ""
+    password: ""
+
+# =============================================================================
+# DISABLE IN-CLUSTER RESOURCES (they'll be skipped when managed services enabled)
+# =============================================================================
+
+# pgAdmin not needed with Neon (use Neon Console instead)
+pgadmin:
+  enabled: false
+
+# In-cluster PostgreSQL disabled (using Neon)
+sso:
+  postgresql:
+    enabled: false
+
+api:
+  postgresql:
+    enabled: false
+
+# =============================================================================
+# PRODUCTION SETTINGS
+# =============================================================================
+
+# SSO Platform
+sso:
+  env:
+    NODE_ENV: production
+    # Update these for your production domain
+    BETTER_AUTH_URL: https://sso.yourdomain.com
+    ALLOWED_ORIGINS: "https://yourdomain.com,https://sso.yourdomain.com"
+
+# API
+api:
+  env:
+    ENV: production
+    CORS_ORIGINS: "https://yourdomain.com,https://sso.yourdomain.com"
+
+# Web Dashboard
+web:
+  env:
+    NODE_ENV: production
+    NEXT_PUBLIC_API_URL: https://api.yourdomain.com
+    NEXT_PUBLIC_SSO_URL: https://sso.yourdomain.com
+
+# Notification Service
+notificationService:
+  allowedOrigins: "https://yourdomain.com,https://sso.yourdomain.com"
+
+# =============================================================================
+# RESOURCE SCALING (adjust based on load)
+# =============================================================================
+
+# Increase replicas for high availability
+# sso:
+#   replicaCount: 2
+# api:
+#   replicaCount: 2
+# web:
+#   replicaCount: 2
+
+# =============================================================================
+# SECRETS - Set via CLI, not in file
+# =============================================================================
+#
+# Required secrets (use --set or environment variables):
+#
+# Database connections (Neon):
+#   --set managedServices.neon.ssoDatabase="postgresql://..."
+#   --set managedServices.neon.apiDatabase="postgresql://..."
+#   --set managedServices.neon.notificationDatabase="postgresql://..."
+#
+# Redis (Upstash):
+#   --set managedServices.upstash.host="xxx.upstash.io:6379"
+#   --set managedServices.upstash.password="xxx"
+#
+# Application secrets:
+#   --set sso.env.BETTER_AUTH_SECRET="generate-32-char-secret"
+#   --set api.jwtSecret="generate-32-char-secret"
+#   --set api.openai.apiKey="sk-..."
+#
+# SMTP (if using email):
+#   --set sso.smtp.password="your-smtp-password"
