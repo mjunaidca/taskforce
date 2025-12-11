@@ -215,6 +215,32 @@ helm upgrade --install taskflow ./infrastructure/helm/taskflow \
   --set "sso.env.BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}"
 ```
 
+## CRITICAL: CPU Architecture Check
+
+**BEFORE ANY DEPLOYMENT**, check your cluster's node architecture:
+
+```bash
+kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}'
+```
+
+- `amd64` → Use `platforms: linux/amd64`
+- `arm64` → Use `platforms: linux/arm64`
+
+**ARM64 is increasingly common** (Azure, AWS Graviton, Apple Silicon dev). Don't assume amd64!
+
+### Docker Build for Correct Architecture
+
+```yaml
+- uses: docker/build-push-action@v5
+  with:
+    platforms: linux/arm64      # MATCH YOUR CLUSTER!
+    provenance: false           # Avoid manifest issues
+    no-cache: true              # When debugging
+```
+
+**Why `provenance: false`?**
+Buildx attestation creates complex manifest lists that can cause "no match for platform" errors. Disable for simple, reliable images.
+
 ## Common Gotchas (Battle-Tested)
 
 ### 1. Logout Redirect to 0.0.0.0
@@ -331,6 +357,7 @@ annotations:
 
 ## Related Skills
 
+- `aks-deployment-troubleshooter` - Debug ImagePullBackOff, CrashLoopBackOff, architecture issues
 - `containerize-apps` - Dockerization patterns
 - `helm-charts` - Helm chart structure
 - `kubernetes-essentials` - K8s fundamentals
