@@ -15,17 +15,34 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
-  border: 2px solid hsl(var(--primary) / 0.3);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: 2px solid rgba(59, 130, 246, 0.5);
   box-shadow:
-    0 4px 12px hsl(var(--primary) / 0.3),
-    0 0 20px hsl(var(--primary) / 0.2);
+    0 4px 12px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.3),
+    0 0 40px rgba(59, 130, 246, 0.2);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--primary-foreground));
+  color: white;
   transition: all 0.3s ease;
+  animation: blueGlow 2s ease-in-out infinite;
+}
+
+@keyframes blueGlow {
+  0%, 100% {
+    box-shadow:
+      0 4px 12px rgba(59, 130, 246, 0.4),
+      0 0 20px rgba(59, 130, 246, 0.3),
+      0 0 40px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 4px 16px rgba(59, 130, 246, 0.5),
+      0 0 30px rgba(59, 130, 246, 0.4),
+      0 0 60px rgba(59, 130, 246, 0.3);
+  }
 }
 
 .settingsButton {
@@ -64,7 +81,11 @@
 
 .chatButton:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px hsl(var(--background) / 0.4);
+  box-shadow:
+    0 6px 20px rgba(59, 130, 246, 0.5),
+    0 0 40px rgba(59, 130, 246, 0.4),
+    0 0 80px rgba(59, 130, 246, 0.3);
+  animation: none;
 }
 
 .chatButton:active {
@@ -501,6 +522,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.expandButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expandButton:hover {
+  background: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.3);
+  color: hsl(var(--primary));
 }
 
 /* Streaming State - Lock UI */

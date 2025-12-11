@@ -87,9 +87,16 @@ export function NotificationBell() {
     }
   };
 
-  // Fetch unread count on mount
+  // Fetch unread count on mount and poll every 30 seconds
   useEffect(() => {
     fetchUnreadCount();
+
+    // Poll for new notifications every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchUnreadCount();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [fetchUnreadCount]);
 
   // Fetch full notifications when dropdown opens

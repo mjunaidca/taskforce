@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Users, Bot, User, Search, ArrowRight } from "lucide-react"
+import { Users, Bot, User, Search, ArrowRight, UserPlus } from "lucide-react"
 
 interface WorkerWithProjects extends MemberRead {
   projects: string[]
@@ -84,12 +84,24 @@ export default function WorkersPage() {
             View all team members and AI agents across your projects
           </p>
         </div>
-        <Button asChild className="btn-glow">
-          <Link href="/agents/new">
-            <Bot className="mr-2 h-4 w-4" />
-            Register Agent
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a
+              href={`${process.env.NEXT_PUBLIC_SSO_URL || 'http://localhost:3001'}/account/organizations`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Invite Team Member
+            </a>
+          </Button>
+          <Button asChild className="btn-glow">
+            <Link href="/agents/new">
+              <Bot className="mr-2 h-4 w-4" />
+              Register Agent
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search */}

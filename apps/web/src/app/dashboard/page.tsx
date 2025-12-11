@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead, TaskListItem, WorkerRead } from "@/types"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,9 +14,6 @@ import {
   Bot,
   ArrowRight,
   Sparkles,
-  Zap,
-  Command,
-  Mic,
   Terminal,
   X,
   ArrowRight as ArrowRightIcon
@@ -176,9 +172,48 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {/* Getting Started Guide - Show for new users */}
+      {!loading && projects.length === 0 && (
+        <GlassCard className="p-6 border-2 border-dashed border-ifk-cyan-500/30">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-ifk-cyan-500/10 rounded-xl">
+              <Sparkles className="h-6 w-6 text-ifk-cyan-500" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold font-display mb-2">Chat with TaskFlow Agent</h2>
+              <p className="text-muted-foreground text-sm mb-4">
+                Use natural language to manage your work. The TaskFlow Agent can help you with:
+              </p>
+              <div className="grid gap-2 md:grid-cols-2 mb-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-ifk-cyan-500">●</span> Create Projects and Plan Tasks
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-ifk-cyan-500">●</span> Add Tasks with Subtasks
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-ifk-cyan-500">●</span> View Complete Audit Trails
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-ifk-cyan-500">●</span> Create Organizations & Add Users
+                </div>
+              </div>
+              <Link
+                href="/workspace"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-ifk-cyan-500/20 hover:bg-ifk-cyan-500/30 text-ifk-cyan-400 font-medium text-sm transition-colors border border-ifk-cyan-500/30"
+              >
+                <Sparkles className="h-4 w-4" />
+                Open TaskFlow Agent
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, i) => (
+        {stats.map((stat) => (
           <GlassCard key={stat.name} className="p-4 flex items-center justify-between group">
             <div>
               <p className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider mb-1">
@@ -324,50 +359,55 @@ export default function DashboardPage() {
         </div>
       </GlassCard>
 
-      {/* Persistent Command Control (Voice & Type) - Fixed Bottom Right */}
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4">
+      {/* Persistent Command Control - Fixed Bottom Right */}
+      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
 
-        {/* Manual Input Overlay (Slide in) */}
+        {/* Command Input Overlay (Slide in) */}
         {showInput && (
-          <div className="bg-black/80 backdrop-blur-xl border border-ifk-gray-700 rounded-xl p-2 mb-2 shadow-2xl animate-in slide-in-from-right-4 fade-in flex items-center gap-2 w-80">
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Command Protocol..."
-              className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-white placeholder:text-gray-500 px-2"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const target = e.target as HTMLInputElement;
-                  if (target.value.trim()) {
-                    router.push(`/workspace?prompt=${encodeURIComponent(target.value.trim())}`);
+          <div className="bg-ifk-gray-950 backdrop-blur-xl border border-ifk-cyan-500/30 rounded-xl p-3 mb-2 shadow-[0_0_30px_rgba(6,182,212,0.15)] animate-in slide-in-from-right-4 fade-in w-96">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-ifk-cyan-500" />
+              <span className="text-xs font-mono text-ifk-cyan-400 uppercase tracking-wider">TaskFlow Agent</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Ask anything... (Press Enter to send)"
+                className="flex-1 bg-black/50 border border-ifk-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-ifk-gray-500 focus:border-ifk-cyan-500/50 focus:outline-none transition-colors"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const target = e.target as HTMLInputElement;
+                    if (target.value.trim()) {
+                      router.push(`/workspace?prompt=${encodeURIComponent(target.value.trim())}`);
+                    }
                   }
-                }
-              }}
-            />
-            <button
-              onClick={() => setShowInput(false)}
-              className="p-1 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
+                }}
+              />
+              <button
+                onClick={() => setShowInput(false)}
+                className="p-2 hover:bg-ifk-gray-800 rounded-lg text-ifk-gray-500 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-[10px] text-ifk-gray-500 mt-2 font-mono">
+              Press Enter to open full workspace with your message
+            </p>
           </div>
         )}
 
-        <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md p-2 rounded-full border border-ifk-gray-800/50 shadow-2xl">
-          {/* Terminal Toggle */}
-          <button
-            onClick={() => setShowInput(!showInput)}
-            className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${showInput
-              ? 'bg-ifk-cyan-500/20 text-ifk-cyan-400 border border-ifk-cyan-500/50'
-              : 'bg-ifk-gray-900/50 text-ifk-gray-400 hover:text-white hover:bg-ifk-gray-800 border border-transparent'
-              }`}
-            title="Manual Input"
-          >
-            <Terminal className="h-5 w-5" />
-          </button>
-
-
-        </div>
+        {/* Terminal Toggle Button */}
+        <button
+          onClick={() => setShowInput(!showInput)}
+          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all shadow-lg ${showInput
+            ? 'bg-ifk-cyan-500/20 text-ifk-cyan-400 border-2 border-ifk-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+            : 'bg-ifk-gray-900 text-ifk-gray-400 hover:text-ifk-cyan-400 hover:bg-ifk-gray-800 border border-ifk-gray-700 hover:border-ifk-cyan-500/30'
+            }`}
+          title="Quick Command"
+        >
+          <Terminal className="h-5 w-5" />
+        </button>
       </div>
     </div>
   )

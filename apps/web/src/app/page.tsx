@@ -388,11 +388,18 @@ export default function Home() {
               Multi-Tenant
             </Badge>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-ifk-gray-400">
-              <Link href="#" className="hover:text-white transition-colors">Manifesto</Link>
-              <Link href="#" className="hover:text-white transition-colors">Agents</Link>
-            </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://github.com/mjunaidca"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:flex items-center gap-2 text-sm font-medium text-ifk-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+              </svg>
+              GitHub
+            </a>
             <Button onClick={handleGetStarted} className="bg-white text-black hover:bg-ifk-cyan-400 hover:text-black transition-all font-bold rounded-lg px-5 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]">
               Launch Workspace
             </Button>
@@ -509,19 +516,41 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="py-12 bg-black border-t border-ifk-gray-900">
+      <footer className="py-12 bg-ifk-gray-950 border-t border-ifk-gray-800">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2 text-ifk-gray-500">
-            <Zap className="h-4 w-4" />
-            <span className="font-mono text-sm tracking-widest uppercase">TaskFlow Platform</span>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-ifk-cyan-600 to-ifk-cyan-900 flex items-center justify-center">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-mono text-sm tracking-wide text-ifk-gray-300">TaskFlow Platform</span>
           </div>
-          <div className="flex gap-8 text-sm text-ifk-gray-600">
-            <span>Built for Hackathon II</span>
-            <span>•</span>
-            <span>Universal MCP</span>
-            <span>•</span>
-            <span>Enterprise Security</span>
+          <div className="flex items-center gap-6 text-sm text-ifk-gray-400">
+            <span className="flex items-center gap-2">
+              <Code2 className="h-4 w-4 text-ifk-cyan-500" />
+              Built for Hackathon II
+            </span>
+            <span className="text-ifk-gray-700">•</span>
+            <span className="flex items-center gap-2">
+              <Network className="h-4 w-4 text-ifk-amber-500" />
+              Universal MCP
+            </span>
+            <span className="text-ifk-gray-700">•</span>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-ifk-pink-500" />
+              Enterprise Security
+            </span>
           </div>
+          <a
+            href="https://github.com/mjunaidca"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-ifk-gray-400 hover:text-white transition-colors"
+          >
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+              <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium">@mjunaidca</span>
+          </a>
         </div>
       </footer>
 

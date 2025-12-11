@@ -19,7 +19,7 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Workspace", href: "/workspace", icon: Sparkles, badge: "AI" },
-  { name: "Connect", href: "/connect", icon: Network }, // MCP Manifestor
+  { name: "Connect", href: "/dashboard/connect", icon: Network }, // MCP Manifestor
   { name: "Projects", href: "/projects", icon: FolderKanban },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Workers", href: "/workers", icon: Users },

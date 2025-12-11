@@ -399,6 +399,7 @@ jobs:
             --set "mcpServer.ingress.enabled=true" \
             --set "mcpServer.ingress.className=$INGRESS_CLASS" \
             --set "mcpServer.ingress.host=mcp.${{ vars.DOMAIN }}" \
+            --set "mcpServer.env.TASKFLOW_SSO_PUBLIC_URL=https://sso.${{ vars.DOMAIN }}" \
             --set "web.ingress.className=$INGRESS_CLASS" \
             --set "web.ingress.host=${{ vars.DOMAIN }}" \
             --set "ingress-nginx.enabled=false" \

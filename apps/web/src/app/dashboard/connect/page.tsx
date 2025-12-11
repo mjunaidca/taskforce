@@ -4,31 +4,46 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
-import { WorkerRead, AgentCreate } from "@/types"
+import { WorkerRead } from "@/types"
 import {
     Network,
-    Zap,
     Power,
-    Plus,
     Terminal,
     Cpu,
     Activity,
     Copy,
     Check,
     Server,
-    Radio
+    Sparkles,
+    Code2,
+    Zap
 } from "lucide-react"
+
+// MCP Configuration for different clients
+interface MCPClientConfig {
+    name: string
+    icon: React.ReactNode
+    description: string
+    configFile: string
+    config: object
+    docsUrl?: string
+    color: string
+}
+
+function getMcpEndpoint(): string {
+    if (typeof window !== 'undefined') {
+        return process.env.NEXT_PUBLIC_MCP_URL || `https://mcp.${window.location.hostname.replace('www.', '')}/mcp`
+    }
+    return "https://mcp.avixato.com/mcp"
+}
 
 // Specialized Host Identity Card
 function HostIdentityCard() {
     const [copied, setCopied] = useState(false)
-    // In a real scenario, this would be dynamic, but for now we hardcode the standard endpoint
-    const mcpEndpoint = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000/mcp` : "TASKFLOW_MCP/mcp"
+    const mcpEndpoint = getMcpEndpoint()
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(mcpEndpoint)
@@ -55,7 +70,7 @@ function HostIdentityCard() {
                 <div>
                     <h2 className="text-xl font-display font-bold text-foreground">TaskFlow Orchestrator Node</h2>
                     <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                        This is your primary MCP Server endpoint. Connect external agents (Claude Code, Cursor, Windsurf) to this URL to give them access to your TaskFlow project context.
+                        Connect your AI coding agents to TaskFlow. Copy the config below for your preferred client.
                     </p>
 
                     <div className="mt-4 flex items-center gap-2">
@@ -77,18 +92,153 @@ function HostIdentityCard() {
     )
 }
 
+// MCP Config Card Component
+function MCPConfigCard({ client }: { client: MCPClientConfig }) {
+    const [copied, setCopied] = useState(false)
+
+    const copyConfig = () => {
+        navigator.clipboard.writeText(JSON.stringify(client.config, null, 2))
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
+
+    return (
+        <Card className={`bg-background/40 backdrop-blur-md border hover:border-opacity-50 transition-all group relative overflow-hidden ${client.color}`}>
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-3 text-lg font-display">
+                    {client.icon}
+                    {client.name}
+                </CardTitle>
+                <CardDescription className="font-mono text-xs">
+                    {client.description}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    <div className="text-xs text-muted-foreground font-mono">
+                        Add to <code className="bg-secondary/50 px-1.5 py-0.5 rounded">{client.configFile}</code>
+                    </div>
+                    <div className="relative">
+                        <pre className="bg-black/60 border border-ifk-gray-700 rounded-lg p-3 font-mono text-xs text-ifk-cyan-100 overflow-x-auto max-h-[160px]">
+                            {JSON.stringify(client.config, null, 2)}
+                        </pre>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="absolute top-2 right-2 h-7 px-2 border-ifk-gray-600 hover:border-ifk-cyan-500/50 hover:bg-ifk-cyan-500/10 bg-black/50"
+                            onClick={copyConfig}
+                        >
+                            {copied ? (
+                                <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                                <Copy className="h-3 w-3 text-muted-foreground" />
+                            )}
+                        </Button>
+                    </div>
+                    {client.docsUrl && (
+                        <a
+                            href={client.docsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-ifk-cyan-400 hover:text-ifk-cyan-300 font-mono inline-flex items-center gap-1"
+                        >
+                            View setup docs →
+                        </a>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function ConnectPage() {
     const { user } = useAuth()
     const [agents, setAgents] = useState<WorkerRead[]>([])
     const [loading, setLoading] = useState(true)
-    const [isAdding, setIsAdding] = useState(false)
-    const [newAgent, setNewAgent] = useState<AgentCreate>({
-        handle: "new-agent",
-        name: "",
-        agent_type: "custom", // Default to "custom" as it maps to "Custom Node" conceptually for user manual entry
-        capabilities: ["subprocess"]
-    })
-    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const mcpEndpoint = getMcpEndpoint()
+
+    // MCP Client configurations
+    const mcpClients: MCPClientConfig[] = [
+        {
+            name: "Claude Code",
+            icon: <Sparkles className="h-5 w-5 text-purple-400" />,
+            description: "Anthropic's AI coding assistant",
+            configFile: ".mcp.json",
+            config: {
+                mcpServers: {
+                    "taskflow": {
+                        type: "http",
+                        url: mcpEndpoint
+                    }
+                }
+            },
+            docsUrl: "https://docs.anthropic.com/en/docs/claude-code",
+            color: "border-purple-500/30 hover:border-purple-500/50"
+        },
+        {
+            name: "Gemini CLI",
+            icon: <Zap className="h-5 w-5 text-blue-400" />,
+            description: "Google's Gemini AI assistant",
+            configFile: ".gemini/settings.json",
+            config: {
+                mcpServers: {
+                    "taskflow": {
+                        httpUrl: mcpEndpoint
+                    }
+                }
+            },
+            docsUrl: "https://github.com/google-gemini/gemini-cli",
+            color: "border-blue-500/30 hover:border-blue-500/50"
+        },
+        {
+            name: "Cursor",
+            icon: <Code2 className="h-5 w-5 text-emerald-400" />,
+            description: "AI-powered code editor",
+            configFile: ".cursor/mcp.json",
+            config: {
+                mcpServers: {
+                    "taskflow": {
+                        url: mcpEndpoint,
+                        transport: "http"
+                    }
+                }
+            },
+            docsUrl: "https://docs.cursor.com/context/model-context-protocol",
+            color: "border-emerald-500/30 hover:border-emerald-500/50"
+        },
+        {
+            name: "Windsurf",
+            icon: <Terminal className="h-5 w-5 text-cyan-400" />,
+            description: "Codeium's AI IDE",
+            configFile: "~/.codeium/windsurf/mcp_config.json",
+            config: {
+                mcpServers: {
+                    "taskflow": {
+                        serverUrl: mcpEndpoint
+                    }
+                }
+            },
+            docsUrl: "https://docs.codeium.com/windsurf/mcp",
+            color: "border-cyan-500/30 hover:border-cyan-500/50"
+        },
+        {
+            name: "VS Code + Copilot",
+            icon: <Cpu className="h-5 w-5 text-amber-400" />,
+            description: "GitHub Copilot in VS Code",
+            configFile: ".vscode/mcp.json",
+            config: {
+                servers: {
+                    "taskflow": {
+                        type: "http",
+                        url: mcpEndpoint
+                    }
+                }
+            },
+            docsUrl: "https://code.visualstudio.com/docs/copilot/chat/mcp-servers",
+            color: "border-amber-500/30 hover:border-amber-500/50"
+        }
+    ]
 
     // Fetch Agents on Mount
     useEffect(() => {
@@ -105,26 +255,6 @@ export default function ConnectPage() {
         fetchAgents()
     }, [])
 
-    const handleAddAgent = async () => {
-        if (!newAgent.name) return
-
-        try {
-            setIsSubmitting(true)
-            await api.createAgent(newAgent)
-            // Refresh list
-            const updated = await api.getAgents()
-            setAgents(updated)
-            setIsAdding(false)
-            setNewAgent({ handle: "new-agent", name: "", agent_type: "custom", capabilities: ["subprocess"] })
-        } catch (err) {
-            console.error("Failed to create agent", err)
-            // In a real app we'd show a toast here
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    // Heuristics to map API data to UI "Stargate" concept
     const resolveTypeIcon = (type: string | null) => {
         if (type === "claude") return <Cpu className="h-5 w-5 text-purple-500" />
         if (type === "qwen") return <Cpu className="h-5 w-5 text-blue-500" />
@@ -135,7 +265,7 @@ export default function ConnectPage() {
     const resolveStatusColor = (status?: string) => {
         if (status === "working") return "bg-amber-500/10 text-amber-500 border-amber-500/20"
         if (status === "offline") return "bg-muted text-muted-foreground"
-        return "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" // Default/Online
+        return "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
     }
 
     return (
@@ -147,128 +277,120 @@ export default function ConnectPage() {
                     The Manifestor <span className="text-muted-foreground font-mono text-lg font-normal">/ MCP Connect</span>
                 </h1>
                 <p className="text-muted-foreground font-mono text-sm max-w-2xl">
-                    Orchestrate your swarm of AI Coding Agents. Connect local MCP servers, remote LLM hosts, and IDE bridges to expand your neural network.
+                    Connect your AI coding agents to TaskFlow's MCP server. Copy the config for your preferred tool and start managing tasks with AI.
                 </p>
             </div>
 
             {/* MCP Host Identity */}
             <HostIdentityCard />
 
-            {/* Main Grid: Stargate View */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* Add New Node Card */}
-                <Card className="border-dashed border-2 border-border bg-background/20 hover:border-primary/50 hover:bg-background/40 transition-all cursor-pointer group flex flex-col items-center justify-center min-h-[200px]" onClick={() => setIsAdding(true)}>
-                    <div className="h-16 w-16 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
-                        <Plus className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <h3 className="text-lg font-medium text-foreground">Link New Intelligence</h3>
-                    <p className="text-xs text-muted-foreground font-mono mt-2">MCP / REST / GRPC</p>
-                </Card>
-
-                {/* Existing Nodes (Live Data) */}
-                {loading ? (
-                    // Skeletons
-                    [1, 2, 3].map(i => <Card key={i} className="min-h-[200px]"><Skeleton className="h-full w-full" /></Card>)
-                ) : (
-                    agents.map((agent) => (
-                        <Card key={agent.id} className="bg-background/40 backdrop-blur-md border border-border hover:border-ifk-cyan-500/30 transition-all group relative overflow-hidden">
-                            {(agent.status === "online" || !agent.status) && (
-                                <div className="absolute top-0 right-0 p-4">
-                                    <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
-                                </div>
-                            )}
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center gap-2 text-lg font-display">
-                                    {resolveTypeIcon(agent.agent_type)}
-                                    {agent.name}
-                                </CardTitle>
-                                <CardDescription className="font-mono text-xs uppercase flex items-center gap-1">
-                                    {agent.agent_type || "Custom Node"}
-                                    <span className="text-muted-foreground">#{agent.handle}</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Status</span>
-                                        <Badge variant="outline" className={`border-0 ${resolveStatusColor(agent.status)}`}>
-                                            {(agent.status || "ONLINE").toUpperCase()}
-                                        </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Latency</span>
-                                        <span className="font-mono text-foreground">{["12ms", "45ms", "110ms"][agent.id % 3]}</span>
-                                    </div>
-
-                                    {/* Capabilities */}
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {agent.capabilities.slice(0, 3).map(cap => (
-                                            <span key={cap} className="text-[9px] font-mono bg-secondary/50 px-1.5 py-0.5 rounded text-muted-foreground">
-                                                {cap}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    <div className="pt-4 border-t border-border/50 flex gap-2">
-                                        <Button variant="outline" size="sm" className="flex-1 border-ifk-cyan-500/30 hover:bg-ifk-cyan-500/10 hover:text-ifk-cyan-400">
-                                            <Activity className="h-3 w-3 mr-2" /> Inspect
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-400">
-                                            <Power className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))
-                )}
+            {/* Quick Start Configs */}
+            <div>
+                <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-ifk-cyan-500" />
+                    Quick Setup Configs
+                </h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                    Copy the configuration for your AI coding tool. Paste it into the specified config file and restart your tool.
+                </p>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {mcpClients.map((client) => (
+                        <MCPConfigCard key={client.name} client={client} />
+                    ))}
+                </div>
             </div>
 
-            {/* Manual Connection Dialog (Simplified as inline for now) */}
-            {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in transition-all">
-                    <Card className="w-full max-w-md bg-background border-border shadow-2xl">
-                        <CardHeader>
-                            <CardTitle>Connect MCP Server</CardTitle>
-                            <CardDescription>Enter the connection details to register a new agent node.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Agent Name</Label>
-                                <Input
-                                    placeholder="e.g., DeepSeek-Local"
-                                    value={newAgent.name}
-                                    onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
-                                    className="font-mono"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Handle (Unique ID)</Label>
-                                <Input
-                                    placeholder="e.g., deepseek-01"
-                                    value={newAgent.handle}
-                                    onChange={(e) => setNewAgent({ ...newAgent, handle: e.target.value })}
-                                    className="font-mono input-dark"
-                                />
-                            </div>
-
-                            {/* Hidden fields for now: Endpoint/Type - Simplified for Demo */}
-
-                            <div className="flex justify-end gap-2 pt-4">
-                                <Button variant="ghost" onClick={() => setIsAdding(false)}>Cancel</Button>
-                                <Button
-                                    className="bg-ifk-cyan-600 hover:bg-ifk-cyan-500 text-white"
-                                    onClick={handleAddAgent}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? <Check className="animate-spin h-4 w-4 mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
-                                    Connect Node
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* Registered Agents */}
+            {agents.length > 0 && (
+                <div>
+                    <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-emerald-500" />
+                        Connected Agents
+                    </h2>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {loading ? (
+                            [1, 2, 3].map(i => <Card key={i} className="min-h-[200px]"><Skeleton className="h-full w-full" /></Card>)
+                        ) : (
+                            agents.map((agent) => (
+                                <Card key={agent.id} className="bg-background/40 backdrop-blur-md border border-border hover:border-ifk-cyan-500/30 transition-all group relative overflow-hidden">
+                                    {(agent.status === "online" || !agent.status) && (
+                                        <div className="absolute top-0 right-0 p-4">
+                                            <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
+                                        </div>
+                                    )}
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="flex items-center gap-2 text-lg font-display">
+                                            {resolveTypeIcon(agent.agent_type)}
+                                            {agent.name}
+                                        </CardTitle>
+                                        <CardDescription className="font-mono text-xs uppercase flex items-center gap-1">
+                                            {agent.agent_type || "Custom Node"}
+                                            <span className="text-muted-foreground">#{agent.handle}</span>
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">Status</span>
+                                                <Badge variant="outline" className={`border-0 ${resolveStatusColor(agent.status)}`}>
+                                                    {(agent.status || "ONLINE").toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {agent.capabilities.slice(0, 3).map(cap => (
+                                                    <span key={cap} className="text-[9px] font-mono bg-secondary/50 px-1.5 py-0.5 rounded text-muted-foreground">
+                                                        {cap}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="pt-4 border-t border-border/50 flex gap-2">
+                                                <Button variant="outline" size="sm" className="flex-1 border-ifk-cyan-500/30 hover:bg-ifk-cyan-500/10 hover:text-ifk-cyan-400">
+                                                    <Activity className="h-3 w-3 mr-2" /> Inspect
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-400">
+                                                    <Power className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
                 </div>
             )}
+
+            {/* Instructions */}
+            <Card className="bg-secondary/20 border-dashed">
+                <CardHeader>
+                    <CardTitle className="text-lg">How It Works</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="flex items-start gap-3">
+                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-ifk-cyan-500/20 text-ifk-cyan-500 font-bold text-sm flex-shrink-0">1</div>
+                            <div>
+                                <p className="font-medium text-sm">Copy Config</p>
+                                <p className="text-xs text-muted-foreground">Choose your AI tool above and copy the JSON config</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-purple-500/20 text-purple-500 font-bold text-sm flex-shrink-0">2</div>
+                            <div>
+                                <p className="font-medium text-sm">Add to Config File</p>
+                                <p className="text-xs text-muted-foreground">Paste into the specified config file in your project</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-500 font-bold text-sm flex-shrink-0">3</div>
+                            <div>
+                                <p className="font-medium text-sm">Authenticate</p>
+                                <p className="text-xs text-muted-foreground">Your AI tool will prompt you to login via TaskFlow SSO</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }

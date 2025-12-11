@@ -60,8 +60,12 @@ data:
   ENV: {{ .Values.mcpServer.env.ENV | quote }}
   # MCP uses TASKFLOW_ prefix for all env vars (see config.py env_prefix)
   TASKFLOW_API_URL: {{ .Values.mcpServer.env.TASKFLOW_API_URL | quote }}
-  # SSO Platform URL for OAuth/JWT verification (014-mcp-oauth-standardization)
+  # SSO Platform internal URL for OAuth/JWT verification (014-mcp-oauth-standardization)
   TASKFLOW_SSO_URL: {{ .Values.mcpServer.env.TASKFLOW_SSO_URL | quote }}
+  # SSO Platform public URL for OAuth metadata (what clients see)
+  {{- if .Values.mcpServer.env.TASKFLOW_SSO_PUBLIC_URL }}
+  TASKFLOW_SSO_PUBLIC_URL: {{ .Values.mcpServer.env.TASKFLOW_SSO_PUBLIC_URL | quote }}
+  {{- end }}
   # Production mode - require JWT or API key auth
   TASKFLOW_DEV_MODE: {{ .Values.mcpServer.env.TASKFLOW_DEV_MODE | default "false" | quote }}
   # Database config (shared with API)

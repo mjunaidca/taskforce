@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
 import styles from "./styles.module.css";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { ContextBadge } from "./ContextBadge";
@@ -68,6 +68,7 @@ export function ChatKitWidget({
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const pathname = usePathname();
   const params = useParams();
+  const router = useRouter();
 
   // Use dedicated ChatKit proxy endpoint - handles auth via httpOnly cookies
   // The proxy at /api/chatkit will forward to the backend /chatkit with Authorization header
@@ -714,6 +715,30 @@ export function ChatKitWidget({
                 projectName={projectContext.name}
                 onClearContext={() => setProjectContext({})}
               />
+              <button
+                className={styles.expandButton}
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push("/workspace");
+                }}
+                title="Open full workspace"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              </button>
             </div>
           </div>
 

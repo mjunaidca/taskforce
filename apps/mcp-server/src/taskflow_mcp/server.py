@@ -102,13 +102,15 @@ class AuthMiddleware:
 
         # OAuth Authorization Server metadata (RFC 8414)
         # Handles: /.well-known/oauth-authorization-server and /.well-known/oauth-authorization-server/mcp
+        # Uses public SSO URL for client-facing metadata
         if path in ("/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server/mcp"):
+            public_sso = config.sso_url_for_metadata
             response = JSONResponse({
-                "issuer": config.sso_url,
-                "authorization_endpoint": f"{config.sso_url}/api/auth/oauth2/authorize",
-                "token_endpoint": f"{config.sso_url}/api/auth/oauth2/token",
-                "device_authorization_endpoint": f"{config.sso_url}/api/auth/device/code",
-                "jwks_uri": f"{config.sso_url}/api/auth/jwks",
+                "issuer": public_sso,
+                "authorization_endpoint": f"{public_sso}/api/auth/oauth2/authorize",
+                "token_endpoint": f"{public_sso}/api/auth/oauth2/token",
+                "device_authorization_endpoint": f"{public_sso}/api/auth/device/code",
+                "jwks_uri": f"{public_sso}/api/auth/jwks",
                 # Only standard OIDC scopes - Better Auth doesn't support custom scopes
                 "scopes_supported": [
                     "openid",
@@ -130,10 +132,12 @@ class AuthMiddleware:
         # OAuth Protected Resource metadata (RFC 9728)
         # This tells clients where to authenticate for this resource
         # Handles: /.well-known/oauth-protected-resource and /.well-known/oauth-protected-resource/mcp
+        # Uses public SSO URL for client-facing metadata
         if path in ("/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"):
+            public_sso = config.sso_url_for_metadata
             response = JSONResponse({
                 "resource": f"http://{config.mcp_host}:{config.mcp_port}/mcp",
-                "authorization_servers": [config.sso_url],
+                "authorization_servers": [public_sso],
                 # Only standard OIDC scopes
                 "scopes_supported": [
                     "openid",
@@ -178,18 +182,20 @@ class AuthMiddleware:
         except Exception as e:
             logger.warning("Authentication failed: %s", e)
             # Return 401 with OAuth challenge per MCP spec
+            # Use public SSO URL for client-facing error responses
+            public_sso = config.sso_url_for_metadata
             response = JSONResponse(
                 {
                     "error": "unauthorized",
                     "error_description": str(e),
-                    "auth_uri": f"{config.sso_url}/api/auth/device/code",
+                    "auth_uri": f"{public_sso}/api/auth/device/code",
                 },
                 status_code=401,
                 headers={
                     "WWW-Authenticate": (
                         f'Bearer realm="taskflow", '
-                        f'authorization_uri="{config.sso_url}/api/auth/oauth2/authorize", '
-                        f'device_authorization_uri="{config.sso_url}/api/auth/device/code"'
+                        f'authorization_uri="{public_sso}/api/auth/oauth2/authorize", '
+                        f'device_authorization_uri="{public_sso}/api/auth/device/code"'
                     ),
                 },
             )

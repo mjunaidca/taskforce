@@ -7,7 +7,8 @@ Environment variables:
 - TASKFLOW_MCP_PORT: Server port (default: 8001)
 - TASKFLOW_DEV_MODE: Enable dev mode (API must also be in dev mode)
 - TASKFLOW_SERVICE_TOKEN: Service token for internal API calls (optional)
-- TASKFLOW_SSO_URL: SSO Platform URL for OAuth (default: http://localhost:3001)
+- TASKFLOW_SSO_URL: SSO Platform internal URL for backend calls (default: http://localhost:3001)
+- TASKFLOW_SSO_PUBLIC_URL: SSO Platform public URL for OAuth metadata (default: same as SSO_URL)
 - TASKFLOW_OAUTH_CLIENT_ID: OAuth client ID (default: taskflow-mcp)
 """
 
@@ -28,10 +29,18 @@ class Settings(BaseSettings):
     mcp_port: int = 8001
 
     # OAuth/SSO configuration (014-mcp-oauth-standardization)
-    # SSO Platform URL for JWKS and API key verification
+    # Internal SSO URL for backend calls (JWKS fetch, API key verification)
     sso_url: str = "http://localhost:3001"
+    # Public SSO URL for OAuth metadata (what clients see in discovery endpoints)
+    # Falls back to sso_url if not set
+    sso_public_url: str | None = None
     # OAuth client ID (for audience validation, optional)
     oauth_client_id: str = "taskflow-mcp"
+
+    @property
+    def sso_url_for_metadata(self) -> str:
+        """Get the SSO URL for OAuth metadata (public-facing)."""
+        return self.sso_public_url or self.sso_url
 
     # Authentication mode
     # Dev mode: API must also have DEV_MODE=true, uses X-User-ID header
