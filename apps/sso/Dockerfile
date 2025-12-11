@@ -3,12 +3,13 @@
 # Next.js 15 SSO Platform Dockerfile
 # ============================================================================
 # Slim production image - migrations run separately on first deploy
+# Using node:22-slim (Debian) instead of alpine for better glibc compatibility
+# and to avoid QEMU emulation issues during cross-platform builds
 # ============================================================================
 
 # ----- Stage 1: Dependencies -----
-FROM node:22-alpine AS deps
+FROM node:22-slim AS deps
 
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -17,7 +18,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ----- Stage 2: Builder -----
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -43,7 +44,7 @@ ENV DOCKER_BUILD=true
 RUN pnpm build
 
 # ----- Stage 3: Runner (slim production image) -----
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 
 WORKDIR /app
 
@@ -66,6 +67,6 @@ USER nextjs
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1
+    CMD node -e "fetch('http://127.0.0.1:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
 CMD ["node", "server.js"]

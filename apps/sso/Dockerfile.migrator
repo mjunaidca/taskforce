@@ -2,11 +2,11 @@
 # SSO Platform Migrator - Lightweight init container for DB migrations
 # ============================================================================
 # Runs migrations and seeding before main services start
+# Using node:22-slim (Debian) for better glibc compatibility
 # ============================================================================
 
-FROM node:22-alpine
+FROM node:22-slim
 
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -22,17 +22,22 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Migration script
 COPY <<'EOF' /app/migrate.sh
-#!/bin/sh
+#!/bin/bash
 set -e
 
 echo "=== SSO Platform Migrations ==="
 echo "Waiting for database..."
 
-# Wait for postgres to be ready
-until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER:-postgres} 2>/dev/null; do
-  echo "Waiting for postgres..."
-  sleep 2
-done
+# Wait for postgres to be ready (using pg_isready if available, otherwise skip wait)
+if command -v pg_isready &> /dev/null; then
+  until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER:-postgres} 2>/dev/null; do
+    echo "Waiting for postgres..."
+    sleep 2
+  done
+else
+  echo "pg_isready not available, waiting 5s..."
+  sleep 5
+fi
 
 echo "Database ready. Running migrations..."
 pnpm db:push
@@ -43,6 +48,8 @@ pnpm seed:setup
 echo "=== Migrations complete ==="
 EOF
 
-RUN apk add --no-cache postgresql-client && chmod +x /app/migrate.sh
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod +x /app/migrate.sh
 
 CMD ["/app/migrate.sh"]
