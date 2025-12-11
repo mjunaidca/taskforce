@@ -90,6 +90,7 @@ jobs:
           push: true
           platforms: linux/amd64
           no-cache: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -131,6 +132,7 @@ jobs:
           push: true
           platforms: linux/amd64
           no-cache: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -176,6 +178,7 @@ jobs:
           push: true
           platforms: linux/amd64
           no-cache: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -217,6 +220,7 @@ jobs:
           push: true
           platforms: linux/amd64
           no-cache: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -258,6 +262,7 @@ jobs:
           push: true
           platforms: linux/amd64
           no-cache: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
