@@ -111,6 +111,9 @@ class AuthMiddleware:
                 "token_endpoint": f"{public_sso}/api/auth/oauth2/token",
                 "device_authorization_endpoint": f"{public_sso}/api/auth/device/code",
                 "jwks_uri": f"{public_sso}/api/auth/jwks",
+                # RFC 7591 - Dynamic Client Registration
+                # Required for MCP clients (Claude Code, Gemini CLI, Cursor) that cannot pre-register
+                "registration_endpoint": f"{public_sso}/api/auth/oauth2/register",
                 # Only standard OIDC scopes - Better Auth doesn't support custom scopes
                 "scopes_supported": [
                     "openid",

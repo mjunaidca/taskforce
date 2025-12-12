@@ -168,24 +168,8 @@ export const TRUSTED_CLIENTS = [
       allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
     },
   },
-  {
-    clientId: "gemini-cli",
-    name: "Google Gemini CLI",
-    type: "public" as const,
-    // Gemini CLI respects redirectUri config when specified WITHOUT a port
-    // User must set redirectUri: "http://localhost/oauth/callback" in their .gemini/settings.json
-    // Gemini CLI will then start a server on port 80 (or the default HTTP port)
-    redirectUrls: [
-      "http://127.0.0.1/oauth/callback",
-      "http://localhost/oauth/callback",
-    ],
-    disabled: false,
-    skipConsent: true,
-    metadata: {
-      description: "Google's Gemini CLI for AI-assisted development",
-      allowedGrantTypes: ["authorization_code", "refresh_token"],
-    },
-  }
+  // NOTE: Gemini CLI uses Dynamic Client Registration (DCR) - no pre-registered client needed
+  // DCR allows CLI tools to register with any ephemeral port for OAuth callbacks
   // {
   //   clientId: "ai-native-public-client",
   //   name: "AI Native Platform",

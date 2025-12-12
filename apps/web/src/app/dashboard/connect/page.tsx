@@ -40,13 +40,6 @@ function getMcpEndpoint(): string {
     return "https://mcp.avixato.com/mcp"
 }
 
-function getSsoEndpoint(): string {
-    if (typeof window !== 'undefined') {
-        return process.env.NEXT_PUBLIC_SSO_URL || `https://sso.${window.location.hostname.replace('www.', '')}`
-    }
-    return "https://sso.avixato.com"
-}
-
 // Specialized Host Identity Card
 function HostIdentityCard() {
     const [copied, setCopied] = useState(false)
@@ -165,7 +158,8 @@ export default function ConnectPage() {
 
     const mcpEndpoint = getMcpEndpoint()
 
-    // MCP Client configurations
+    // MCP Client configurations - simplified with DCR (Dynamic Client Registration)
+    // No clientId or OAuth config needed - DCR handles everything automatically
     const mcpClients: MCPClientConfig[] = [
         {
             name: "Claude Code",
@@ -174,7 +168,7 @@ export default function ConnectPage() {
             configFile: ".mcp.json",
             config: {
                 mcpServers: {
-                    "taskflow": {
+                    taskflow: {
                         type: "http",
                         url: mcpEndpoint
                     }
@@ -190,16 +184,8 @@ export default function ConnectPage() {
             configFile: ".gemini/settings.json",
             config: {
                 mcpServers: {
-                    "taskflow": {
-                        httpUrl: mcpEndpoint,
-                        oauth: {
-                            enabled: true,
-                            clientId: "gemini-cli",
-                            authorizationUrl: `${getSsoEndpoint()}/api/auth/oauth2/authorize`,
-                            tokenUrl: `${getSsoEndpoint()}/api/auth/oauth2/token`,
-                            redirectUri: "http://127.0.0.1/oauth/callback",
-                            scopes: ["openid", "profile", "email"]
-                        }
+                    taskflow: {
+                        httpUrl: mcpEndpoint
                     }
                 }
             },
@@ -213,7 +199,7 @@ export default function ConnectPage() {
             configFile: ".cursor/mcp.json",
             config: {
                 mcpServers: {
-                    "taskflow": {
+                    taskflow: {
                         url: mcpEndpoint,
                         transport: "http"
                     }
@@ -229,7 +215,7 @@ export default function ConnectPage() {
             configFile: "~/.codeium/windsurf/mcp_config.json",
             config: {
                 mcpServers: {
-                    "taskflow": {
+                    taskflow: {
                         serverUrl: mcpEndpoint
                     }
                 }
@@ -244,7 +230,7 @@ export default function ConnectPage() {
             configFile: ".vscode/mcp.json",
             config: {
                 servers: {
-                    "taskflow": {
+                    taskflow: {
                         type: "http",
                         url: mcpEndpoint
                     }
