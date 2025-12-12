@@ -71,13 +71,23 @@ export async function GET(request: NextRequest) {
     const tokens = await tokenResponse.json();
     const expiresAt = Date.now() + (tokens.expires_in || 3600) * 1000;
 
-    // Debug logging
+    // Debug logging - decode JWT to show tenant_id
     console.log("[Callback] Token exchange successful");
     console.log("[Callback] access_token present:", !!tokens.access_token);
     console.log("[Callback] id_token present:", !!tokens.id_token);
-    console.log("[Callback] id_token is JWT:", tokens.id_token?.startsWith("eyJ"));
     if (tokens.id_token) {
-      console.log("[Callback] id_token preview:", tokens.id_token.substring(0, 30) + "...");
+      try {
+        // Decode JWT payload (base64url decode middle part)
+        const parts = tokens.id_token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+          console.log("[Callback] JWT tenant_id:", payload.tenant_id);
+          console.log("[Callback] JWT organization_ids:", payload.organization_ids);
+          console.log("[Callback] JWT sub:", payload.sub);
+        }
+      } catch (e) {
+        console.log("[Callback] Could not decode JWT:", e);
+      }
     }
 
     // Create response with redirect to dashboard
