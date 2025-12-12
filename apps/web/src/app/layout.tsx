@@ -20,6 +20,19 @@ export default function RootLayout({
           src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
           strategy="beforeInteractive"
         />
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-V61B7MDL2B"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-V61B7MDL2B');
+          `}
+        </Script>
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
