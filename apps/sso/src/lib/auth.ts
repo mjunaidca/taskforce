@@ -580,16 +580,12 @@ export const auth = betterAuth({
       // Seed them with: pnpm run seed:prod
       // Configuration: See src/lib/trusted-clients.ts
       trustedClients: TRUSTED_CLIENTS,
-      // SECURITY: Dynamic client registration
+      // SECURITY: Dynamic client registration DISABLED
       // RFC 7591 - OAuth 2.0 Dynamic Client Registration
       //
-      // ⚠️  PRODUCTION WARNING: Set to false in production!
-      // Dynamic registration allows any client to register, which can be abused for phishing.
-      // MCP clients (Gemini CLI, Cursor, Claude Code) should be pre-registered in TRUSTED_CLIENTS.
-      //
-      // Only enable for local development when testing new MCP clients.
-      // In production, pre-register all clients in trusted-clients.ts
-      allowDynamicClientRegistration: process.env.NODE_ENV !== "production",
+      // DISABLED: Security risk - allows any client to register
+      // All clients must be pre-registered in TRUSTED_CLIENTS
+      allowDynamicClientRegistration: false,
       // Add custom claims to userinfo endpoint and ID token
       // Parameters: user object, requested scopes, OAuth client that initiated the request
       async getAdditionalUserInfoClaim(user, scopes, client) {

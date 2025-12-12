@@ -191,6 +191,8 @@ mcpServer:
     TASKFLOW_SSO_URL: http://sso-platform:3001
     # Public SSO URL for OAuth metadata (must be set via --set in CI/CD)
     # TASKFLOW_SSO_PUBLIC_URL: https://sso.${domain}
+    # Public MCP URL for OAuth protected resource metadata (must be set via --set in CI/CD)
+    # TASKFLOW_MCP_PUBLIC_URL: https://mcp.${domain}
     TASKFLOW_API_URL: http://taskflow-api:8000
     TASKFLOW_DEV_MODE: "false"
 

@@ -66,6 +66,10 @@ data:
   {{- if .Values.mcpServer.env.TASKFLOW_SSO_PUBLIC_URL }}
   TASKFLOW_SSO_PUBLIC_URL: {{ .Values.mcpServer.env.TASKFLOW_SSO_PUBLIC_URL | quote }}
   {{- end }}
+  # MCP Server public URL for OAuth protected resource metadata
+  {{- if .Values.mcpServer.env.TASKFLOW_MCP_PUBLIC_URL }}
+  TASKFLOW_MCP_PUBLIC_URL: {{ .Values.mcpServer.env.TASKFLOW_MCP_PUBLIC_URL | quote }}
+  {{- end }}
   # Production mode - require JWT or API key auth
   TASKFLOW_DEV_MODE: {{ .Values.mcpServer.env.TASKFLOW_DEV_MODE | default "false" | quote }}
   # Database config (shared with API)

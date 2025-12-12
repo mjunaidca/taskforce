@@ -10,8 +10,9 @@
  * 3. Protected in admin UI (cannot edit/delete via UI)
  *
  * Security:
- * - Localhost URLs are automatically filtered out in production
- * - Only HTTPS URLs allowed in production (except localhost in dev)
+ * - Localhost URLs are allowed for CLI tools (per RFC 8252)
+ * - CLI tools must specify exact redirectUri in their config
+ * - Only HTTPS URLs allowed in production (except localhost for CLI tools)
  */
 
 /**
@@ -167,25 +168,28 @@ export const TRUSTED_CLIENTS = [
       allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
     },
   },
-  {
-    clientId: "gemini-cli",
-    name: "Google Gemini CLI",
-    type: "public" as const,
-    // NOTE: CLI tools use localhost callbacks (RFC 8252 - OAuth for Native Apps)
-    // These MUST NOT be filtered even in production - the callback goes to user's local machine
-    redirectUrls: [
-      "http://localhost/callback",
-      "http://localhost:7777/oauth/callback",
-      "http://127.0.0.1/callback",
-      "http://127.0.0.1:7777/oauth/callback",
-    ],
-    disabled: false,
-    skipConsent: true,
-    metadata: {
-      description: "Google's Gemini CLI for AI-assisted development",
-      allowedGrantTypes: ["authorization_code", "refresh_token"],
-    },
-  }
+  // NOTE: Gemini CLI is NOT supported
+  // Gemini CLI uses random ephemeral ports (49152-65535) for OAuth callbacks
+  // and ignores any redirectUri configuration specified in settings.json.
+  // Without allowDynamicClientRegistration=true or a validateRedirectUri hook
+  // in Better Auth, we cannot support Gemini CLI's Authorization Code flow.
+  //
+  // If Better Auth adds a validateRedirectUri hook for RFC 8252 loopback validation,
+  // we can re-enable this client with localhost/* redirect URIs.
+  // See: https://github.com/better-auth/better-auth/issues
+  //
+  // {
+  //   clientId: "gemini-cli",
+  //   name: "Google Gemini CLI",
+  //   type: "public" as const,
+  //   redirectUrls: ["http://localhost/oauth/callback"], // Would need wildcard port support
+  //   disabled: false,
+  //   skipConsent: true,
+  //   metadata: {
+  //     description: "Google's Gemini CLI for AI-assisted development",
+  //     allowedGrantTypes: ["authorization_code", "refresh_token"],
+  //   },
+  // }
   // {
   //   clientId: "ai-native-public-client",
   //   name: "AI Native Platform",

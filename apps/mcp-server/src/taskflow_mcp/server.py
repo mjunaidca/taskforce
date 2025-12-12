@@ -136,7 +136,7 @@ class AuthMiddleware:
         if path in ("/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"):
             public_sso = config.sso_url_for_metadata
             response = JSONResponse({
-                "resource": f"http://{config.mcp_host}:{config.mcp_port}/mcp",
+                "resource": config.mcp_resource_url,
                 "authorization_servers": [public_sso],
                 # Only standard OIDC scopes
                 "scopes_supported": [

@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     # MCP Server configuration
     mcp_host: str = "0.0.0.0"
     mcp_port: int = 8001
+    # Public MCP URL for OAuth metadata (what clients see in discovery endpoints)
+    # In production, set to https://mcp.avixato.com
+    mcp_public_url: str | None = None
+
+    @property
+    def mcp_resource_url(self) -> str:
+        """Get the MCP resource URL for OAuth metadata (public-facing)."""
+        if self.mcp_public_url:
+            # Ensure it ends with /mcp
+            url = self.mcp_public_url.rstrip("/")
+            return f"{url}/mcp" if not url.endswith("/mcp") else url
+        return f"http://{self.mcp_host}:{self.mcp_port}/mcp"
 
     # OAuth/SSO configuration (014-mcp-oauth-standardization)
     # Internal SSO URL for backend calls (JWKS fetch, API key verification)

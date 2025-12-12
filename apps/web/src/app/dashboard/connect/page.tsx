@@ -40,6 +40,7 @@ function getMcpEndpoint(): string {
     return "https://mcp.avixato.com/mcp"
 }
 
+
 // Specialized Host Identity Card
 function HostIdentityCard() {
     const [copied, setCopied] = useState(false)
@@ -176,21 +177,11 @@ export default function ConnectPage() {
             docsUrl: "https://docs.anthropic.com/en/docs/claude-code",
             color: "border-purple-500/30 hover:border-purple-500/50"
         },
-        {
-            name: "Gemini CLI",
-            icon: <Zap className="h-5 w-5 text-blue-400" />,
-            description: "Google's Gemini AI assistant",
-            configFile: ".gemini/settings.json",
-            config: {
-                mcpServers: {
-                    "taskflow": {
-                        httpUrl: mcpEndpoint
-                    }
-                }
-            },
-            docsUrl: "https://github.com/google-gemini/gemini-cli",
-            color: "border-blue-500/30 hover:border-blue-500/50"
-        },
+        // NOTE: Gemini CLI is NOT supported
+        // Gemini CLI uses random ephemeral ports (49152-65535) for OAuth callbacks
+        // and ignores any redirectUri configuration. Without allowDynamicClientRegistration
+        // or a validateRedirectUri hook in Better Auth, we cannot support it.
+        // See: https://github.com/better-auth/better-auth/issues for feature requests
         {
             name: "Cursor",
             icon: <Code2 className="h-5 w-5 text-emerald-400" />,
