@@ -15,6 +15,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Building2, Check, Loader2 } from "lucide-react"
 
+// SSO URL for API calls
+const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001"
+
 /**
  * Organization Switcher Component
  *
@@ -22,17 +25,17 @@ import { Building2, Check, Loader2 } from "lucide-react"
  * Implements the enterprise pattern: Identity Session + Tenant-Scoped Tokens
  *
  * How it works:
- * 1. User clicks organization → calls organization.setActive()
- * 2. SSO updates session.activeOrganizationId in database
- * 3. Redirect to SSO login with prompt=none for silent re-auth
- * 4. SSO issues NEW JWT with updated tenant_id from session
- * 5. All subsequent requests use new JWT with new tenant_id
+ * 1. User clicks organization → calls organization.setActive() (updates SSO session)
+ * 2. Calls SSO /api/auth/set-org-context to store orgId in Redis
+ * 3. Redirect to SSO login for re-auth
+ * 4. SSO reads orgId from Redis in getAdditionalUserInfoClaim
+ * 5. SSO issues NEW JWT with updated tenant_id
+ * 6. All subsequent requests use new JWT with new tenant_id
  *
- * Why redirect instead of refresh?
- * - The JWT (taskflow_id_token cookie) is issued at login time
- * - router.refresh() only re-renders React components, doesn't replace JWT
- * - Need full OAuth flow to get new JWT with updated tenant_id claim
- * - prompt=none enables silent re-auth (no login screen shown)
+ * Why Redis for org context?
+ * - getAdditionalUserInfoClaim can't access Redis sessions (Better Auth limitation)
+ * - No DB schema changes needed
+ * - Short TTL (5 min) ensures cleanup
  */
 export function OrgSwitcher() {
   const { user } = useAuth()
@@ -65,20 +68,29 @@ export function OrgSwitcher() {
     try {
       console.log("[OrgSwitcher] Step 1: Calling setActive for org:", orgId)
 
-      // Step 1: Update SSO session's active organization
+      // Step 1: Update SSO session's active organization (for SSO UI consistency)
       const result = await organization.setActive({ organizationId: orgId })
       console.log("[OrgSwitcher] setActive result:", result)
 
-      // Delay to ensure session.activeOrganizationId is committed to database
-      // before starting OAuth flow. The setActive() call updates the session,
-      // and the OAuth flow needs to read the updated session.
-      // 500ms should be sufficient for DB write to complete.
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Step 2: Store org context in Redis for JWT generation
+      console.log("[OrgSwitcher] Step 2: Storing org context in Redis")
+      const contextResult = await fetch(`${SSO_URL}/api/auth/set-org-context`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Send SSO session cookies
+        body: JSON.stringify({ organizationId: orgId }),
+      })
 
-      // Step 2: Re-authenticate to get new JWT with updated tenant_id
-      // Pass orgId explicitly to ensure SSO uses the correct org even if session race condition
-      // The SSO will use this org_id parameter to set tenant_id in the JWT
-      console.log("[OrgSwitcher] Step 2: Initiating OAuth flow for new tokens with orgId:", orgId)
+      if (!contextResult.ok) {
+        const errorData = await contextResult.json().catch(() => ({}))
+        console.error("[OrgSwitcher] Failed to store org context:", errorData)
+        throw new Error(errorData.error || "Failed to store organization context")
+      }
+
+      console.log("[OrgSwitcher] Org context stored in Redis")
+
+      // Step 3: Re-authenticate to get new JWT with updated tenant_id
+      console.log("[OrgSwitcher] Step 3: Initiating OAuth flow for new tokens")
       await initiateLogin(orgId)
 
       // Note: initiateLogin sets window.location.href which triggers navigation

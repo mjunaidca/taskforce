@@ -13,7 +13,7 @@ import { deviceAuthorization } from "better-auth/plugins"; // 014-mcp-oauth-stan
 import { db } from "./db";
 import * as schema from "../../auth-schema"; // Use Better Auth generated schema
 import { member } from "../../auth-schema";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { Resend } from "resend";
 import * as nodemailer from "nodemailer";
 import { TRUSTED_CLIENTS, DEFAULT_ORG_ID } from "./trusted-clients";
@@ -630,40 +630,29 @@ export const auth = betterAuth({
           console.log("[JWT] Organization Names:", organizationNames);
         }
 
-        // Get active organization from user's most recent session
-        // This allows org switcher to update tenant_id in JWT
+        // Get active organization from Redis (set by /api/auth/set-org-context during org switch)
+        // This is needed because getAdditionalUserInfoClaim can't access Redis sessions directly
         let activeOrgId: string | null = null;
 
-        // Query ALL sessions for this user to debug
-        const allUserSessions = await db
-          .select({
-            id: schema.session.id,
-            activeOrganizationId: schema.session.activeOrganizationId,
-            updatedAt: schema.session.updatedAt,
-          })
-          .from(schema.session)
-          .where(eq(schema.session.userId, user.id))
-          .orderBy(desc(schema.session.updatedAt));
+        // Check Redis for org context (set before OAuth re-auth for org switching)
+        if (redis) {
+          try {
+            const redisOrgId = await redis.get<string>(`org_context:${user.id}`);
+            console.log("[JWT] Redis org_context:", redisOrgId);
 
-        console.log("[JWT] All sessions for user:", user.id);
-        console.log("[JWT] Session count:", allUserSessions.length);
-        allUserSessions.forEach((s: { id: string; activeOrganizationId: string | null; updatedAt: Date | null }, i: number) => {
-          console.log(`[JWT] Session ${i}: id=${s.id?.slice(0, 8)}..., activeOrgId=${s.activeOrganizationId}, updated=${s.updatedAt}`);
-        });
-
-        const userSessions = allUserSessions.slice(0, 1);
-
-        if (userSessions.length > 0 && userSessions[0].activeOrganizationId) {
-          // Verify the active org is one the user actually belongs to
-          if (organizationIds.includes(userSessions[0].activeOrganizationId)) {
-            activeOrgId = userSessions[0].activeOrganizationId;
-            console.log("[JWT] Using activeOrganizationId from session:", activeOrgId);
-          } else {
-            console.log("[JWT] Session activeOrganizationId not in user's orgs, falling back");
-            console.log("[JWT] organizationIds:", organizationIds);
+            if (redisOrgId && organizationIds.includes(redisOrgId)) {
+              activeOrgId = redisOrgId;
+              console.log("[JWT] Using activeOrganizationId from Redis:", activeOrgId);
+              // Clean up the Redis key after use (one-time use)
+              await redis.del(`org_context:${user.id}`);
+            } else if (redisOrgId) {
+              console.log("[JWT] Redis org_context not in user's orgs, falling back");
+            }
+          } catch (error) {
+            console.error("[JWT] Error reading org context from Redis:", error);
           }
         } else {
-          console.log("[JWT] No session with activeOrganizationId found");
+          console.log("[JWT] Redis not available, skipping org context lookup");
         }
 
         // Use active org if set, otherwise fall back to first org
