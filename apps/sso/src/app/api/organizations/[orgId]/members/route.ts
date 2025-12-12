@@ -3,6 +3,10 @@
  *
  * Used by TaskFlow API to sync org members as workers.
  * Requires the user to be a member of the organization.
+ *
+ * Supports two auth methods:
+ * 1. Session cookies (for browser requests)
+ * 2. JWT Bearer token (for API-to-API requests from TaskFlow)
  */
 
 import { auth } from "@/lib/auth";
@@ -11,16 +15,39 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { member, user } from "@/lib/db/schema-export";
 import { eq, and } from "drizzle-orm";
+import { decodeJwt } from "jose";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
+  const headersList = await headers();
+  let userId: string | null = null;
+
+  // Try session auth first (browser requests)
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: headersList,
   });
 
-  if (!session) {
+  if (session) {
+    userId = session.user.id;
+  } else {
+    // Try JWT Bearer token (API-to-API requests)
+    const authHeader = headersList.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.slice(7);
+        const payload = decodeJwt(token);
+        // JWT 'sub' claim contains the user ID
+        userId = payload.sub as string || null;
+        console.log("[Members API] JWT auth - user:", userId);
+      } catch (e) {
+        console.error("[Members API] JWT decode failed:", e);
+      }
+    }
+  }
+
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -31,7 +58,7 @@ export async function GET(
     const userMembership = await db.query.member.findFirst({
       where: and(
         eq(member.organizationId, orgId),
-        eq(member.userId, session.user.id)
+        eq(member.userId, userId)
       ),
     });
 
