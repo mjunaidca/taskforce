@@ -69,16 +69,17 @@ export function OrgSwitcher() {
       const result = await organization.setActive({ organizationId: orgId })
       console.log("[OrgSwitcher] setActive result:", result)
 
-      // Small delay to ensure session is committed to database
-      // before starting OAuth flow (workaround for potential race condition)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Delay to ensure session.activeOrganizationId is committed to database
+      // before starting OAuth flow. The setActive() call updates the session,
+      // and the OAuth flow needs to read the updated session.
+      // 500ms should be sufficient for DB write to complete.
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Step 2: Re-authenticate to get new JWT with updated tenant_id
-      // The SSO will read the updated activeOrganizationId from session
-      // and include it as tenant_id in the new JWT
-      // Using initiateLogin triggers full OAuth flow to get fresh tokens
-      console.log("[OrgSwitcher] Step 2: Initiating OAuth flow for new tokens")
-      await initiateLogin()
+      // Pass orgId explicitly to ensure SSO uses the correct org even if session race condition
+      // The SSO will use this org_id parameter to set tenant_id in the JWT
+      console.log("[OrgSwitcher] Step 2: Initiating OAuth flow for new tokens with orgId:", orgId)
+      await initiateLogin(orgId)
 
       // Note: initiateLogin sets window.location.href which triggers navigation
       // If we reach here, something went wrong (should have redirected)

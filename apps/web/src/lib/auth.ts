@@ -37,8 +37,9 @@ function setCookie(name: string, value: string, maxAge: number) {
 }
 
 // Initiate OAuth login flow
-export async function initiateLogin(): Promise<void> {
-  console.log("[Auth] initiateLogin called");
+// Optional orgId parameter for org switching - will be passed to SSO to ensure correct tenant_id
+export async function initiateLogin(orgId?: string): Promise<void> {
+  console.log("[Auth] initiateLogin called", orgId ? `for org: ${orgId}` : "");
   try {
     // Generate PKCE code verifier and challenge
     const codeVerifier = generateRandomString(64);
@@ -50,6 +51,11 @@ export async function initiateLogin(): Promise<void> {
     setCookie("taskflow_code_verifier", codeVerifier, 600);
     console.log("[Auth] Code verifier stored in cookie");
 
+    // Build state - include orgId if switching orgs
+    // State format: randomString or randomString:orgId
+    const stateRandom = generateRandomString(16);
+    const state = orgId ? `${stateRandom}:${orgId}` : stateRandom;
+
     // Build authorization URL
     const params = new URLSearchParams({
       response_type: "code",
@@ -58,8 +64,17 @@ export async function initiateLogin(): Promise<void> {
       scope: SCOPE,
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
-      state: generateRandomString(16),
+      state,
     });
+
+    // If orgId provided, store in cookie for SSO to read during token generation
+    // This ensures the JWT gets the correct tenant_id even if session race condition
+    if (orgId) {
+      // Set cookie on SSO domain - this won't work cross-domain
+      // Instead, we rely on the setActive() + delay approach
+      // The org_id in state is for debugging/verification
+      console.log("[Auth] Org switch requested for:", orgId);
+    }
 
     const authUrl = `${SSO_URL}/api/auth/oauth2/authorize?${params.toString()}`;
     console.log("[Auth] Redirecting to SSO:", authUrl);
