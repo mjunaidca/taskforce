@@ -24,38 +24,17 @@ import {
   LayoutGrid,
   Sparkles,
   Zap,
-  CheckSquare,
-  AlertCircle,
   Activity,
   Cpu,
   Terminal,
-  Clock,
   Radio,
-  Settings,
   Loader2,
-  Box,
   Plus,
-  BarChart3
 } from "lucide-react";
 
 const isBrowser = typeof window !== "undefined";
 
 // --- Components ---
-
-// --- Components ---
-
-const TelemetryCard = ({ label, value, icon: Icon, color, trend }: any) => (
-  <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm border-l-2 p-4 rounded-r-xl transition-all group duration-300 border-transparent hover:border-ifk-cyan-500/50">
-    <div className="flex justify-between items-start mb-2">
-      <div className={`p-1.5 rounded-lg ${color} bg-opacity-0 group-hover:bg-opacity-10 text-opacity-100 transition-all`}>
-        <Icon className={`h-4 w-4 ${color.replace('bg-', 'text-')}`} />
-      </div>
-      {trend && <span className="text-[10px] font-mono text-ifk-cyan-400">{trend}</span>}
-    </div>
-    <div className="text-2xl font-mono font-bold text-white mb-1">{value}</div>
-    <div className="text-[10px] uppercase tracking-widest text-ifk-gray-400 font-medium">{label}</div>
-  </div>
-);
 
 const AgentAvatar = ({ name, role, status, type }: any) => (
   <div className="flex items-center gap-3 p-3 rounded-xl bg-ifk-gray-900/30 border border-ifk-gray-800/50 hover:bg-ifk-gray-800/50 transition-all cursor-pointer group">
@@ -90,7 +69,7 @@ const WorkspaceContent = () => {
   const [isTyping, setIsTyping] = useState(false);
 
   // V3 State: Layout & Voice
-  const [isLeftOpen, setIsLeftOpen] = useState(true);
+  const [isLeftOpen, setIsLeftOpen] = useState(false);
   const [isRightOpen, setIsRightOpen] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
@@ -416,28 +395,49 @@ const WorkspaceContent = () => {
         {/* Left HUD (Collapsible) - Slimmer & transparent */}
         <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isLeftOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
           <div className="h-full bg-gradient-to-r from-black/40 to-transparent p-4 flex flex-col gap-4">
-            {/* Telemetry Panel */}
-            {/* Telemetry Panel */}
+            {/* Activity Feed Panel */}
             <div className="flex-1 bg-ifk-gray-900/20 backdrop-blur-xl border border-ifk-gray-800 rounded-2xl p-4 flex flex-col relative group overflow-hidden min-h-0">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-ifk-cyan-500/50 to-transparent opacity-30" />
 
               <h2 className="text-xs font-mono font-bold text-ifk-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                 <Radio className="h-3 w-3 text-ifk-cyan-500 animate-pulse" />
-                Live Telemetry
+                Activity Feed
               </h2>
 
-              <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-2">
-                <TelemetryCard label="Efficiency" value="98%" icon={BarChart3} color="bg-emerald-500" trend="+2%" />
-                <TelemetryCard label="Active Units" value={activeAgents.length.toString()} icon={Box} color="bg-ifk-cyan-500" />
-                <TelemetryCard label="Blockers" value="0" icon={AlertCircle} color="bg-red-500" />
-                <TelemetryCard label="CPU Load" value={`${Math.floor(Math.random() * 30 + 10)}%`} icon={Zap} color="bg-amber-500" />
+              <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-1">
+                {recentTasks.length === 0 ? (
+                  <div className="text-center py-8 text-ifk-gray-500 font-mono text-xs">
+                    No recent activity
+                  </div>
+                ) : (
+                  recentTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-start gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer text-xs"
+                      onClick={() => window.location.href = `/tasks/${task.id}`}
+                    >
+                      <span className="text-ifk-cyan-500 shrink-0">→</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-300 truncate">{task.title}</p>
+                        <p className="text-ifk-gray-500 text-[10px] font-mono">
+                          {task.status.toUpperCase()}
+                          {task.assignee_handle && ` • @${task.assignee_handle}`}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="pt-4 border-t border-ifk-gray-800/50 shrink-0 mt-auto">
-                <div className="text-[10px] text-ifk-gray-500 font-mono mb-1">SYSTEM STATUS</div>
-                <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  OPERATIONAL
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-emerald-400 font-mono text-[10px]">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {activeAgents.length} UNITS ONLINE
+                  </div>
+                  <a href="/audit" className="text-[10px] text-ifk-cyan-500 hover:text-ifk-cyan-400 font-mono">
+                    FULL LOG →
+                  </a>
                 </div>
               </div>
             </div>
