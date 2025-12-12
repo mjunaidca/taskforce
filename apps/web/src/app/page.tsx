@@ -400,8 +400,9 @@ export default function Home() {
               </svg>
               GitHub
             </a>
-            <Button onClick={handleGetStarted} className="bg-white text-black hover:bg-ifk-cyan-400 hover:text-black transition-all font-bold rounded-lg px-5 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]">
-              Launch Workspace
+            <Button onClick={handleGetStarted} className="bg-white text-black hover:bg-ifk-cyan-400 hover:text-black transition-all font-bold rounded-lg px-3 md:px-5 text-sm md:text-base shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+              <span className="hidden sm:inline">Launch Workspace</span>
+              <span className="sm:hidden">Launch</span>
             </Button>
           </div>
         </div>
