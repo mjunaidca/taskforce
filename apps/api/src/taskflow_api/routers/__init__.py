@@ -1,6 +1,6 @@
 """FastAPI routers."""
 
-from . import agents, audit, health, jobs, members, projects, tasks
+from . import agents, audit, health, jobs, members, projects, tasks, workers
 
 __all__ = [
     "agents",
@@ -10,4 +10,5 @@ __all__ = [
     "members",
     "projects",
     "tasks",
+    "workers",
 ]

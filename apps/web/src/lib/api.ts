@@ -296,6 +296,31 @@ class ApiClient {
       method: "POST",
     });
   }
+
+  // Workers API
+  async getWorkers(): Promise<{
+    org_members: Array<{
+      user_id: string;
+      email: string;
+      name: string;
+      image: string | null;
+      org_role: string;
+      projects: Array<{ id: number; name: string; role: string }>;
+      has_project_access: boolean;
+    }>;
+    agents: Array<{
+      id: number;
+      handle: string;
+      name: string;
+      type: string;
+      description: string | null;
+    }>;
+    total_members: number;
+    total_agents: number;
+    unassigned_count: number;
+  }> {
+    return this.request("/workers");
+  }
 }
 
 // Export singleton instance

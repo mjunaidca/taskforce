@@ -17,7 +17,7 @@ load_dotenv()
 from .chatkit_store import RequestContext  # noqa: E402
 from .config import settings  # noqa: E402
 from .database import create_db_and_tables  # noqa: E402
-from .routers import agents, audit, health, jobs, members, projects, tasks  # noqa: E402
+from .routers import agents, audit, health, jobs, members, projects, tasks, workers  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
@@ -132,6 +132,7 @@ app.include_router(agents.router, prefix="/api/workers/agents")
 app.include_router(tasks.router)  # Has its own prefixes defined
 app.include_router(audit.router, prefix="/api")
 app.include_router(jobs.router)  # Dapr Jobs callbacks at /api/jobs
+app.include_router(workers.router, prefix="/api/workers")  # Worker sync operations
 
 
 @app.post("/chatkit")

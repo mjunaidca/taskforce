@@ -1,9 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { api } from "@/lib/api"
-import { ProjectRead, MemberRead } from "@/types"
+import { ProjectRead } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,46 +16,60 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Users, Bot, User, Search, ArrowRight, UserPlus } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Users,
+  User,
+  Search,
+  UserPlus,
+  AlertTriangle,
+  Plus,
+  Shield,
+  Crown,
+  CheckCircle2,
+} from "lucide-react"
 
-interface WorkerWithProjects extends MemberRead {
-  projects: string[]
+interface OrgMember {
+  user_id: string
+  email: string
+  name: string
+  image: string | null
+  org_role: string
+  projects: Array<{ id: number; name: string; role: string }>
+  has_project_access: boolean
 }
 
 export default function WorkersPage() {
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([])
   const [projects, setProjects] = useState<ProjectRead[]>([])
-  const [workers, setWorkers] = useState<WorkerWithProjects[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [unassignedCount, setUnassignedCount] = useState(0)
+  const [totalMembers, setTotalMembers] = useState(0)
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
-        const projectsData = await api.getProjects()
+
+        // Fetch org members and projects in parallel
+        const [workersData, projectsData] = await Promise.all([
+          api.getWorkers(),
+          api.getProjects(),
+        ])
+
+        setOrgMembers(workersData.org_members)
+        setUnassignedCount(workersData.unassigned_count)
+        setTotalMembers(workersData.total_members)
         setProjects(projectsData)
-
-        // Aggregate workers from all projects
-        const workerMap = new Map<number, WorkerWithProjects>()
-
-        for (const project of projectsData) {
-          const members = await api.getProjectMembers(project.id)
-          for (const member of members) {
-            if (workerMap.has(member.worker_id)) {
-              workerMap.get(member.worker_id)!.projects.push(project.name)
-            } else {
-              workerMap.set(member.worker_id, {
-                ...member,
-                projects: [project.name],
-              })
-            }
-          }
-        }
-
-        setWorkers(Array.from(workerMap.values()))
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load workers")
+        setError(err instanceof Error ? err.message : "Failed to load team members")
       } finally {
         setLoading(false)
       }
@@ -65,44 +78,84 @@ export default function WorkersPage() {
     fetchData()
   }, [])
 
-  const filteredWorkers = workers.filter(
-    (worker) =>
-      worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      worker.handle.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleAddToProject = async (userId: string, projectId: number) => {
+    try {
+      await api.addProjectMember(projectId, { user_id: userId })
+      // Refresh data
+      const workersData = await api.getWorkers()
+      setOrgMembers(workersData.org_members)
+      setUnassignedCount(workersData.unassigned_count)
+    } catch (err) {
+      console.error("Failed to add member to project:", err)
+    }
+  }
+
+  const filteredMembers = orgMembers.filter(
+    (member) =>
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const humans = filteredWorkers.filter((w) => w.type === "human")
-  const agents = filteredWorkers.filter((w) => w.type === "agent")
+  const assignedCount = totalMembers - unassignedCount
+
+  const getOrgRoleIcon = (role: string) => {
+    switch (role) {
+      case "owner":
+        return <Crown className="h-3 w-3" />
+      case "admin":
+        return <Shield className="h-3 w-3" />
+      default:
+        return null
+    }
+  }
+
+  const getOrgRoleColor = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "border-yellow-500/30 text-yellow-600 bg-yellow-500/5"
+      case "admin":
+        return "border-blue-500/30 text-blue-600 bg-blue-500/5"
+      default:
+        return ""
+    }
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Workers</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Team</h1>
           <p className="text-muted-foreground mt-1">
-            View all team members and AI agents across your projects
+            Manage your organization members and their project access
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <a
-              href={`${process.env.NEXT_PUBLIC_SSO_URL || 'http://localhost:3001'}/account/organizations`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite Team Member
-            </a>
-          </Button>
-          <Button asChild className="btn-glow">
-            <Link href="/agents/new">
-              <Bot className="mr-2 h-4 w-4" />
-              Register Agent
-            </Link>
-          </Button>
-        </div>
+        <Button variant="outline" asChild>
+          <a
+            href={`${process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001"}/account/organizations`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite to Org
+          </a>
+        </Button>
       </div>
+
+      {/* Unassigned Warning */}
+      {unassignedCount > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">
+              {unassignedCount} member{unassignedCount > 1 ? "s" : ""} without project access
+            </p>
+            <p className="text-sm opacity-80">
+              These org members can&apos;t access any projects yet. Add them to a project below.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="flex items-center gap-4">
@@ -118,42 +171,57 @@ export default function WorkersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="card-interactive">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{humans.length}</div>
-            <p className="text-xs text-muted-foreground">Human workers</p>
+            <div className="text-2xl font-bold">{totalMembers}</div>
+            <p className="text-xs text-muted-foreground">People in your organization</p>
           </CardContent>
         </Card>
 
         <Card className="card-interactive">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Agents</CardTitle>
-            <Bot className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">With Access</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{agents.length}</div>
-            <p className="text-xs text-muted-foreground">Registered agents</p>
+            <div className="text-2xl font-bold text-green-600">{assignedCount}</div>
+            <p className="text-xs text-muted-foreground">Assigned to projects</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`card-interactive ${unassignedCount > 0 ? "border-amber-500/30" : ""}`}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Access</CardTitle>
+            <AlertTriangle
+              className={`h-4 w-4 ${unassignedCount > 0 ? "text-amber-500" : "text-muted-foreground"}`}
+            />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${unassignedCount > 0 ? "text-amber-500" : ""}`}>
+              {unassignedCount}
+            </div>
+            <p className="text-xs text-muted-foreground">Need project access</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Workers Table */}
+      {/* Team Members Table */}
       <Card className="card-elevated">
         <CardHeader>
-          <CardTitle>All Workers</CardTitle>
+          <CardTitle>Team Members</CardTitle>
           <CardDescription>
-            Humans and AI agents are equal workers - both appear here
+            People in your organization. Assign them to projects to grant access.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="p-6 space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
@@ -161,97 +229,118 @@ export default function WorkersPage() {
             <div className="p-6 text-center">
               <p className="text-destructive">{error}</p>
             </div>
-          ) : filteredWorkers.length === 0 ? (
+          ) : filteredMembers.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium">No workers found</h3>
+              <h3 className="text-lg font-medium">No members found</h3>
               <p className="text-muted-foreground mt-1">
-                {searchQuery ? "Try a different search term" : "No workers in your projects yet"}
+                {searchQuery ? "Try a different search term" : "Invite people to your organization"}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Worker</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Projects</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Org Role</TableHead>
+                  <TableHead>Project Access</TableHead>
+                  <TableHead className="w-[140px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWorkers.map((worker) => (
-                  <TableRow key={worker.worker_id}>
+                {filteredMembers.map((member) => (
+                  <TableRow
+                    key={member.user_id}
+                    className={!member.has_project_access ? "bg-amber-500/5" : ""}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            worker.type === "agent" ? "bg-primary/10" : "bg-muted"
-                          }`}
-                        >
-                          {worker.type === "agent" ? (
-                            <Bot className="h-5 w-5 text-primary" />
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                          {member.image ? (
+                            <img
+                              src={member.image}
+                              alt={member.name}
+                              className="h-10 w-10 rounded-full"
+                            />
                           ) : (
                             <User className="h-5 w-5" />
                           )}
                         </div>
                         <div>
-                          <p className="font-medium">{worker.name}</p>
-                          <p
-                            className={`text-sm ${
-                              worker.type === "agent" ? "text-primary" : "text-muted-foreground"
-                            }`}
-                          >
-                            {worker.handle}
-                          </p>
+                          <p className="font-medium">{member.name}</p>
+                          <p className="text-sm text-muted-foreground">{member.email}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          worker.type === "agent"
-                            ? "border-primary/30 text-primary bg-primary/5"
-                            : ""
-                        }
-                      >
-                        {worker.type === "agent" ? (
-                          <>
-                            <Bot className="mr-1 h-3 w-3" />
-                            Agent
-                          </>
-                        ) : (
-                          <>
-                            <User className="mr-1 h-3 w-3" />
-                            Human
-                          </>
-                        )}
+                      <Badge variant="outline" className={getOrgRoleColor(member.org_role)}>
+                        {getOrgRoleIcon(member.org_role)}
+                        <span className={getOrgRoleIcon(member.org_role) ? "ml-1" : ""}>
+                          {member.org_role}
+                        </span>
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {worker.projects.slice(0, 3).map((project, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {project}
-                          </Badge>
-                        ))}
-                        {worker.projects.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{worker.projects.length - 3}
-                          </Badge>
-                        )}
-                      </div>
+                      {member.has_project_access ? (
+                        <div className="flex flex-wrap gap-1">
+                          {member.projects.slice(0, 3).map((project) => (
+                            <Badge key={project.id} variant="secondary" className="text-xs">
+                              {project.name}
+                              {project.role === "owner" && (
+                                <Crown className="ml-1 h-3 w-3 text-yellow-500" />
+                              )}
+                            </Badge>
+                          ))}
+                          {member.projects.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{member.projects.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500/30 text-amber-600 bg-amber-500/5"
+                        >
+                          <AlertTriangle className="mr-1 h-3 w-3" />
+                          No access
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {worker.type === "agent" && (
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/agents/${worker.worker_id}`}>
-                            View
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Plus className="mr-1 h-3 w-3" />
+                            Add to Project
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {projects.length === 0 ? (
+                            <DropdownMenuItem disabled>No projects available</DropdownMenuItem>
+                          ) : (
+                            projects.map((project) => {
+                              const alreadyMember = member.projects.some(
+                                (p) => p.id === project.id
+                              )
+                              return (
+                                <DropdownMenuItem
+                                  key={project.id}
+                                  disabled={alreadyMember}
+                                  onClick={() => handleAddToProject(member.user_id, project.id)}
+                                >
+                                  {project.name}
+                                  {alreadyMember && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (already member)
+                                    </span>
+                                  )}
+                                </DropdownMenuItem>
+                              )
+                            })
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
