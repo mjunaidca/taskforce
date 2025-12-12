@@ -168,28 +168,24 @@ export const TRUSTED_CLIENTS = [
       allowedGrantTypes: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
     },
   },
-  // NOTE: Gemini CLI is NOT supported
-  // Gemini CLI uses random ephemeral ports (49152-65535) for OAuth callbacks
-  // and ignores any redirectUri configuration specified in settings.json.
-  // Without allowDynamicClientRegistration=true or a validateRedirectUri hook
-  // in Better Auth, we cannot support Gemini CLI's Authorization Code flow.
-  //
-  // If Better Auth adds a validateRedirectUri hook for RFC 8252 loopback validation,
-  // we can re-enable this client with localhost/* redirect URIs.
-  // See: https://github.com/better-auth/better-auth/issues
-  //
-  // {
-  //   clientId: "gemini-cli",
-  //   name: "Google Gemini CLI",
-  //   type: "public" as const,
-  //   redirectUrls: ["http://localhost/oauth/callback"], // Would need wildcard port support
-  //   disabled: false,
-  //   skipConsent: true,
-  //   metadata: {
-  //     description: "Google's Gemini CLI for AI-assisted development",
-  //     allowedGrantTypes: ["authorization_code", "refresh_token"],
-  //   },
-  // }
+  {
+    clientId: "gemini-cli",
+    name: "Google Gemini CLI",
+    type: "public" as const,
+    // Gemini CLI respects redirectUri config when specified WITHOUT a port
+    // User must set redirectUri: "http://localhost/oauth/callback" in their .gemini/settings.json
+    // Gemini CLI will then start a server on port 80 (or the default HTTP port)
+    redirectUrls: [
+      "http://localhost/oauth/callback",
+      "http://127.0.0.1/oauth/callback",
+    ],
+    disabled: false,
+    skipConsent: true,
+    metadata: {
+      description: "Google's Gemini CLI for AI-assisted development",
+      allowedGrantTypes: ["authorization_code", "refresh_token"],
+    },
+  }
   // {
   //   clientId: "ai-native-public-client",
   //   name: "AI Native Platform",
