@@ -152,7 +152,7 @@ function MCPConfigCard({ client }: { client: MCPClientConfig }) {
 }
 
 export default function ConnectPage() {
-    const { user } = useAuth()
+    const { user, isLoading: authLoading, isAuthenticated } = useAuth()
     const [agents, setAgents] = useState<WorkerRead[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -241,8 +241,13 @@ export default function ConnectPage() {
         }
     ]
 
-    // Fetch Agents on Mount
+    // Fetch Agents - wait for auth to be ready
     useEffect(() => {
+        // Wait for auth to be ready before making API calls
+        if (authLoading || !isAuthenticated) {
+            return
+        }
+
         async function fetchAgents() {
             try {
                 const data = await api.getAgents()
@@ -254,7 +259,7 @@ export default function ConnectPage() {
             }
         }
         fetchAgents()
-    }, [])
+    }, [authLoading, isAuthenticated])
 
     const resolveTypeIcon = (type: string | null) => {
         if (type === "claude") return <Cpu className="h-5 w-5 text-purple-500" />

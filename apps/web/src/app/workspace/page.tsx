@@ -70,11 +70,21 @@ const WorkspaceContent = () => {
   const [isTyping, setIsTyping] = useState(false);
 
   // V3 State: Layout & Voice
-  const [isLeftOpen, setIsLeftOpen] = useState(false);
-  const [isRightOpen, setIsRightOpen] = useState(true);
+  // Desktop: Left panel (activity) open by default, right panel (agents) closed
+  // Mobile: Both closed for cleaner view
+  const [isLeftOpen, setIsLeftOpen] = useState(true);
+  const [isRightOpen, setIsRightOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [voiceText, setVoiceText] = useState("");
+
+  // Close panels on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setIsLeftOpen(false);
+      setIsRightOpen(false);
+    }
+  }, []);
 
   // --- ChatKit Integration ---
 

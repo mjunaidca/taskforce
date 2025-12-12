@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,7 @@ export default function ProjectSettingsPage() {
   const router = useRouter()
   const params = useParams()
   const projectId = Number(params.id)
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
 
   const [project, setProject] = useState<ProjectRead | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,6 +42,11 @@ export default function ProjectSettingsPage() {
   const [description, setDescription] = useState("")
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchProject() {
       try {
         setLoading(true)
@@ -57,7 +64,7 @@ export default function ProjectSettingsPage() {
     if (projectId) {
       fetchProject()
     }
-  }, [projectId])
+  }, [projectId, authLoading, isAuthenticated])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

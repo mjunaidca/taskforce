@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead, MemberRead, TaskPriority, RecurrencePattern, RecurrenceTrigger, RECURRENCE_PATTERNS, RECURRENCE_TRIGGERS } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,7 @@ export default function NewTaskPage() {
   const router = useRouter()
   const params = useParams()
   const projectId = Number(params.id)
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
 
   const [project, setProject] = useState<ProjectRead | null>(null)
   const [allProjects, setAllProjects] = useState<ProjectRead[]>([])
@@ -49,6 +51,11 @@ export default function NewTaskPage() {
   const [cloneSubtasks, setCloneSubtasks] = useState(false)
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchData() {
       try {
         setLoading(true)
@@ -68,7 +75,7 @@ export default function NewTaskPage() {
     }
 
     fetchData()
-  }, [selectedProjectId])
+  }, [selectedProjectId, authLoading, isAuthenticated])
 
   const handleProjectChange = (newProjectId: string) => {
     const id = Number(newProjectId)
