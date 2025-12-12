@@ -633,12 +633,25 @@ export const auth = betterAuth({
         // Get active organization from user's most recent session
         // This allows org switcher to update tenant_id in JWT
         let activeOrgId: string | null = null;
-        const userSessions = await db
-          .select({ activeOrganizationId: schema.session.activeOrganizationId })
+
+        // Query ALL sessions for this user to debug
+        const allUserSessions = await db
+          .select({
+            id: schema.session.id,
+            activeOrganizationId: schema.session.activeOrganizationId,
+            updatedAt: schema.session.updatedAt,
+          })
           .from(schema.session)
           .where(eq(schema.session.userId, user.id))
-          .orderBy(desc(schema.session.updatedAt))
-          .limit(1);
+          .orderBy(desc(schema.session.updatedAt));
+
+        console.log("[JWT] All sessions for user:", user.id);
+        console.log("[JWT] Session count:", allUserSessions.length);
+        allUserSessions.forEach((s, i) => {
+          console.log(`[JWT] Session ${i}: id=${s.id?.slice(0, 8)}..., activeOrgId=${s.activeOrganizationId}, updated=${s.updatedAt}`);
+        });
+
+        const userSessions = allUserSessions.slice(0, 1);
 
         if (userSessions.length > 0 && userSessions[0].activeOrganizationId) {
           // Verify the active org is one the user actually belongs to
@@ -647,7 +660,10 @@ export const auth = betterAuth({
             console.log("[JWT] Using activeOrganizationId from session:", activeOrgId);
           } else {
             console.log("[JWT] Session activeOrganizationId not in user's orgs, falling back");
+            console.log("[JWT] organizationIds:", organizationIds);
           }
+        } else {
+          console.log("[JWT] No session with activeOrganizationId found");
         }
 
         // Use active org if set, otherwise fall back to first org

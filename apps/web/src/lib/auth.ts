@@ -38,14 +38,17 @@ function setCookie(name: string, value: string, maxAge: number) {
 
 // Initiate OAuth login flow
 export async function initiateLogin(): Promise<void> {
+  console.log("[Auth] initiateLogin called");
   try {
     // Generate PKCE code verifier and challenge
     const codeVerifier = generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
+    console.log("[Auth] PKCE generated, code_challenge:", codeChallenge.substring(0, 20) + "...");
 
     // Store code verifier in cookie (will be read by API route)
     // 10 minute expiry - enough for OAuth flow
     setCookie("taskflow_code_verifier", codeVerifier, 600);
+    console.log("[Auth] Code verifier stored in cookie");
 
     // Build authorization URL
     const params = new URLSearchParams({
@@ -58,13 +61,17 @@ export async function initiateLogin(): Promise<void> {
       state: generateRandomString(16),
     });
 
+    const authUrl = `${SSO_URL}/api/auth/oauth2/authorize?${params.toString()}`;
+    console.log("[Auth] Redirecting to SSO:", authUrl);
+
     // Redirect to SSO authorization endpoint
-    window.location.href = `${SSO_URL}/api/auth/oauth2/authorize?${params.toString()}`;
+    window.location.href = authUrl;
   } catch (error) {
     // Alert user about the error (crypto.subtle not available, etc.)
     const message = error instanceof Error ? error.message : "Failed to initiate login";
     alert(message);
     console.error("[Auth] Login initiation failed:", error);
+    throw error; // Re-throw so caller knows it failed
   }
 }
 

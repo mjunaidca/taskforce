@@ -63,17 +63,24 @@ export function OrgSwitcher() {
     setError(null)
 
     try {
+      console.log("[OrgSwitcher] Step 1: Calling setActive for org:", orgId)
+
       // Step 1: Update SSO session's active organization
-      await organization.setActive({ organizationId: orgId })
+      const result = await organization.setActive({ organizationId: orgId })
+      console.log("[OrgSwitcher] setActive result:", result)
 
       // Step 2: Re-authenticate to get new JWT with updated tenant_id
       // The SSO will read the updated activeOrganizationId from session
       // and include it as tenant_id in the new JWT
       // Using initiateLogin triggers full OAuth flow to get fresh tokens
+      console.log("[OrgSwitcher] Step 2: Initiating OAuth flow for new tokens")
+      await initiateLogin()
+
       // Note: initiateLogin sets window.location.href which triggers navigation
-      initiateLogin()
+      // If we reach here, something went wrong (should have redirected)
+      console.error("[OrgSwitcher] initiateLogin did not redirect - unexpected")
     } catch (err) {
-      console.error("Failed to switch organization:", err)
+      console.error("[OrgSwitcher] Failed to switch organization:", err)
       setError(err instanceof Error ? err.message : "Failed to switch organization")
       setIsSwitching(false)
     }
