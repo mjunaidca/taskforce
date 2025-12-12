@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead, AuditRead } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ import {
 } from "lucide-react"
 
 function AuditContent() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const searchParams = useSearchParams()
   const taskIdParam = searchParams.get("task")
 
@@ -40,6 +42,11 @@ function AuditContent() {
   const [selectedProject, setSelectedProject] = useState<string>("all")
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchData() {
       try {
         setLoading(true)
@@ -79,7 +86,7 @@ function AuditContent() {
     }
 
     fetchData()
-  }, [selectedProject, taskIdParam])
+  }, [authLoading, isAuthenticated, selectedProject, taskIdParam])
 
   const getActionIcon = (action: string) => {
     if (action.includes("created")) return <Plus className="h-4 w-4" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -34,12 +35,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export default function ProjectsPage() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [projects, setProjects] = useState<ProjectRead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchProjects() {
       try {
         setLoading(true)
@@ -53,7 +60,7 @@ export default function ProjectsPage() {
     }
 
     fetchProjects()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
   const filteredProjects = projects.filter(
     (project) =>

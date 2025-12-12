@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useDeferredValue } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead, TaskListItem, TaskStatus, TaskPriority } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,7 @@ import {
 import { Loader2, Trash2 } from "lucide-react"
 
 function TasksContent() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const searchParams = useSearchParams()
   const projectIdParam = searchParams.get("project")
 
@@ -82,6 +84,11 @@ function TasksContent() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchProjects() {
       try {
         const data = await api.getProjects()
@@ -129,7 +136,7 @@ function TasksContent() {
         setLoading(false)
       }
     })
-  }, [selectedProject, statusFilter, priorityFilter, deferredSearch, sortBy, sortOrder])
+  }, [authLoading, isAuthenticated, selectedProject, statusFilter, priorityFilter, deferredSearch, sortBy, sortOrder])
 
   // REMOVED: Client-side filtering - now done server-side via API
   // const filteredTasks = tasks.filter(...)

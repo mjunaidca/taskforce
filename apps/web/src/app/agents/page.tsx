@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { WorkerRead } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -26,12 +27,18 @@ import {
 import { Bot, Plus, Search, MoreHorizontal, Zap, CheckCircle2, Clock, Terminal, Key } from "lucide-react"
 
 export default function AgentsPage() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [agents, setAgents] = useState<WorkerRead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchAgents() {
       try {
         setLoading(true)
@@ -45,7 +52,7 @@ export default function AgentsPage() {
     }
 
     fetchAgents()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
   const filteredAgents = agents.filter(
     (agent) =>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAuth } from "@/components/providers/auth-provider"
 import { api } from "@/lib/api"
 import { ProjectRead } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -45,6 +46,7 @@ interface OrgMember {
 }
 
 export default function WorkersPage() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([])
   const [projects, setProjects] = useState<ProjectRead[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,6 +56,11 @@ export default function WorkersPage() {
   const [totalMembers, setTotalMembers] = useState(0)
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     async function fetchData() {
       try {
         setLoading(true)
@@ -76,7 +83,7 @@ export default function WorkersPage() {
     }
 
     fetchData()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
   const handleAddToProject = async (userId: string, projectId: number) => {
     try {

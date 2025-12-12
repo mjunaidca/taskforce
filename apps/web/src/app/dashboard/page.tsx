@@ -37,7 +37,7 @@ function GlassCard({ children, className, ...props }: React.HTMLAttributes<HTMLD
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
   const router = useRouter()
   const [projects, setProjects] = useState<ProjectRead[]>([])
   const [recentTasks, setRecentTasks] = useState<TaskListItem[]>([])
@@ -46,6 +46,11 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
@@ -66,7 +71,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
   const stats = [
     {
