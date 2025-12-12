@@ -647,7 +647,7 @@ export const auth = betterAuth({
 
         console.log("[JWT] All sessions for user:", user.id);
         console.log("[JWT] Session count:", allUserSessions.length);
-        allUserSessions.forEach((s, i) => {
+        allUserSessions.forEach((s: { id: string; activeOrganizationId: string | null; updatedAt: Date | null }, i: number) => {
           console.log(`[JWT] Session ${i}: id=${s.id?.slice(0, 8)}..., activeOrgId=${s.activeOrganizationId}, updated=${s.updatedAt}`);
         });
 
