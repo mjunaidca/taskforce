@@ -69,14 +69,14 @@ export default function AgentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">AI Agents</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">AI Agents</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Manage your AI agents - they work alongside humans as equals
           </p>
         </div>
-        <Button asChild className="btn-glow">
+        <Button asChild className="btn-glow w-full sm:w-auto">
           <Link href="/agents/new">
             <Plus className="mr-2 h-4 w-4" />
             Register Agent
@@ -189,13 +189,14 @@ export default function AgentsPage() {
               )}
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Agent</TableHead>
+                  <TableHead className="min-w-[180px]">Agent</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Capabilities</TableHead>
-                  <TableHead>Registered</TableHead>
+                  <TableHead className="hidden sm:table-cell">Capabilities</TableHead>
+                  <TableHead className="hidden md:table-cell">Registered</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -221,7 +222,7 @@ export default function AgentsPage() {
                         {agent.agent_type || "custom"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="flex flex-wrap gap-1">
                         {agent.capabilities.slice(0, 3).map((cap, i) => (
                           <Badge key={i} variant="secondary" className="text-xs">
@@ -238,7 +239,7 @@ export default function AgentsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground hidden md:table-cell">
                       {new Date(agent.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
@@ -266,6 +267,7 @@ export default function AgentsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

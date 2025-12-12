@@ -115,10 +115,10 @@ function AuditContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Audit Log</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Track all actions by humans and AI agents
           </p>
         </div>
@@ -126,6 +126,7 @@ function AuditContent() {
           variant="outline"
           onClick={() => window.location.reload()}
           disabled={loading}
+          className="w-full sm:w-auto"
         >
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -263,7 +264,7 @@ function AuditContent() {
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">
                           {new Date(entry.created_at).toLocaleString()}
                         </span>
                       </div>

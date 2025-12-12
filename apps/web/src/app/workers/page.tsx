@@ -123,14 +123,14 @@ export default function WorkersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Team</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Manage your organization members and their project access
           </p>
         </div>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="w-full sm:w-auto">
           <a
             href={`${process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001"}/account/organizations`}
             target="_blank"
@@ -238,12 +238,13 @@ export default function WorkersPage() {
               </p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Org Role</TableHead>
-                  <TableHead>Project Access</TableHead>
+                  <TableHead className="min-w-[180px]">Member</TableHead>
+                  <TableHead className="hidden sm:table-cell">Org Role</TableHead>
+                  <TableHead className="min-w-[150px]">Project Access</TableHead>
                   <TableHead className="w-[140px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -272,7 +273,7 @@ export default function WorkersPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline" className={getOrgRoleColor(member.org_role)}>
                         {getOrgRoleIcon(member.org_role)}
                         <span className={getOrgRoleIcon(member.org_role) ? "ml-1" : ""}>
@@ -346,6 +347,7 @@ export default function WorkersPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

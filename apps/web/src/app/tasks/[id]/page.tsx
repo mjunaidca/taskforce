@@ -314,16 +314,16 @@ export default function TaskDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-1">
             <Link href="/tasks">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{task.title}</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold tracking-tight">{task.title}</h1>
               <Badge variant="outline" className={getStatusColor(task.status)}>
                 {getStatusIcon(task.status)}
                 <span className="ml-1">{task.status.replace("_", " ")}</span>
@@ -331,24 +331,24 @@ export default function TaskDetailPage() {
               {task.is_recurring && (
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                   <Repeat className="h-3 w-3 mr-1" />
-                  Recurring
+                  <span className="hidden sm:inline">Recurring</span>
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-sm">
               Task #{task.id} · Created{" "}
               {new Date(task.created_at).toLocaleDateString()}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openEditDialog}>
+        <div className="flex flex-col sm:flex-row gap-2 sm:ml-11">
+          <Button variant="outline" size="sm" onClick={openEditDialog} className="w-full sm:w-auto">
             <Pencil className="mr-2 h-4 w-4" />
             Edit
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive w-full sm:w-auto">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>

@@ -180,17 +180,17 @@ function TasksContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Tasks</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             View and manage tasks across all projects
           </p>
         </div>
         {projects.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="btn-glow">
+              <Button className="btn-glow w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 New Task
               </Button>
@@ -317,15 +317,16 @@ function TasksContent() {
               </p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Task</TableHead>
+                  <TableHead className="min-w-[200px]">Task</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Assignee</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Priority</TableHead>
+                  <TableHead className="hidden md:table-cell">Assignee</TableHead>
+                  <TableHead className="hidden lg:table-cell">Progress</TableHead>
+                  <TableHead className="hidden lg:table-cell">Due Date</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -361,12 +362,12 @@ function TasksContent() {
                         {task.status.replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline" className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {task.assignee_handle ? (
                         <div className="flex items-center gap-2">
                           {task.assignee_handle.includes("@claude") ||
@@ -382,7 +383,7 @@ function TasksContent() {
                         <span className="text-muted-foreground text-sm">Unassigned</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-20 bg-muted rounded-full overflow-hidden">
                           <div
@@ -395,7 +396,7 @@ function TasksContent() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground hidden lg:table-cell">
                       {task.due_date
                         ? new Date(task.due_date).toLocaleDateString()
                         : "-"}
@@ -435,6 +436,7 @@ function TasksContent() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

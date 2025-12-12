@@ -5,11 +5,11 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-          <Settings className="h-8 w-8" />
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+          <Settings className="h-6 w-6 sm:h-8 sm:w-8" />
           Settings
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
           Manage your account and application preferences
         </p>
       </div>

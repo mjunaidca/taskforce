@@ -254,29 +254,29 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild className="shrink-0">
             <Link href="/projects">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{project.name}</h1>
               {project.is_default && <Badge variant="outline">Default</Badge>}
             </div>
-            <p className="text-muted-foreground mt-1">{project.description || project.slug}</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base truncate">{project.description || project.slug}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
+        <div className="flex flex-col sm:flex-row gap-2 sm:ml-14">
+          <Button variant="outline" asChild className="w-full sm:w-auto">
             <Link href={`/projects/${project.id}/settings`}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </Link>
           </Button>
-          <Button asChild className="btn-glow">
+          <Button asChild className="btn-glow w-full sm:w-auto">
             <Link href={`/projects/${project.id}/tasks/new`}>
               <Plus className="mr-2 h-4 w-4" />
               New Task
@@ -525,14 +525,15 @@ export default function ProjectDetailPage() {
               </Button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Task</TableHead>
+                  <TableHead className="min-w-[150px]">Task</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Assignee</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead className="hidden sm:table-cell">Priority</TableHead>
+                  <TableHead className="hidden md:table-cell">Assignee</TableHead>
+                  <TableHead className="hidden lg:table-cell">Progress</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -552,19 +553,19 @@ export default function ProjectDetailPage() {
                         {task.status.replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline" className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {task.assignee_handle ? (
                         <span className="text-sm">{task.assignee_handle}</span>
                       ) : (
                         <span className="text-muted-foreground text-sm">Unassigned</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
                           <div
@@ -612,6 +613,7 @@ export default function ProjectDetailPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
