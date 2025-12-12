@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/components/providers/auth-provider";
 import { api } from "@/lib/api";
 import { Notification } from "@/types/notification";
 import { formatDistanceToNow } from "date-fns";
@@ -31,6 +32,7 @@ function getNotificationIcon(type: string) {
 }
 
 export function NotificationBell() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -88,7 +90,12 @@ export function NotificationBell() {
   };
 
   // Fetch unread count on mount and poll every 30 seconds
+  // Wait for auth to be ready before making API calls
   useEffect(() => {
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
+
     fetchUnreadCount();
 
     // Poll for new notifications every 30 seconds
@@ -97,14 +104,17 @@ export function NotificationBell() {
     }, 30000);
 
     return () => clearInterval(intervalId);
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, authLoading, isAuthenticated]);
 
   // Fetch full notifications when dropdown opens
   useEffect(() => {
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen, fetchNotifications]);
+  }, [isOpen, fetchNotifications, authLoading, isAuthenticated]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
