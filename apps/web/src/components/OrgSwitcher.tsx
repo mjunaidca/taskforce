@@ -69,6 +69,10 @@ export function OrgSwitcher() {
       const result = await organization.setActive({ organizationId: orgId })
       console.log("[OrgSwitcher] setActive result:", result)
 
+      // Small delay to ensure session is committed to database
+      // before starting OAuth flow (workaround for potential race condition)
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       // Step 2: Re-authenticate to get new JWT with updated tenant_id
       // The SSO will read the updated activeOrganizationId from session
       // and include it as tenant_id in the new JWT
