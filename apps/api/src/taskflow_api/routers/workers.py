@@ -7,7 +7,6 @@ Philosophy: Org membership ≠ Project access
 """
 
 import logging
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
