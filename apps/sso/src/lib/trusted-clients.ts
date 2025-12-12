@@ -176,8 +176,8 @@ export const TRUSTED_CLIENTS = [
     // User must set redirectUri: "http://localhost/oauth/callback" in their .gemini/settings.json
     // Gemini CLI will then start a server on port 80 (or the default HTTP port)
     redirectUrls: [
-      "http://localhost/oauth/callback",
       "http://127.0.0.1/oauth/callback",
+      "http://localhost/oauth/callback",
     ],
     disabled: false,
     skipConsent: true,
