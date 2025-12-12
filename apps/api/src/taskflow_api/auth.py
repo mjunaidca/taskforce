@@ -220,9 +220,14 @@ class CurrentUser:
         self.name: str = payload.get("name", "")
         self.role: str = payload.get("role", "user")
         # Extract tenant from multiple possible JWT claims
+        # organization_ids is an array, take the first one as active tenant
+        org_ids = payload.get("organization_ids") or []
         self.tenant_id: str | None = (
-            payload.get("tenant_id") or payload.get("organization_id") or None
+            payload.get("tenant_id")
+            or payload.get("organization_id")
+            or (org_ids[0] if org_ids else None)
         )
+        self.organization_ids: list[str] = org_ids if isinstance(org_ids, list) else []
         # OAuth client identity for audit trail (e.g., "@user via Claude Code")
         self.client_id: str | None = payload.get("client_id")
         self.client_name: str | None = payload.get("client_name")
@@ -272,7 +277,8 @@ async def get_current_user(
         try:
             payload = await verify_jwt(token)
             user = CurrentUser(payload)
-            logger.info("[AUTH] Authenticated via JWT: %s", user)
+            logger.info("[AUTH] Authenticated via JWT: %s, tenant_id=%s, org_ids=%s",
+                       user, user.tenant_id, user.organization_ids)
             return user
         except HTTPException:
             # JWT validation failed, try opaque as fallback
