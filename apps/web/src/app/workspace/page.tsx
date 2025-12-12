@@ -20,6 +20,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import {
   Bot,
+  Box,
   Command,
   LayoutGrid,
   Sparkles,
