@@ -45,8 +45,11 @@ interface OrgMember {
   has_project_access: boolean
 }
 
+// The default org contains all platform users - don't show team management for it
+const DEFAULT_ORG_ID = "taskflow-default-org-id"
+
 export default function WorkersPage() {
-  const { isLoading: authLoading, isAuthenticated } = useAuth()
+  const { isLoading: authLoading, isAuthenticated, user } = useAuth()
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([])
   const [projects, setProjects] = useState<ProjectRead[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,9 +58,18 @@ export default function WorkersPage() {
   const [unassignedCount, setUnassignedCount] = useState(0)
   const [totalMembers, setTotalMembers] = useState(0)
 
+  // Check if user is in the default public org
+  const isDefaultOrg = user?.tenant_id === DEFAULT_ORG_ID
+
   useEffect(() => {
     // Wait for auth to be ready before making API calls
     if (authLoading || !isAuthenticated) {
+      return
+    }
+
+    // Don't fetch workers for default org - it contains all platform users
+    if (isDefaultOrg) {
+      setLoading(false)
       return
     }
 
@@ -83,7 +95,7 @@ export default function WorkersPage() {
     }
 
     fetchData()
-  }, [authLoading, isAuthenticated])
+  }, [authLoading, isAuthenticated, isDefaultOrg])
 
   const handleAddToProject = async (userId: string, projectId: number) => {
     try {
@@ -125,6 +137,47 @@ export default function WorkersPage() {
       default:
         return ""
     }
+  }
+
+  // Show different UI for default org (public workspace)
+  if (isDefaultOrg) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Team</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            Create a private workspace to collaborate with your team
+          </p>
+        </div>
+
+        <Card className="card-elevated">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl">You&apos;re in the Public Workspace</CardTitle>
+            <CardDescription className="text-base max-w-md mx-auto">
+              The public workspace is shared by all TaskFlow users. To manage a private team, create your own organization.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4 pt-4">
+            <Button asChild size="lg">
+              <a
+                href={`${process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001"}/account/organizations`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Private Organization
+              </a>
+            </Button>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              Private organizations let you invite team members, manage access, and collaborate on projects together.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
