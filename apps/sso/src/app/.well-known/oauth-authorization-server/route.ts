@@ -26,7 +26,8 @@ export async function GET() {
 
     // Optional but recommended
     jwks_uri: `${BASE_URL}/api/auth/jwks`,
-    registration_endpoint: `${BASE_URL}/api/auth/oauth2/register`,
+    // NOTE: registration_endpoint removed - dynamic client registration is disabled
+    // All clients must be pre-registered in trusted-clients.ts and seeded to DB
     scopes_supported: ["openid", "profile", "email", "offline_access"],
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
