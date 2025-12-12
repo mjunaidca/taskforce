@@ -379,21 +379,39 @@ jobs:
               CORS_ORIGINS: "https://${{ vars.DOMAIN }},https://sso.${{ vars.DOMAIN }},https://api.${{ vars.DOMAIN }},https://mcp.${{ vars.DOMAIN }}"
           ENDOFVALUES
 
+          # Build image override args - only set tags for services that were actually built
+          IMAGE_ARGS=""
+
+          # Always set repositories
+          IMAGE_ARGS="$IMAGE_ARGS --set sso.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/sso"
+          IMAGE_ARGS="$IMAGE_ARGS --set api.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api"
+          IMAGE_ARGS="$IMAGE_ARGS --set web.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web"
+          IMAGE_ARGS="$IMAGE_ARGS --set mcpServer.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/mcp"
+          IMAGE_ARGS="$IMAGE_ARGS --set notificationService.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/notification"
+
+          # Only set tags for services that were built (or all on manual trigger)
+          if [ "${{ needs.changes.outputs.sso }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            IMAGE_ARGS="$IMAGE_ARGS --set sso.image.tag=${{ github.sha }}"
+          fi
+          if [ "${{ needs.changes.outputs.api }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            IMAGE_ARGS="$IMAGE_ARGS --set api.image.tag=${{ github.sha }}"
+          fi
+          if [ "${{ needs.changes.outputs.web }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            IMAGE_ARGS="$IMAGE_ARGS --set web.image.tag=${{ github.sha }}"
+          fi
+          if [ "${{ needs.changes.outputs.mcp }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            IMAGE_ARGS="$IMAGE_ARGS --set mcpServer.image.tag=${{ github.sha }}"
+          fi
+          if [ "${{ needs.changes.outputs.notification }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            IMAGE_ARGS="$IMAGE_ARGS --set notificationService.image.tag=${{ github.sha }}"
+          fi
+
           helm upgrade --install taskflow ./infrastructure/helm/taskflow \
             --namespace taskflow \
             --values infrastructure/helm/taskflow/values-cloud.yaml \
             --values /tmp/helm-overrides.yaml \
             --set global.imagePullSecrets[0].name=ghcr-secret \
-            --set "sso.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/sso" \
-            --set "sso.image.tag=${{ github.sha }}" \
-            --set "api.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api" \
-            --set "api.image.tag=${{ github.sha }}" \
-            --set "web.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web" \
-            --set "web.image.tag=${{ github.sha }}" \
-            --set "mcpServer.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/mcp" \
-            --set "mcpServer.image.tag=${{ github.sha }}" \
-            --set "notificationService.image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/notification" \
-            --set "notificationService.image.tag=${{ github.sha }}" \
+            $IMAGE_ARGS \
             --set managedServices.neon.enabled=true \
             --set "managedServices.neon.ssoDatabase=${{ secrets.NEON_SSO_DATABASE_URL }}" \
             --set "managedServices.neon.apiDatabase=${{ secrets.NEON_API_DATABASE_URL }}" \
