@@ -270,14 +270,17 @@ export default function NewTaskPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">Due Date & Time</Label>
                 <Input
                   id="dueDate"
-                  type="date"
+                  type="datetime-local"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   disabled={submitting}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Set when this task is due (reminders will be sent before this time)
+                </p>
               </div>
             </div>
 

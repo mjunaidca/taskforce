@@ -435,10 +435,10 @@ export default function TaskDetailPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editDueDate">Due Date</Label>
+                <Label htmlFor="editDueDate">Due Date & Time</Label>
                 <Input
                   id="editDueDate"
-                  type="date"
+                  type="datetime-local"
                   value={editDueDate}
                   onChange={(e) => setEditDueDate(e.target.value)}
                   disabled={saving}
@@ -583,10 +583,10 @@ export default function TaskDetailPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="subtaskDueDate">Due Date</Label>
+                        <Label htmlFor="subtaskDueDate">Due Date & Time</Label>
                         <Input
                           id="subtaskDueDate"
-                          type="date"
+                          type="datetime-local"
                           value={subtaskDueDate}
                           onChange={(e) => setSubtaskDueDate(e.target.value)}
                           disabled={addingSubtask}
