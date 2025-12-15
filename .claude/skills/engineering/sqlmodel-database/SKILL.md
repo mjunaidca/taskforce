@@ -592,6 +592,35 @@ await session.refresh(entity)  # Reattach
 print(entity.name)
 ```
 
+### 6. MissingGreenlet in log statements (sneaky!)
+
+**This is a common trap** - log statements that access ORM attributes after commit:
+
+```python
+# WRONG - logger.info triggers attribute access after commit!
+session.add(notification)
+await session.commit()
+logger.info("Created notification %d for %s", notification.id, notification.user_id)
+#                                              ^^^^^^^^^^^^^^^ MissingGreenlet!
+
+# CORRECT - refresh after commit before accessing any attributes
+session.add(notification)
+await session.commit()
+await session.refresh(notification)  # Reattach to session
+logger.info("Created notification %d for %s", notification.id, notification.user_id)
+
+# ALTERNATIVE - extract values before commit
+session.add(notification)
+await session.flush()  # Get ID without committing
+notif_id = notification.id  # Extract while attached
+user_id = notification.user_id
+await session.commit()
+logger.info("Created notification %d for %s", notif_id, user_id)
+```
+
+**Why this is sneaky**: The commit succeeds, data is saved, but then the log line crashes.
+The notification exists in the database, but you get an error in logs.
+
 ---
 
 ## Input Validation Patterns
