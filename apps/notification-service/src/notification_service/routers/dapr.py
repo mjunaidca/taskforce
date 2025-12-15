@@ -129,6 +129,7 @@ async def handle_reminders(
             )
             session.add(notification)
             await session.commit()
+            await session.refresh(notification)  # Refresh to get user_id without lazy load
             logger.info("[DAPR] Created reminder notification for user %s", notification.user_id)
 
         return {"status": "SUCCESS"}
