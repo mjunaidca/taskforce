@@ -180,7 +180,8 @@ async def list_workers(
             "handle": w.handle,
             "name": w.name,
             "type": w.type,
-            "description": w.description,
+            "agent_type": w.agent_type,
+            "capabilities": w.capabilities,
         }
         for w in result.all()
     ]
