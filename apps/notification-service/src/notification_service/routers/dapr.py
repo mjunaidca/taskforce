@@ -89,11 +89,16 @@ async def handle_reminders(
 ) -> dict:
     """Handle events from reminders topic.
 
-    Events: reminder.scheduled, reminder.sent
+    Events: reminder.due
     These are triggered by Dapr Jobs at exact times.
     """
     try:
-        event = await request.json()
+        raw_event = await request.json()
+        logger.info("[DAPR] Raw reminder event received: %s", raw_event)
+
+        # Dapr CloudEvent wraps our payload in "data" field
+        # Our payload has: {"event_type": ..., "data": ..., "timestamp": ...}
+        event = raw_event.get("data", raw_event)  # Unwrap CloudEvent or use as-is
         logger.info("[DAPR] Received reminder event: %s", event.get("event_type"))
 
         event_type = event.get("event_type", "")
