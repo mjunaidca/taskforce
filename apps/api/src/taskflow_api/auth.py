@@ -277,8 +277,12 @@ async def get_current_user(
         try:
             payload = await verify_jwt(token)
             user = CurrentUser(payload)
-            logger.info("[AUTH] Authenticated via JWT: %s, tenant_id=%s, org_ids=%s",
-                       user, user.tenant_id, user.organization_ids)
+            logger.info(
+                "[AUTH] Authenticated via JWT: %s, tenant_id=%s, org_ids=%s",
+                user,
+                user.tenant_id,
+                user.organization_ids,
+            )
             return user
         except HTTPException:
             # JWT validation failed, try opaque as fallback

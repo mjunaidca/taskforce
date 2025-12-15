@@ -28,6 +28,7 @@ router = APIRouter(tags=["Workers"])
 
 class ProjectInfo(BaseModel):
     """Project summary for worker display."""
+
     id: int
     name: str
     role: str
@@ -35,6 +36,7 @@ class ProjectInfo(BaseModel):
 
 class OrgMemberWithProjects(BaseModel):
     """Organization member with their project assignments."""
+
     user_id: str
     email: str
     name: str
@@ -46,6 +48,7 @@ class OrgMemberWithProjects(BaseModel):
 
 class WorkerListResponse(BaseModel):
     """Combined view of org members and agents."""
+
     org_members: list[OrgMemberWithProjects]
     agents: list[dict]
     total_members: int
@@ -95,9 +98,7 @@ async def list_workers(
             if response.status_code == 401:
                 raise HTTPException(status_code=401, detail="SSO authentication failed")
             if response.status_code == 403:
-                raise HTTPException(
-                    status_code=403, detail="Not a member of this organization"
-                )
+                raise HTTPException(status_code=403, detail="Not a member of this organization")
             if response.status_code != 200:
                 logger.error("[WORKERS] SSO returned %d: %s", response.status_code, response.text)
                 raise HTTPException(
@@ -127,8 +128,8 @@ async def list_workers(
     user_project_map: dict[str, list[tuple[int, str]]] = {}
 
     for project_id in projects:
-        stmt = select(ProjectMember, Worker).join(Worker).where(
-            ProjectMember.project_id == project_id
+        stmt = (
+            select(ProjectMember, Worker).join(Worker).where(ProjectMember.project_id == project_id)
         )
         result = await session.exec(stmt)
         for membership, worker in result.all():
