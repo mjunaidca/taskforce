@@ -26,7 +26,10 @@ from ..services.jobs import schedule_recurring_spawn, schedule_reminder
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/jobs", tags=["Jobs (Dapr Callbacks)"])
+router = APIRouter(tags=["Jobs (Dapr Callbacks)"])
+
+# Dapr Jobs v1.0-alpha1 calls back to /job/{job_name} by default
+# We need to handle this path to receive job triggers
 
 
 def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
@@ -45,26 +48,66 @@ def calculate_next_due(pattern: str, from_time: datetime) -> datetime:
     return from_time + patterns.get(pattern, timedelta(days=1))
 
 
-@router.post("/trigger")
-async def handle_job_trigger(
+@router.post("/job/{job_name}")
+async def handle_dapr_job_callback(
+    job_name: str,
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Handle Dapr job trigger callback.
+    """Handle Dapr Jobs v1.0-alpha1 callback.
 
-    Dapr calls this endpoint when a scheduled job fires.
-    Job types:
-    - spawn: Create next recurring task occurrence
-    - reminder: Publish reminder event to Notification Service
+    Dapr calls POST /job/{job_name} when a scheduled job fires.
+    The job data we provided during scheduling is in the request body.
+
+    Job naming convention:
+    - spawn-task-{id}: Create next recurring task occurrence
+    - reminder-task-{id}: Send reminder notification
     """
     try:
         body = await request.json()
-        job_data = body.get("data", body)  # Handle both wrapped and raw payloads
+        # Dapr wraps our data - extract it
+        job_data = body.get("data", body)
 
         task_id = job_data.get("task_id")
         job_type = job_data.get("type")
 
-        logger.info("[DAPR-JOB] Received trigger: type=%s, task_id=%s", job_type, task_id)
+        logger.info(
+            "[DAPR-JOB] Callback received: job=%s, type=%s, task_id=%s",
+            job_name,
+            job_type,
+            task_id,
+        )
+
+        if job_type == "spawn":
+            return await handle_spawn(session, task_id)
+        elif job_type == "reminder":
+            return await handle_reminder(session, job_data)
+        else:
+            logger.warning("[DAPR-JOB] Unknown job type: %s", job_type)
+            return {"status": "unknown_type"}
+
+    except Exception as e:
+        logger.exception("[DAPR-JOB] Error handling job %s: %s", job_name, e)
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/api/jobs/trigger")
+async def handle_job_trigger(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Legacy endpoint - kept for backwards compatibility.
+
+    New jobs use /job/{job_name} callback (Dapr default).
+    """
+    try:
+        body = await request.json()
+        job_data = body.get("data", body)
+
+        task_id = job_data.get("task_id")
+        job_type = job_data.get("type")
+
+        logger.info("[DAPR-JOB] Legacy trigger: type=%s, task_id=%s", job_type, task_id)
 
         if job_type == "spawn":
             return await handle_spawn(session, task_id)
