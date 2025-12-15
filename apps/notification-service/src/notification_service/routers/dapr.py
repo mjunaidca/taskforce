@@ -71,6 +71,7 @@ async def handle_task_events(
         if notification:
             session.add(notification)
             await session.commit()
+            await session.refresh(notification)  # Refresh to get ID without lazy load
             logger.info("[DAPR] Created notification %d for %s", notification.id, notification.user_id)
 
         return {"status": "SUCCESS"}

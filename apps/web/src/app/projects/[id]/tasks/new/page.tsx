@@ -101,12 +101,20 @@ export default function NewTaskPage() {
 
     try {
       setSubmitting(true)
+      // Convert local datetime to UTC ISO string for the API
+      // datetime-local gives us "2025-12-15T23:13" in local time
+      // We need to send it as UTC: "2025-12-15T18:13:00Z" (for UTC+5)
+      let dueDateUTC: string | undefined = undefined
+      if (dueDate) {
+        const localDate = new Date(dueDate)
+        dueDateUTC = localDate.toISOString()
+      }
       const task = await api.createTask(selectedProjectId, {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
         assignee_id: assigneeId && assigneeId !== "unassigned" ? Number(assigneeId) : undefined,
-        due_date: dueDate || undefined,
+        due_date: dueDateUTC,
         // Recurring fields
         is_recurring: isRecurring,
         recurrence_pattern: isRecurring && recurrencePattern ? recurrencePattern : undefined,
