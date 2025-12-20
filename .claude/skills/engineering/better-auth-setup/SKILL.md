@@ -1,3 +1,8 @@
+---
+name: better-auth-setup
+description: Guide implementation of OAuth 2.1 / OIDC authentication using Better Auth with the OIDC Provider plugin. Use this skill when setting up centralized authentication for multiple apps, implementing SSO across a platform, creating an OAuth authorization server, or integrating Better Auth as an identity provider. Covers PKCE for public clients, JWKS configuration, token management, email verification, and common pitfalls like preserving PKCE parameters during sign-in redirects.
+---
+
 # Better Auth OAuth/OIDC Setup Skill
 
 ## Purpose
