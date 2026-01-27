@@ -1,0 +1,314 @@
+# TaskFlow Platform - Hetzner K3s Values
+# Single-node K3s deployment on CAX31 ARM64 server
+# Uses Traefik ingress (K3s default) and managed services (Neon + Upstash)
+#
+# IMPORTANT: Domain is baked into container images at build time.
+# Using avixato.com means existing GHCR images work without rebuild.
+#
+# Deploy with:
+#   helm upgrade --install taskflow ./infrastructure/helm/taskflow \
+#     --namespace taskflow \
+#     --values infrastructure/helm/taskflow/values-hetzner.yaml \
+#     --set "managedServices.neon.ssoDatabase=$NEON_SSO_DATABASE_URL" \
+#     --set "managedServices.neon.apiDatabase=$NEON_API_DATABASE_URL" \
+#     ... (see deployment guide for full command)
+
+global:
+  domain: avixato.com
+  namespace: taskflow
+  imagePullPolicy: Always
+  imageRegistry: ghcr.io/mjunaidca/taskflow
+  imagePullSecrets:
+    - name: ghcr-secret
+
+# =============================================================================
+# MANAGED SERVICES (Neon + Upstash)
+# Inject values from GitHub Secrets via --set flags
+# =============================================================================
+managedServices:
+  neon:
+    enabled: true
+    # Connection strings injected via --set from secrets
+    ssoDatabase: ""           # postgresql://...@neon.tech/sso-v1?sslmode=require
+    apiDatabase: ""           # postgresql://...@neon.tech/api-v1?sslmode=require
+    chatkitDatabase: ""       # postgresql://...@neon.tech/chatkit-v1?sslmode=require
+    notificationDatabase: ""  # postgresql://...@neon.tech/notify-v1?sslmode=require
+  upstash:
+    enabled: true
+    # Upstash Redis for Dapr pub/sub (standard Redis protocol with TLS)
+    host: ""                  # xxx.upstash.io:6379
+    password: ""              # Your Upstash password
+    # Upstash REST API for SSO rate limiting
+    restUrl: ""               # https://xxx.upstash.io
+    restToken: ""             # AXxxxx...
+
+# Disable in-cluster databases (using Neon)
+pgadmin:
+  enabled: false
+
+# =============================================================================
+# SSO Platform (Better Auth)
+# =============================================================================
+sso:
+  enabled: true
+  name: sso-platform
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mjunaidca/taskflow/sso
+    tag: latest
+    pullPolicy: Always
+
+  migrations:
+    enabled: false  # Using Neon - run migrations locally
+
+  service:
+    type: ClusterIP
+    port: 3001
+    targetPort: 3001
+
+  ingress:
+    enabled: true
+    className: traefik  # K3s default ingress controller
+    host: sso.avixato.com
+    tls:
+      enabled: true
+      secretName: sso-tls
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+  # PostgreSQL config (still needed for secret naming even when using Neon)
+  postgresql:
+    enabled: false
+    name: sso-postgres
+    password: "not-used-with-neon"
+
+  env:
+    NODE_ENV: production
+    BETTER_AUTH_URL: https://sso.avixato.com
+    BETTER_AUTH_SECRET: ""  # Injected via --set from secrets
+    ALLOWED_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com"
+
+  smtp:
+    enabled: true
+    host: smtp.gmail.com
+    port: "587"
+    user: ""      # Injected via --set
+    password: ""  # Injected via --set
+    secure: "false"
+    emailFrom: no-reply@taskflow.org
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# =============================================================================
+# API Service (FastAPI)
+# =============================================================================
+api:
+  enabled: true
+  name: taskflow-api
+  daprAppId: taskflow-api
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mjunaidca/taskflow/api
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+
+  ingress:
+    enabled: true
+    className: traefik
+    host: api.avixato.com
+    tls:
+      enabled: true
+      secretName: api-tls
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+  # PostgreSQL config (still needed for secret naming even when using Neon)
+  postgresql:
+    enabled: false
+    name: api-postgres
+    password: "not-used-with-neon"
+
+  env:
+    ENV: production
+    SSO_URL: http://sso-platform:3001
+    CORS_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com"
+    MCP_SERVER_URL: http://mcp-server:8001/mcp
+
+  openai:
+    apiKey: ""  # Injected via --set from secrets
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# =============================================================================
+# MCP Server
+# =============================================================================
+mcpServer:
+  enabled: true
+  name: mcp-server
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mjunaidca/taskflow/mcp
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+
+  ingress:
+    enabled: true
+    className: traefik
+    host: mcp.avixato.com
+    tls:
+      enabled: true
+      secretName: mcp-tls
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+  env:
+    ENV: production
+    TASKFLOW_API_URL: http://taskflow-api:8000
+    TASKFLOW_SSO_URL: http://sso-platform:3001
+    TASKFLOW_DEV_MODE: "false"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# =============================================================================
+# Web Dashboard (Next.js)
+# =============================================================================
+web:
+  enabled: true
+  name: web-dashboard
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mjunaidca/taskflow/web
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  ingress:
+    enabled: true
+    className: traefik
+    host: avixato.com
+    tls:
+      enabled: true
+      secretName: web-tls
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+  env:
+    NODE_ENV: production
+    # Note: NEXT_PUBLIC_* vars are baked into image at build time
+    # These runtime env vars are for reference only
+    NEXT_PUBLIC_API_URL: https://api.avixato.com
+    NEXT_PUBLIC_SSO_URL: https://sso.avixato.com
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# =============================================================================
+# Notification Service (Dapr pub/sub consumer)
+# =============================================================================
+notificationService:
+  enabled: true
+  name: notification-service
+  daprAppId: notification-service
+  replicas: 1
+  port: 8001
+  logLevel: INFO
+  allowedOrigins: "https://avixato.com,https://sso.avixato.com"
+
+  image:
+    repository: ghcr.io/mjunaidca/taskflow/notification
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8001
+
+  postgresql:
+    enabled: false  # Using Neon
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+# =============================================================================
+# Dapr Configuration (using Upstash Redis)
+# =============================================================================
+dapr:
+  enabled: true
+
+  pubsub:
+    name: taskflow-pubsub
+    type: pubsub.redis
+    redisHost: ""      # Injected via --set (xxx.upstash.io:6379)
+    redisPassword: ""  # Injected via --set
+    enableTLS: "true"  # Upstash requires TLS
+
+  scheduler:
+    enabled: true
+    name: taskflow-scheduler
+
+# =============================================================================
+# Redis (disabled - using Upstash)
+# =============================================================================
+redis:
+  enabled: false
+
+# =============================================================================
+# Ingress Controller
+# K3s includes Traefik by default - no need to install nginx
+# =============================================================================
+ingress-nginx:
+  enabled: false
+
+# =============================================================================
+# Key Differences from Azure Deployment:
+# - Ingress: traefik (K3s default) vs nginx (Azure)
+# - Load Balancer: NodePort via Traefik vs Azure LB
+# - Cost: ~$13/mo vs ~$85-150/mo
+# - Scaling: Single node vs multi-node capable
+# =============================================================================
