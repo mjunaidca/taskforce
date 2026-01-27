@@ -109,6 +109,18 @@ export const TRUSTED_CLIENTS = [
     skipConsent: true,
     metadata: {},
   },
+  {
+    clientId: "learnflow-sso-public-client",
+    name: "LearnFlow SSO",
+    type: "public" as const,
+    redirectUrls: filterRedirectUrls([
+      "http://localhost:3000/api/auth/callback",
+      "https://learnflow.avixato.com/api/auth/callback",
+    ]),
+    disabled: false,
+    skipConsent: true,
+    metadata: {},
+  },
   // =============================================================================
   // MCP OAuth Clients - 014-mcp-oauth-standardization
   // These clients use Device Authorization Flow (RFC 8628) for headless auth
@@ -214,6 +226,11 @@ export const CLIENT_DESCRIPTIONS = {
   "taskflow-sso-public-client": {
     purpose: "Taskflow Single Sign-On portal",
     audience: "All Taskflow users across platforms",
+    security: "Public client with PKCE, no client secret",
+  },
+  "learnflow-sso-public-client": {
+    purpose: "LearnFlow educational course platform",
+    audience: "Teachers and students using LearnFlow",
     security: "Public client with PKCE, no client secret",
   },
   "ai-native-public-client": {

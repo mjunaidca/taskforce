@@ -39,7 +39,8 @@ const TASKFLOW_SSO_CLIENT = {
   name: "Taskflow SSO",
   redirectUrls: [
     "http://localhost:3000/api/auth/callback",
-    "https://taskflow.org/api/auth/callback",
+    "https://avixato.com/api/auth/callback",
+    "https://api.avixato.com/auth/callback",
   ].join(","),
   type: "public",
   disabled: false,
@@ -65,6 +66,24 @@ const AI_NATIVE_CLIENT = {
     token_endpoint_auth_method: "none",
     grant_types: ["authorization_code", "refresh_token"],
     description: "AI Native platform public client",
+  }),
+};
+
+const LEARNFLOW_SSO_CLIENT = {
+  id: "learnflow-sso-public-client-id",
+  clientId: "learnflow-sso-public-client",
+  clientSecret: null,
+  name: "LearnFlow SSO",
+  redirectUrls: [
+    "http://localhost:3000/api/auth/callback",
+    "https://learnflow.avixato.com/api/auth/callback",
+  ].join(","),
+  type: "public",
+  disabled: false,
+  metadata: JSON.stringify({
+    token_endpoint_auth_method: "none",
+    grant_types: ["authorization_code", "refresh_token"],
+    description: "LearnFlow educational course platform",
   }),
 };
 
@@ -116,12 +135,14 @@ async function seed() {
 
   await upsertClient(TASKFLOW_SSO_CLIENT);
   await upsertClient(AI_NATIVE_CLIENT);
+  await upsertClient(LEARNFLOW_SSO_CLIENT);
 
   // Verify and display all production clients
   const allClients = await db.select().from(oauthApplication);
   const prodClients = allClients.filter(c =>
     c.clientId === TASKFLOW_SSO_CLIENT.clientId ||
-    c.clientId === AI_NATIVE_CLIENT.clientId
+    c.clientId === AI_NATIVE_CLIENT.clientId ||
+    c.clientId === LEARNFLOW_SSO_CLIENT.clientId
   );
 
   console.log("\n✅ Successfully configured!\n");
