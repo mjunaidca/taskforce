@@ -87,7 +87,7 @@ sso:
     NODE_ENV: production
     BETTER_AUTH_URL: https://sso.avixato.com
     BETTER_AUTH_SECRET: ""  # Injected via --set from secrets
-    ALLOWED_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com"
+    ALLOWED_ORIGINS: "https://avixato.com,https://sso.avixato.com,https://api.avixato.com,https://mcp.avixato.com,https://learnflow.avixato.com"
 
   smtp:
     enabled: true
